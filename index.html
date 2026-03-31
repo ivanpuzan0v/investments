@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Планирование инвестиций</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div>
+          <div class="title">Планирование инвестиций</div>
+          <div class="subtitle">Чистый интерфейс: активы, ожидания и план операций</div>
+        </div>
+
+        <div class="topbar__actions">
+          <button id="reset-all" class="btn btn--ghost" type="button" title="Сбросить локальные данные">
+            Сбросить
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="tabs" aria-label="Разделы страницы">
+        <button id="tab-portfolio" class="tabBtn" type="button" data-tab-target="portfolio">Портфель</button>
+        <button id="tab-planning" class="tabBtn is-active" type="button" data-tab-target="planning">Планирование</button>
+        <button id="tab-charts" class="tabBtn" type="button" data-tab-target="charts">Графики</button>
+      </section>
+
+      <section id="tab-panel-portfolio" class="grid tabPanel" data-tab-panel="portfolio" hidden>
+        <div class="card widget widget--wide" data-widget="portfolio-controls">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Параметры портфеля</div>
+              <div class="widget__hint">Стартовая дата, начальная стоимость и ежемесячные пополнения для расчёта стоимости портфеля</div>
+            </div>
+          </div>
+
+          <div class="portfolioControls">
+            <label class="taxControl" for="portfolio-start-date">
+              <span>Дата старта</span>
+              <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input" type="date" />
+            </label>
+            <div class="taxControl portfolioTaxControl">
+              <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
+                <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+                <span class="floatingField__label">Стартовая стоимость</span>
+              </label>
+            </div>
+            <div class="taxControl portfolioTaxControl">
+              <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
+                <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+                <span class="floatingField__label">Ежемесячное пополнение</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card widget widget--wide" data-widget="portfolio-value">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Стоимость портфеля</div>
+              <div class="widget__hint">Начальная стоимость портфеля и накопление чистых купонов по месяцам до последней выплаты</div>
+            </div>
+            <div class="widget__headerRight">
+              <label class="taxControl" for="portfolio-chart-year">
+                <span>Год</span>
+                <select id="portfolio-chart-year" class="input taxControl__input portfolioChartYearSelect" aria-label="Год для графика портфеля"></select>
+              </label>
+            </div>
+          </div>
+
+          <div class="portfolioTotals">
+            <div class="summaryStat">
+              <div class="summaryStat__label">Старт</div>
+              <div id="portfolio-start-total" class="summaryStat__value">0.00</div>
+            </div>
+            <div class="summaryStat">
+              <div class="summaryStat__label">Купонами добавлено</div>
+              <div id="portfolio-coupon-total" class="summaryStat__value">0.00</div>
+            </div>
+            <div class="summaryStat">
+              <div class="summaryStat__label">Стоимость на конец периода</div>
+              <div id="portfolio-end-total" class="summaryStat__value">0.00</div>
+            </div>
+          </div>
+
+          <div class="chartWrap" role="region" aria-label="Диаграмма стоимости портфеля">
+            <svg id="portfolio-chart" viewBox="0 0 900 360" class="chart" aria-hidden="true">
+              <g id="portfolio-chart-content"></g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-panel-planning" class="grid tabPanel" data-tab-panel="planning">
+        <div class="card widget" data-widget="assets">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Облигации</div>
+              <div class="widget__hint">Купон и даты выплат по каждой облигации</div>
+            </div>
+
+            <div class="widget__headerRight">
+              <button id="add-asset-row" class="btn" type="button">Добавить</button>
+            </div>
+          </div>
+
+          <div class="tableWrap" role="region" aria-label="Таблица облигаций">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 160px;" data-sort-table="assets" data-sort-field="bond" scope="col">Облигация</th>
+                  <th style="width: 160px;" data-sort-table="assets" data-sort-field="coupon" scope="col">Купон за 1 выплату</th>
+                  <th data-sort-table="assets" data-sort-field="payoutPeriod" scope="col">Периодичность выплат</th>
+                  <th style="width: 56px;"></th>
+                </tr>
+              </thead>
+
+              <tbody id="assets-tbody">
+                <!-- JS inject -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card widget" data-widget="holdings">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Текущий портфель</div>
+              <div class="widget__hint">Уже купленные облигации и их количество. Учитываются в графике с сегодняшней даты</div>
+            </div>
+
+            <div class="widget__headerRight">
+              <button id="add-holding-row" class="btn" type="button">Добавить</button>
+            </div>
+          </div>
+
+          <div class="tableWrap" role="region" aria-label="Таблица текущих облигаций в портфеле">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th data-sort-table="holdings" data-sort-field="bond" scope="col">Облигация</th>
+                  <th style="width: 140px;" data-sort-table="holdings" data-sort-field="quantity" scope="col">Количество</th>
+                  <th style="width: 56px;"></th>
+                </tr>
+              </thead>
+
+              <tbody id="holdings-tbody">
+                <!-- JS inject -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Row 2 (wide bottom widget) -->
+        <div class="card widget widget--wide" data-widget="plan">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Покупки облигаций</div>
+              <div class="widget__hint">Дата покупки, облигация, цена и количество. Нажмите на строку, чтобы изменить</div>
+            </div>
+          </div>
+
+          <div class="tableWrap" role="region" aria-label="Таблица покупок облигаций">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Дата</th>
+                  <th>Покупаемые облигации</th>
+                  <th style="width: 160px;">Сумма покупки</th>
+                  <th style="width: 56px;"></th>
+                </tr>
+              </thead>
+
+              <tbody id="txns-tbody">
+                <!-- JS inject -->
+              </tbody>
+            </table>
+          </div>
+          <div class="widget__footerActions">
+            <button id="add-txn-row" class="btn" type="button">Добавить строку</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-panel-charts" class="grid tabPanel" data-tab-panel="charts" hidden>
+        <div class="card widget widget--wide" data-widget="summary">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Сводка по облигациям и выплатам</div>
+              <div class="widget__hint">Выплаты, вложения в покупки и простая доходность по прогнозу купонов (к периоду выплат)</div>
+            </div>
+            <div class="widget__headerRight">
+              <label class="taxControl" for="tax-rate">
+                <span>Налог, %</span>
+                <input id="tax-rate" class="input input--num taxControl__input" type="number" min="0" max="100" step="0.1" value="13" />
+              </label>
+            </div>
+          </div>
+
+          <div class="summaryLayout">
+            <div class="summaryLayout__left">
+              <div class="summaryTotals">
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат gross: сумма всех купонных выплат до удержания налога. Формула: сумма всех gross-выплат по всем облигациям." aria-label="Как считается показатель Всего выплат gross">?</button>
+                  <div class="summaryStat__label">Всего выплат (gross)</div>
+                  <div id="total-gross" class="summaryStat__value">0.00</div>
+                </div>
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Налог: удержание с купонных выплат по заданной ставке. Формула: Всего выплат gross × ставка налога." aria-label="Как считается показатель Налог">?</button>
+                  <div class="summaryStat__label">Налог</div>
+                  <div id="total-tax" class="summaryStat__value">0.00</div>
+                </div>
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Чистыми net: сумма выплат после налога. Формула: Всего выплат gross − Налог." aria-label="Как считается показатель Чистыми net">?</button>
+                  <div class="summaryStat__label">Чистыми (net)</div>
+                  <div id="total-net" class="summaryStat__value">0.00</div>
+                </div>
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Вложено: сумма плановых покупок облигаций. Формула: сумма по всем покупкам (цена × количество)." aria-label="Как считается показатель Вложено">?</button>
+                  <div class="summaryStat__label">Вложено</div>
+                  <div id="total-invested" class="summaryStat__value">0.00</div>
+                </div>
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднегодовая доходность по gross-выплатам за период. Формула: (Всего выплат gross / Вложено) × (12 / число месяцев с выплатами) × 100%." aria-label="Как считается показатель Среднегодовая доходность">?</button>
+                  <div class="summaryStat__label">Среднегодовая доходность</div>
+                  <div id="yield-annual" class="summaryStat__value">—</div>
+                </div>
+                <div class="summaryStat">
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по gross-выплатам. Формула: (Всего выплат gross / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность">?</button>
+                  <div class="summaryStat__label">Среднемесячная доходность</div>
+                  <div id="yield-monthly" class="summaryStat__value">—</div>
+                </div>
+              </div>
+
+              <div class="tableWrap" role="region" aria-label="Сводка по облигациям">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th data-sort-table="summary" data-sort-field="bond" scope="col">Облигация</th>
+                      <th style="width: 140px;" data-sort-table="summary" data-sort-field="qty" scope="col">Количество</th>
+                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="invested" scope="col">Вложено</th>
+                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="gross" scope="col">Выплаты gross</th>
+                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="net" scope="col">Выплаты net</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summary-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="summaryLayout__right">
+              <div id="year-pies" class="yearPies" aria-label="Круговые диаграммы выплат по годам"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card widget widget--wide" data-widget="returns">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">График выплат купонов</div>
+              <div class="widget__hint">Сумма выплат по месяцам на основе облигаций и покупок</div>
+            </div>
+            <div class="widget__headerRight">
+              <label class="taxControl" for="chart-year">
+                <span>Год</span>
+                <select id="chart-year" class="input taxControl__input" aria-label="Год для графика"></select>
+              </label>
+            </div>
+          </div>
+
+          <div id="chart-legend" class="chartLegend" aria-label="Легенда графика"></div>
+          <div class="chartWrap" role="region" aria-label="Диаграмма выплат купонов">
+            <svg id="returns-chart" viewBox="0 0 800 360" class="chart" aria-hidden="true">
+              <g id="chart-content"></g>
+            </svg>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="asset-row-template">
+      <tr>
+        <td>
+          <input data-field="bond" class="input" placeholder="SU26238RMFS4" autocomplete="off" />
+        </td>
+        <td>
+          <input data-field="coupon" class="input input--num" inputmode="decimal" placeholder="36.50" />
+        </td>
+        <td>
+          <input type="hidden" data-field="payoutMonths" value="" />
+          <input type="hidden" data-field="startDate" value="" />
+          <input type="hidden" data-field="endDate" value="" />
+          <div class="dateCell">
+            <button type="button" class="dateBtn" data-action="open-month-picker">Выбрать даты</button>
+          </div>
+        </td>
+        <td>
+          <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
+            ✕
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <template id="txn-row-template">
+      <tr>
+        <td>
+          <input data-field="date" class="input" type="date" />
+        </td>
+        <td>
+          <input type="hidden" data-field="items" value="[]" />
+          <div class="buySummary" data-display-for="items">—</div>
+        </td>
+        <td>
+          <div class="buySummary" data-display-for="total">0.00 ₽</div>
+        </td>
+        <td>
+          <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
+            ✕
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <template id="holding-row-template">
+      <tr>
+        <td>
+          <input data-field="bond" class="input" placeholder="SU26238RMFS4" autocomplete="off" />
+        </td>
+        <td>
+          <input data-field="quantity" class="input input--num" inputmode="numeric" pattern="[0-9]*" placeholder="10" />
+        </td>
+        <td>
+          <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
+            ✕
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <div id="month-modal-overlay" class="modalOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="month-modal-title">
+        <div class="modal__header">
+          <div class="modal__title" id="month-modal-title">Выбор месяцев выплат</div>
+          <button id="month-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <div id="month-grid" class="monthGrid" aria-label="Месяцы года"></div>
+        <div class="modal__sectionTitle">Период выплат</div>
+        <div class="periodWrap">
+          <input id="month-start-date" class="input" type="date" />
+          <input id="month-end-date" class="input" type="date" />
+        </div>
+        <div class="modal__footer">
+          <button id="month-clear" class="btn btn--ghost" type="button">Очистить</button>
+          <button id="month-done" class="btn" type="button">Готово</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="buy-modal-overlay" class="modalOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="buy-modal-title">
+        <div class="modal__header">
+          <div class="modal__title" id="buy-modal-title">Новая покупка облигаций</div>
+          <button id="buy-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+
+        <div class="modal__sectionTitle">Дата покупки</div>
+        <input id="buy-date" class="input buyDateInput" type="date" />
+
+        <div class="modal__sectionTitle">Состав покупки</div>
+        <div id="buy-items" class="buyItems"></div>
+        <button id="buy-add-item" class="btn btn--ghost" type="button">Добавить облигацию</button>
+
+        <div class="modal__footer">
+          <button id="buy-save" class="btn" type="button">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
