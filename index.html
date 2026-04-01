@@ -13,7 +13,7 @@
       <div class="topbar__inner">
         <div>
           <div class="title">Планирование инвестиций</div>
-          <div class="subtitle">Чистый интерфейс: активы, ожидания и план операций</div>
+          <div class="subtitle">Сайт для планирования облигационного портфеля, купонных выплат и расчёта доходности</div>
         </div>
 
         <div class="topbar__actions">
@@ -29,6 +29,7 @@
         <button id="tab-portfolio" class="tabBtn" type="button" data-tab-target="portfolio">Портфель</button>
         <button id="tab-planning" class="tabBtn is-active" type="button" data-tab-target="planning">Планирование</button>
         <button id="tab-charts" class="tabBtn" type="button" data-tab-target="charts">Графики</button>
+        <button id="tab-calculators" class="tabBtn" type="button" data-tab-target="calculators">Калькуляторы</button>
       </section>
 
       <section id="tab-panel-portfolio" class="grid tabPanel" data-tab-panel="portfolio" hidden>
@@ -36,7 +37,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Параметры портфеля</div>
-              <div class="widget__hint">Стартовая дата, начальная стоимость и ежемесячные пополнения для расчёта стоимости портфеля</div>
+              <div class="widget__hint">Укажите дату старта, начальную стоимость портфеля и ежемесячные пополнения для расчёта его динамики</div>
             </div>
           </div>
 
@@ -64,7 +65,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Стоимость портфеля</div>
-              <div class="widget__hint">Начальная стоимость портфеля и накопление чистых купонов по месяцам до последней выплаты</div>
+              <div class="widget__hint">График показывает, как будет меняться стоимость портфеля с учётом пополнений и купонных выплат по месяцам</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="portfolio-chart-year">
@@ -102,11 +103,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Облигации</div>
-              <div class="widget__hint">Купон и даты выплат по каждой облигации</div>
-            </div>
-
-            <div class="widget__headerRight">
-              <button id="add-asset-row" class="btn" type="button">Добавить</button>
+              <div class="widget__hint">Добавьте облигации, которые планируете покупать в портфель, чтобы учитывать их купоны и даты выплат</div>
             </div>
           </div>
 
@@ -126,17 +123,16 @@
               </tbody>
             </table>
           </div>
+          <div class="widget__footerActions">
+            <button id="add-asset-row" class="btn" type="button">Добавить</button>
+          </div>
         </div>
 
         <div class="card widget" data-widget="holdings">
           <div class="widget__header">
             <div>
               <div class="widget__title">Текущий портфель</div>
-              <div class="widget__hint">Уже купленные облигации и их количество. Учитываются в графике с сегодняшней даты</div>
-            </div>
-
-            <div class="widget__headerRight">
-              <button id="add-holding-row" class="btn" type="button">Добавить</button>
+              <div class="widget__hint">Добавьте облигации, которые уже есть в портфеле, чтобы учитывать их в расчётах и графиках</div>
             </div>
           </div>
 
@@ -155,6 +151,9 @@
               </tbody>
             </table>
           </div>
+          <div class="widget__footerActions">
+            <button id="add-holding-row" class="btn" type="button">Добавить</button>
+          </div>
         </div>
 
         <!-- Row 2 (wide bottom widget) -->
@@ -162,7 +161,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Покупки облигаций</div>
-              <div class="widget__hint">Дата покупки, облигация, цена и количество. Нажмите на строку, чтобы изменить</div>
+              <div class="widget__hint">Добавьте планируемые покупки облигаций на дату, чтобы рассчитывать ожидаемые будущие выплаты. Нажмите на строку, чтобы изменить</div>
             </div>
           </div>
 
@@ -193,7 +192,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Сводка по облигациям и выплатам</div>
-              <div class="widget__hint">Выплаты, вложения в покупки и простая доходность по прогнозу купонов (к периоду выплат)</div>
+              <div class="widget__hint">Выплаты net, вложения в покупки и простая доходность после налога по прогнозу купонов</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="tax-rate">
@@ -207,18 +206,18 @@
             <div class="summaryLayout__left">
               <div class="summaryTotals">
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат gross: сумма всех купонных выплат до удержания налога. Формула: сумма всех gross-выплат по всем облигациям." aria-label="Как считается показатель Всего выплат gross">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат gross: сумма всех купонных выплат до удержания налога. Формула: выплаты net / (1 - ставка налога)." aria-label="Как считается показатель Всего выплат gross">?</button>
                   <div class="summaryStat__label">Всего выплат (gross)</div>
                   <div id="total-gross" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Налог: удержание с купонных выплат по заданной ставке. Формула: Всего выплат gross × ставка налога." aria-label="Как считается показатель Налог">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Налог: оценка удержания с купонных выплат по заданной ставке. Формула: выплаты до налога − выплаты net." aria-label="Как считается показатель Налог">?</button>
                   <div class="summaryStat__label">Налог</div>
                   <div id="total-tax" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Чистыми net: сумма выплат после налога. Формула: Всего выплат gross − Налог." aria-label="Как считается показатель Чистыми net">?</button>
-                  <div class="summaryStat__label">Чистыми (net)</div>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="К выплате net: итоговая сумма купонов после налога. Формула: сумма всех net-выплат." aria-label="Как считается показатель К выплате net">?</button>
+                  <div class="summaryStat__label">К выплате (net)</div>
                   <div id="total-net" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
@@ -227,13 +226,13 @@
                   <div id="total-invested" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднегодовая доходность по gross-выплатам за период. Формула: (Всего выплат gross / Вложено) × (12 / число месяцев с выплатами) × 100%." aria-label="Как считается показатель Среднегодовая доходность">?</button>
-                  <div class="summaryStat__label">Среднегодовая доходность</div>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднегодовая доходность по net-выплатам за период. Формула: (Всего выплат net / Вложено) × (12 / число месяцев с выплатами) × 100%." aria-label="Как считается показатель Среднегодовая доходность net">?</button>
+                  <div class="summaryStat__label">Среднегодовая доходность (net)</div>
                   <div id="yield-annual" class="summaryStat__value">—</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по gross-выплатам. Формула: (Всего выплат gross / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность">?</button>
-                  <div class="summaryStat__label">Среднемесячная доходность</div>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по net-выплатам. Формула: (Всего выплат net / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность net">?</button>
+                  <div class="summaryStat__label">Среднемесячная доходность (net)</div>
                   <div id="yield-monthly" class="summaryStat__value">—</div>
                 </div>
               </div>
@@ -245,7 +244,7 @@
                       <th data-sort-table="summary" data-sort-field="bond" scope="col">Облигация</th>
                       <th style="width: 140px;" data-sort-table="summary" data-sort-field="qty" scope="col">Количество</th>
                       <th style="width: 180px;" data-sort-table="summary" data-sort-field="invested" scope="col">Вложено</th>
-                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="gross" scope="col">Выплаты gross</th>
+                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="tax" scope="col">Налог</th>
                       <th style="width: 180px;" data-sort-table="summary" data-sort-field="net" scope="col">Выплаты net</th>
                     </tr>
                   </thead>
@@ -263,8 +262,8 @@
         <div class="card widget widget--wide" data-widget="returns">
           <div class="widget__header">
             <div>
-              <div class="widget__title">График выплат купонов</div>
-              <div class="widget__hint">Сумма выплат по месяцам на основе облигаций и покупок</div>
+              <div class="widget__title">График выплат купонов (gross)</div>
+              <div class="widget__hint">Сумма выплат по месяцам до налога на основе облигаций и покупок</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="chart-year">
@@ -280,6 +279,86 @@
               <g id="chart-content"></g>
             </svg>
           </div>
+        </div>
+      </section>
+
+      <section id="tab-panel-calculators" class="grid tabPanel" data-tab-panel="calculators" hidden>
+        <div class="card widget" data-widget="calculator-accrued">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Накопленный купонный доход</div>
+              <div class="widget__hint">Расчёт НКД по номиналу, ставке купона и дням внутри купонного периода</div>
+            </div>
+          </div>
+
+          <div class="calculatorForm">
+            <label class="floatingField" for="accrued-nominal">
+              <input id="accrued-nominal" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="1000" placeholder=" " />
+              <span class="floatingField__label">Номинал</span>
+            </label>
+            <label class="floatingField" for="accrued-coupon-rate">
+              <input id="accrued-coupon-rate" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="12" placeholder=" " />
+              <span class="floatingField__label">Ставка купона, % годовых</span>
+            </label>
+            <label class="floatingField" for="accrued-last-coupon-date">
+              <input id="accrued-last-coupon-date" class="input floatingField__input" type="date" placeholder=" " />
+              <span class="floatingField__label">Дата прошлого купона</span>
+            </label>
+            <label class="floatingField" for="accrued-next-coupon-date">
+              <input id="accrued-next-coupon-date" class="input floatingField__input" type="date" placeholder=" " />
+              <span class="floatingField__label">Дата следующего купона</span>
+            </label>
+            <label class="floatingField" for="accrued-settlement-date">
+              <input id="accrued-settlement-date" class="input floatingField__input" type="date" placeholder=" " />
+              <span class="floatingField__label">Дата расчёта</span>
+            </label>
+          </div>
+
+          <div class="summaryTotals calculatorTotals">
+            <div class="summaryStat">
+              <div class="summaryStat__label">Дней с прошлого купона</div>
+              <div id="accrued-days-elapsed" class="summaryStat__value">0</div>
+            </div>
+            <div class="summaryStat">
+              <div class="summaryStat__label">Дней в периоде</div>
+              <div id="accrued-days-period" class="summaryStat__value">0</div>
+            </div>
+            <div class="summaryStat">
+              <div class="summaryStat__label">НКД</div>
+              <div id="accrued-income-result" class="summaryStat__value">0.00 ₽</div>
+            </div>
+          </div>
+
+          <div id="accrued-formula" class="calculatorNote">Формула: НКД = Номинал × Ставка купона / 100 × Дней с прошлого купона / 365.</div>
+        </div>
+
+        <div class="card widget widget--wide" data-widget="calculator-yield">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Сравнение доходности облигаций</div>
+              <div class="widget__hint">Добавляйте строки, чтобы сравнивать текущую доходность и приблизительную доходность к погашению по нескольким облигациям</div>
+            </div>
+          </div>
+
+          <div class="tableWrap" role="region" aria-label="Таблица сравнения доходности облигаций">
+            <table class="table calcCompareTable">
+              <thead>
+                <tr>
+                  <th scope="col">Облигация</th>
+                  <th scope="col">Выплат в год</th>
+                  <th scope="col">Доходность купонная</th>
+                  <th scope="col">Доходность к погашению</th>
+                  <th style="width: 96px;"></th>
+                </tr>
+              </thead>
+              <tbody id="yield-tbody"></tbody>
+            </table>
+          </div>
+          <div class="widget__footerActions">
+            <button id="add-yield-row" class="btn" type="button">Добавить</button>
+          </div>
+
+          <div id="yield-formula" class="calculatorNote">Доходность к погашению считается по приближённой формуле для купонной облигации.</div>
         </div>
       </section>
     </main>
@@ -344,6 +423,44 @@
       </tr>
     </template>
 
+    <template id="yield-row-template">
+      <tr>
+        <td>
+          <input type="hidden" data-field="bondName" value="" />
+          <input type="hidden" data-field="nominal" value="" />
+          <input type="hidden" data-field="cleanPricePercent" value="" />
+          <input type="hidden" data-field="couponRate" value="" />
+          <input type="hidden" data-field="accruedIncome" value="" />
+          <input type="hidden" data-field="commission" value="" />
+          <input type="hidden" data-field="purchaseDate" value="" />
+          <input type="hidden" data-field="maturityDate" value="" />
+          <input type="hidden" data-field="paymentsPerYear" value="" />
+          <input type="hidden" data-field="paidCouponsCount" value="" />
+          <input type="hidden" data-field="redemptionPrice" value="" />
+          <div class="calcTableValue calcTableValue--strong" data-display-for="bondName">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="paymentsPerYear">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="currentYield">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="ytm">—</div>
+        </td>
+        <td>
+          <div class="calcTableActions">
+            <button type="button" class="iconBtn" data-action="edit-yield" title="Изменить строку" aria-label="Изменить строку">
+              ✎
+            </button>
+            <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
+              ✕
+            </button>
+          </div>
+        </td>
+      </tr>
+    </template>
+
     <div id="month-modal-overlay" class="modalOverlay" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="month-modal-title">
         <div class="modal__header">
@@ -379,6 +496,66 @@
 
         <div class="modal__footer">
           <button id="buy-save" class="btn" type="button">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="yield-modal-overlay" class="modalOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="yield-modal-title">
+        <div class="modal__header">
+          <div class="modal__title" id="yield-modal-title">Новая облигация для сравнения</div>
+          <button id="yield-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+
+        <div class="calculatorForm">
+          <label class="floatingField" for="yield-modal-bond-name">
+            <input id="yield-modal-bond-name" class="input floatingField__input" type="text" placeholder=" " autocomplete="off" />
+            <span class="floatingField__label">Название или тикер</span>
+          </label>
+          <label class="floatingField" for="yield-modal-purchase-date">
+            <input id="yield-modal-purchase-date" class="input floatingField__input" type="date" placeholder=" " />
+            <span class="floatingField__label">Дата покупки</span>
+          </label>
+          <label class="floatingField" for="yield-modal-maturity-date">
+            <input id="yield-modal-maturity-date" class="input floatingField__input" type="date" placeholder=" " />
+            <span class="floatingField__label">Дата погашения</span>
+          </label>
+          <label class="floatingField" for="yield-modal-payments-per-year">
+            <input id="yield-modal-payments-per-year" class="input input--num floatingField__input" type="number" min="1" step="1" value="4" placeholder=" " />
+            <span class="floatingField__label">Выплат в год</span>
+          </label>
+          <label class="floatingField" for="yield-modal-paid-coupons-count">
+            <input id="yield-modal-paid-coupons-count" class="input input--num floatingField__input" type="number" min="0" step="1" value="0" placeholder=" " />
+            <span class="floatingField__label">Уже выплачено купонов</span>
+          </label>
+          <label class="floatingField" for="yield-modal-nominal">
+            <input id="yield-modal-nominal" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="1000" placeholder=" " />
+            <span class="floatingField__label">Номинал</span>
+          </label>
+          <label class="floatingField" for="yield-modal-clean-price-percent">
+            <input id="yield-modal-clean-price-percent" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="95" placeholder=" " />
+            <span class="floatingField__label">Чистая цена, % от номинала</span>
+          </label>
+          <label class="floatingField" for="yield-modal-coupon-rate">
+            <input id="yield-modal-coupon-rate" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="12" placeholder=" " />
+            <span class="floatingField__label">Ставка купона, % годовых</span>
+          </label>
+          <label class="floatingField" for="yield-modal-accrued-income">
+            <input id="yield-modal-accrued-income" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+            <span class="floatingField__label">НКД при покупке</span>
+          </label>
+          <label class="floatingField" for="yield-modal-commission">
+            <input id="yield-modal-commission" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+            <span class="floatingField__label">Комиссия</span>
+          </label>
+          <label class="floatingField" for="yield-modal-redemption-price">
+            <input id="yield-modal-redemption-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="1000" placeholder=" " />
+            <span class="floatingField__label">Цена погашения</span>
+          </label>
+        </div>
+
+        <div class="modal__footer">
+          <button id="yield-save" class="btn" type="button">Сохранить</button>
         </div>
       </div>
     </div>
