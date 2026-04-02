@@ -718,6 +718,10 @@ select.input{
   background: rgba(0,122,255,0.10);
   color: var(--text);
 }
+
+.iconBtn svg{
+  display: block;
+}
 [data-action="remove"].iconBtn:hover,
 [data-buy-action="remove"].iconBtn:hover{
   background: rgba(255, 59, 48, 0.14);
@@ -1314,12 +1318,13 @@ select.input{
   place-items: center;
   background: rgba(0,0,0,0.25);
   backdrop-filter: blur(8px);
+  will-change: opacity, visibility;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition:
-    opacity 0.22s ease,
-    visibility 0.22s ease;
+    opacity 0.2s ease,
+    visibility 0.2s ease;
 }
 .modalOverlay[hidden]{
   display: none !important;
@@ -1340,9 +1345,10 @@ select.input{
   color: var(--text);
   opacity: 0;
   transform: translateY(10px) scale(0.98);
+  will-change: transform, opacity;
   transition:
-    opacity 0.22s cubic-bezier(0.25, 0.1, 0.25, 1),
-    transform 0.22s cubic-bezier(0.25, 0.1, 0.25, 1);
+    opacity 0.2s cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 .modalOverlay.is-open .modal{
   opacity: 1;

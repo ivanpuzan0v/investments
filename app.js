@@ -931,6 +931,51 @@ function renderCalculators() {
   syncStaticTableEmptyStates();
 }
 
+/**
+ * Мягкая анимация изменения layout (в т.ч. высоты) при перерисовке виджетов.
+ * Реализация в стиле FLIP: измеряем до/после и делаем короткую инверсию transform.
+ * @returns {Map<HTMLElement, {top:number,height:number}>}
+ */
+function captureVisibleWidgetLayout() {
+  const widgets = Array.from(document.querySelectorAll('.tabPanel:not([hidden]) .widget')).filter((el) => el instanceof HTMLElement);
+  const snap = new Map();
+  widgets.forEach((el) => {
+    const r = el.getBoundingClientRect();
+    snap.set(el, { top: r.top, height: r.height });
+  });
+  return snap;
+}
+
+function animateVisibleWidgetLayout(snap) {
+  if (!snap || !(snap instanceof Map) || snap.size === 0) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      snap.forEach((old, el) => {
+        if (!el || !el.isConnected) return;
+        const r = el.getBoundingClientRect();
+        const newTop = r.top;
+        const newHeight = r.height;
+        if (!Number.isFinite(old.top) || !Number.isFinite(old.height) || newHeight <= 0) return;
+
+        const deltaY = old.top - newTop;
+        const scaleY = old.height / newHeight;
+
+        // Слишком мелкие изменения не анимируем.
+        if (Math.abs(deltaY) < 1 && Math.abs(scaleY - 1) < 0.01) return;
+
+        // Мягкое "перелистывание" без изменения смысла.
+        el.animate(
+          [
+            { transformOrigin: 'top', transform: `translateY(${deltaY}px) scaleY(${scaleY})`, opacity: 0.985 },
+            { transformOrigin: 'top', transform: 'translateY(0px) scaleY(1)', opacity: 1 },
+          ],
+          { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }
+        );
+      });
+    });
+  });
+}
+
 function computeTotalInvestedFromBuys(buys) {
   return buys.reduce((sum, row) => {
     const items = parseBuyItems(row.items);
@@ -958,10 +1003,12 @@ let lastHoveredLegendItem = null;
 let lastHoveredPortfolioZone = null;
 
 function clearBarHover() {
-  if (lastHoveredBar) {
-    lastHoveredBar.classList.remove("chartHover--active");
-    lastHoveredBar = null;
-  }
+  // Сбрасываем подсветку сразу у всех столбцов (для сценариев: выделение месяца/нескольких столбцов).
+  document.querySelectorAll(".chartBar.chartHover--active").forEach((el) => {
+    if (!(el instanceof SVGElement)) return;
+    el.classList.remove("chartHover--active");
+  });
+  lastHoveredBar = null;
 }
 
 function clearSliceHover() {
@@ -1119,19 +1166,63 @@ function onBarChartPointerMove(e) {
   if (!(t instanceof Element)) return;
   const bar = t.closest(".chartBar");
   if (!bar || !(bar instanceof SVGElement)) {
-    const axisLabel = t.closest(".chartAxisLabel[data-axis-total]");
-    if (axisLabel instanceof SVGElement) {
+    const axisLabelTotal = t.closest(".chartAxisLabel[data-axis-total]");
+    const axisMonthLabel = t.closest(".chartAxisLabel[data-axis-month]");
+    if (axisMonthLabel instanceof SVGElement) {
       hideChartTooltip();
       clearBarHover();
+      clearChartTextHighlight();
       if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
-      const monthKey = axisLabel.getAttribute("data-axis-month") || "";
-      const total = parseNumber(axisLabel.getAttribute("data-axis-total"));
+
+      const monthKey = axisMonthLabel.getAttribute("data-axis-month") || "";
+      const totalFromAxis = axisLabelTotal ? parseNumber(axisLabelTotal.getAttribute("data-axis-total")) : NaN;
+      const total = Number.isFinite(totalFromAxis) ? totalFromAxis : Array.from(document.querySelectorAll(`.chartBar[data-bar-month="${monthKey}"]`)).reduce((sum, barEl) => {
+        if (!(barEl instanceof SVGElement)) return sum;
+        return sum + (Number(parseNumber(barEl.getAttribute("data-bar-amount"))) || 0);
+      }, 0);
+
+      // Выделяем все столбцы (все облигации) за этот месяц и обесцвечиваем остальные.
+      if (chartContent && monthKey) {
+        chartContent.classList.add("chartContent--dimOthers");
+        // Активируем все бары и подписи сумм в этом месяце.
+        document.querySelectorAll(`.chartBar[data-bar-month="${monthKey}"]`).forEach((el) => {
+          if (el instanceof SVGElement) el.classList.add("chartHover--active");
+        });
+        document.querySelectorAll(`.chartValueLabel[data-label-month="${monthKey}"]`).forEach((el) => {
+          if (el instanceof SVGTextElement) el.classList.add("chartValueLabel--active");
+        });
+        // Подсвечиваем сам месяц/год на оси.
+        document.querySelectorAll(`.chartAxisLabel[data-axis-month="${monthKey}"]`).forEach((el) => {
+          if (!(el instanceof SVGTextElement)) return;
+          el.classList.add("chartText--active");
+          el.setAttribute("fill", "#007AFF");
+          el.setAttribute("opacity", "0.98");
+        });
+      }
+
       const period = monthLabelFromKey(monthKey);
-      showChartTooltip("Сумма выплат", `${escapeHtml(period)} · ${escapeHtml(formatMoney(total))}`, e.clientX, e.clientY);
+
+      // Сводка по каждой облигации для этого месяца.
+      const bondAmounts = new Map();
+      document.querySelectorAll(`.chartBar[data-bar-month="${monthKey}"]`).forEach((barEl) => {
+        if (!(barEl instanceof SVGElement)) return;
+        const bond = barEl.getAttribute("data-bar-bond") || "";
+        const amt = parseNumber(barEl.getAttribute("data-bar-amount"));
+        if (!bond || !Number.isFinite(amt)) return;
+        bondAmounts.set(bond, (bondAmounts.get(bond) || 0) + amt);
+      });
+      const bondLines = Array.from(bondAmounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([bond, amt]) => `${escapeHtml(bond)}: ${escapeHtml(formatMoney(amt))}`);
+      const title = `${escapeHtml(period)} • ${escapeHtml(formatMoney(total))}`;
+      const meta = bondLines.length ? `${bondLines.join("<br/>")}` : "—";
+
+      showChartTooltip(title, meta, e.clientX, e.clientY);
       return;
     }
     hideChartTooltip();
     clearBarHover();
+    clearChartTextHighlight();
     if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
     return;
   }
@@ -1599,8 +1690,9 @@ function renderChart(chartData) {
     lines.push(
       `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${monthKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 22}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="8.5">${monthLabel.month}</text>`
     );
+    // Годовая метка тоже должна ловить hover, иначе пользователь не сможет получить выделение при наведении на текст под месяцем.
     lines.push(
-      `<text class="chartAxisLabel" data-axis-month="${monthKey}" data-default-fill="currentColor" data-default-opacity="0.62" pointer-events="none" x="${labelX}" y="${H - 11}" text-anchor="middle" fill="currentColor" opacity="0.62" font-size="8">${monthLabel.year}</text>`
+      `<text class="chartAxisLabel" data-axis-month="${monthKey}" data-default-fill="currentColor" data-default-opacity="0.62" x="${labelX}" y="${H - 11}" text-anchor="middle" fill="currentColor" opacity="0.62" font-size="8">${monthLabel.year}</text>`
     );
   });
 
@@ -1861,6 +1953,7 @@ function bindPortfolioMoneyInput(input, storageKey) {
 }
 
 function renderAll() {
+  const layoutSnap = captureVisibleWidgetLayout();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const buys = sortBuyRowsByDate(readRows(buysTbody)).rows.filter(isBuyRowComplete);
   const holdings = sanitizeHoldingRows(readRows(holdingsTbody));
@@ -1869,6 +1962,7 @@ function renderAll() {
   renderChart(payoutSeries);
   renderSummary(payoutSeries, buys, holdings);
   renderCalculators();
+  animateVisibleWidgetLayout(layoutSnap);
 }
 
 function persistAndRender() {
@@ -1965,21 +2059,25 @@ function copyBuyRow(tr) {
   if (tr.hasAttribute("data-empty-state")) return;
 
   const dateInput = tr.querySelector('[data-field="date"]');
-  const itemsInput = tr.querySelector('[data-field="items"]');
-  if (!dateInput || !itemsInput) return;
+  if (!dateInput) return;
 
-  clearTableEmptyState(buysTbody);
+  // Открываем модалку в режиме "создать новую покупку",
+  // но с данными из выбранной строки (чтобы пользователь мог изменить только дату).
+  buyModalEditingTr = null;
+  if (buyModalTitle) buyModalTitle.textContent = BUY_MODAL_TITLE_NEW;
 
-  const node = buyTpl.content.cloneNode(true);
-  const newTr = node.querySelector("tr");
-  const newDateInput = newTr?.querySelector('[data-field="date"]');
-  const newItemsInput = newTr?.querySelector('[data-field="items"]');
+  if (buyDateInput) buyDateInput.value = normalizeYMD(dateInput?.value || "") || "";
+  buyModalItems = buyRowItemsToModalState(tr);
+  renderBuyModalItems();
+  setBuyModalOpen(true);
 
-  if (newDateInput) newDateInput.value = dateInput.value || "";
-  if (newItemsInput) newItemsInput.value = itemsInput.value || "[]";
-
-  buysTbody.appendChild(node);
-  syncBuySummaries();
+  if (buyDateInput) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        buyDateInput.focus();
+      });
+    });
+  }
 
 }
 
