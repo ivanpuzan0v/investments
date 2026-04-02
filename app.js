@@ -1661,7 +1661,7 @@ function renderSummary(chartData, buys, holdings) {
   let monthlyYieldPct = NaN;
   let annualYieldPct = NaN;
 
-  const selectedYearForYield = chartYearSelect?.value || "";
+  const selectedYearForYield = chartYearSelect?.value || ensureChartYearOptions(chartData) || "";
   if (totalInvested > 0) {
     if (selectedYearForYield) {
       // `totalNet` в этой сводке суммируется по всему горизонту.
