@@ -8,6 +8,7 @@ const PORTFOLIO_CHART_YEAR_KEY = "invest_planner_portfolio_chart_year_v1";
 const PORTFOLIO_START_DATE_KEY = "invest_planner_portfolio_start_date_v1";
 const PORTFOLIO_START_VALUE_KEY = "invest_planner_portfolio_start_value_v1";
 const PORTFOLIO_MONTHLY_TOPUP_KEY = "invest_planner_portfolio_monthly_topup_v1";
+const PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY = "invest_planner_portfolio_monthly_topup_end_date_v1";
 const ACCRUED_CALC_KEY = "invest_planner_accrued_calc_v1";
 const YIELD_CALC_KEY = "invest_planner_yield_calc_v1";
 
@@ -39,6 +40,7 @@ const portfolioMonthlyTopupInput = document.getElementById("portfolio-monthly-to
 const portfolioStartTotalEl = document.getElementById("portfolio-start-total");
 const portfolioCouponTotalEl = document.getElementById("portfolio-coupon-total");
 const portfolioEndTotalEl = document.getElementById("portfolio-end-total");
+const portfolioMonthlyTopupEndDateInput = document.getElementById("portfolio-monthly-topup-end-date");
 const summaryTbody = document.getElementById("summary-tbody");
 const totalGrossEl = document.getElementById("total-gross");
 const totalTaxEl = document.getElementById("total-tax");
@@ -55,6 +57,8 @@ const monthClearBtn = document.getElementById("month-clear");
 const monthDoneBtn = document.getElementById("month-done");
 const monthStartDateInput = document.getElementById("month-start-date");
 const monthEndDateInput = document.getElementById("month-end-date");
+const monthModeAllBtn = document.getElementById("month-mode-all");
+const monthModeCustomBtn = document.getElementById("month-mode-custom");
 const buyModalOverlay = document.getElementById("buy-modal-overlay");
 const buyModalClose = document.getElementById("buy-modal-close");
 const buyModalTitle = document.getElementById("buy-modal-title");
@@ -89,10 +93,9 @@ const yieldModalMaturityDateInput = document.getElementById("yield-modal-maturit
 const yieldModalPaymentsPerYearInput = document.getElementById("yield-modal-payments-per-year");
 const yieldModalPaidCouponsCountInput = document.getElementById("yield-modal-paid-coupons-count");
 const yieldModalNominalInput = document.getElementById("yield-modal-nominal");
-const yieldModalCleanPricePercentInput = document.getElementById("yield-modal-clean-price-percent");
+const yieldModalPurchasePriceInput = document.getElementById("yield-modal-purchase-price");
 const yieldModalCouponRateInput = document.getElementById("yield-modal-coupon-rate");
 const yieldModalAccruedIncomeInput = document.getElementById("yield-modal-accrued-income");
-const yieldModalCommissionInput = document.getElementById("yield-modal-commission");
 const yieldModalRedemptionPriceInput = document.getElementById("yield-modal-redemption-price");
 const yieldSaveBtn = document.getElementById("yield-save");
 
@@ -205,7 +208,7 @@ function syncStaticTableEmptyStates() {
   if (yieldTbody && !yieldTbody.querySelector("tr")) {
     renderTableEmptyState(
       yieldTbody,
-      5,
+      9,
       "Сравнение доходности пока пусто",
       "Добавьте облигацию через модальное окно, чтобы сравнить купонную доходность и доходность к погашению."
     );
@@ -724,10 +727,9 @@ function getDefaultYieldCalcRow() {
     paymentsPerYear: 4,
     paidCouponsCount: 0,
     nominal: 1000,
-    cleanPricePercent: 95,
+    purchasePrice: 950,
     couponRate: 12,
     accruedIncome: 0,
-    commission: 0,
     redemptionPrice: 1000,
   };
 }
@@ -811,10 +813,9 @@ function computeYieldMetrics(row) {
   const paymentsPerYearRaw = parseNumber(row.paymentsPerYear);
   const paidCouponsCountRaw = parseNumber(row.paidCouponsCount);
   const nominal = parseNumber(row.nominal);
-  const cleanPricePercent = parseNumber(row.cleanPricePercent);
+  const purchasePrice = parseNumber(row.purchasePrice);
   const couponRate = parseNumber(row.couponRate);
   const accruedIncome = parseNumber(row.accruedIncome);
-  const commission = parseNumber(row.commission);
   const redemptionPrice = parseNumber(row.redemptionPrice);
   const purchaseTs = ymdToUTCms(purchaseDate || "");
   const maturityTs = ymdToUTCms(maturityDate || "");
@@ -828,11 +829,8 @@ function computeYieldMetrics(row) {
     ? Math.max(0, Math.round(paidCouponsCountRaw))
     : NaN;
 
-  const cleanPrice = Number.isFinite(nominal) && Number.isFinite(cleanPricePercent)
-    ? nominal * (cleanPricePercent / 100)
-    : NaN;
-  const dirtyPrice = Number.isFinite(cleanPrice) && Number.isFinite(accruedIncome) && Number.isFinite(commission)
-    ? cleanPrice + accruedIncome + commission
+  const investedAmount = Number.isFinite(purchasePrice) && Number.isFinite(accruedIncome)
+    ? purchasePrice + accruedIncome
     : NaN;
   const annualCouponIncome = Number.isFinite(nominal) && Number.isFinite(couponRate)
     ? nominal * (couponRate / 100)
@@ -846,31 +844,42 @@ function computeYieldMetrics(row) {
   const remainingCouponPayments = Number.isFinite(plannedCouponPayments) && Number.isFinite(paidCouponsCount)
     ? Math.max(0, plannedCouponPayments - paidCouponsCount)
     : NaN;
-  const totalCouponIncomeToMaturity = Number.isFinite(couponPerPayment) && Number.isFinite(remainingCouponPayments)
+  const couponIncome = Number.isFinite(couponPerPayment) && Number.isFinite(remainingCouponPayments)
     ? couponPerPayment * remainingCouponPayments
     : NaN;
-  const currentYield = Number.isFinite(annualCouponIncome) && Number.isFinite(dirtyPrice) && dirtyPrice > 0
-    ? (annualCouponIncome / dirtyPrice) * 100
+  const redemptionIncome = Number.isFinite(redemptionPrice) && Number.isFinite(investedAmount)
+    ? redemptionPrice - investedAmount
     : NaN;
-  const ytmApprox = Number.isFinite(totalCouponIncomeToMaturity)
-    && Number.isFinite(redemptionPrice)
-    && Number.isFinite(dirtyPrice)
+  const totalIncome = Number.isFinite(couponIncome) && Number.isFinite(redemptionIncome)
+    ? couponIncome + redemptionIncome
+    : NaN;
+  const investmentReturn = Number.isFinite(totalIncome) && Number.isFinite(investedAmount) && investedAmount > 0
+    ? (totalIncome / investedAmount) * 100
+    : NaN;
+  const currentYield = Number.isFinite(annualCouponIncome) && Number.isFinite(investedAmount) && investedAmount > 0
+    ? (annualCouponIncome / investedAmount) * 100
+    : NaN;
+  const ytmApprox = Number.isFinite(totalIncome)
+    && Number.isFinite(investedAmount)
     && Number.isFinite(holdingYears)
     && holdingYears > 0
-    && dirtyPrice > 0
-    ? ((totalCouponIncomeToMaturity + (redemptionPrice - dirtyPrice)) / dirtyPrice / holdingYears) * 100
+    && investedAmount > 0
+    ? (totalIncome / investedAmount / holdingYears) * 100
     : NaN;
 
   return {
     annualCouponIncome,
-    dirtyPrice,
+    investedAmount,
     currentYield,
     ytmApprox,
     paymentsPerYear,
     paidCouponsCount,
     holdingYears,
     remainingCouponPayments,
-    totalCouponIncomeToMaturity,
+    couponIncome,
+    redemptionIncome,
+    totalIncome,
+    investmentReturn,
   };
 }
 
@@ -890,10 +899,20 @@ function renderYieldCalculator() {
     const metrics = computeYieldMetrics(row);
     const bondNameEl = tr.querySelector('[data-display-for="bondName"]');
     const paymentsPerYearEl = tr.querySelector('[data-display-for="paymentsPerYear"]');
+    const couponIncomeEl = tr.querySelector('[data-display-for="couponIncome"]');
+    const redemptionIncomeEl = tr.querySelector('[data-display-for="redemptionIncome"]');
+    const totalIncomeEl = tr.querySelector('[data-display-for="totalIncome"]');
+    const investmentReturnEl = tr.querySelector('[data-display-for="investmentReturn"]');
+    const holdingYearsEl = tr.querySelector('[data-display-for="holdingYears"]');
     const currentYieldEl = tr.querySelector('[data-display-for="currentYield"]');
     const ytmEl = tr.querySelector('[data-display-for="ytm"]');
     if (bondNameEl) bondNameEl.textContent = String(row.bondName || "").trim() || "—";
     if (paymentsPerYearEl) paymentsPerYearEl.textContent = Number.isFinite(metrics.paymentsPerYear) ? String(metrics.paymentsPerYear) : "—";
+    if (couponIncomeEl) couponIncomeEl.textContent = Number.isFinite(metrics.couponIncome) ? formatMoney(metrics.couponIncome) : "—";
+    if (redemptionIncomeEl) redemptionIncomeEl.textContent = Number.isFinite(metrics.redemptionIncome) ? formatMoney(metrics.redemptionIncome) : "—";
+    if (totalIncomeEl) totalIncomeEl.textContent = Number.isFinite(metrics.totalIncome) ? formatMoney(metrics.totalIncome) : "—";
+    if (investmentReturnEl) investmentReturnEl.textContent = formatPercentValue(metrics.investmentReturn);
+    if (holdingYearsEl) holdingYearsEl.textContent = Number.isFinite(metrics.holdingYears) ? `${formatAmount(metrics.holdingYears)} г.` : "—";
     if (currentYieldEl) currentYieldEl.textContent = formatPercentValue(metrics.currentYield);
     if (ytmEl) ytmEl.textContent = formatPercentValue(metrics.ytmApprox);
     if (Number.isFinite(metrics.ytmApprox)) hasCalculatedRow = true;
@@ -1585,7 +1604,6 @@ function renderSummary(chartData, buys, holdings) {
   const netChartData = toNetChartData(chartData, taxRate);
   const seriesByBond = netChartData?.seriesByBond || [];
   const totalInvested = computeTotalInvestedFromBuys(buys);
-  const payoutMonthsCount = (netChartData?.allDates || []).length;
   renderYearPies(chartData);
 
   const quantityMap = new Map();
@@ -1641,9 +1659,37 @@ function renderSummary(chartData, buys, holdings) {
 
   let monthlyYieldPct = NaN;
   let annualYieldPct = NaN;
-  if (totalInvested > 0 && payoutMonthsCount > 0) {
-    monthlyYieldPct = (totalNet / payoutMonthsCount / totalInvested) * 100;
-    annualYieldPct = (totalNet / totalInvested) * (12 / payoutMonthsCount) * 100;
+
+  const selectedYearForYield = chartYearSelect?.value || "";
+  if (totalInvested > 0) {
+    if (selectedYearForYield) {
+      // `totalNet` в этой сводке суммируется по всему горизонту.
+      // Для "среднегодовой" доходности используем выплаты только в выбранном календарном году,
+      // чтобы не "пересчитывать" их ещё раз коэффициентом 12/число_месяцев_с_выплатами.
+      const netForYear = seriesByBond.reduce((sum, series) => {
+        const pts = series.points || [];
+        return sum + pts.reduce((s, point) => {
+          const y = getYearFromMonthKey(point.monthKey);
+          return y && y === selectedYearForYield ? s + (Number(point.amount) || 0) : s;
+        }, 0);
+      }, 0);
+
+      annualYieldPct = (netForYear / totalInvested) * 100;
+      monthlyYieldPct = annualYieldPct / 12;
+    } else {
+      // fallback: annualize over time span of monthKeys
+      const allDates = Array.isArray(chartData?.allDates) ? chartData.allDates : [];
+      const first = allDates[0];
+      const last = allDates[allDates.length - 1];
+      const m1 = first ? /^(\d{4})-(\d{2})$/.exec(first) : null;
+      const m2 = last ? /^(\d{4})-(\d{2})$/.exec(last) : null;
+      const monthsSpan = m1 && m2
+        ? (Number(m2[1]) - Number(m1[1])) * 12 + (Number(m2[2]) - Number(m1[2])) + 1
+        : 12;
+
+      annualYieldPct = (totalNet / totalInvested) * (12 / Math.max(1, monthsSpan)) * 100;
+      monthlyYieldPct = annualYieldPct / 12;
+    }
   }
   if (yieldAnnualEl) yieldAnnualEl.textContent = formatPercentValue(annualYieldPct);
   if (yieldMonthlyEl) yieldMonthlyEl.textContent = formatPercentValue(monthlyYieldPct);
@@ -1680,6 +1726,8 @@ function renderPortfolioChart(chartData) {
   const startValue = Number.isFinite(startValueRaw) && startValueRaw >= 0 ? startValueRaw : 0;
   const monthlyTopupRaw = parseNumber(portfolioMonthlyTopupInput?.value || "");
   const monthlyTopup = Number.isFinite(monthlyTopupRaw) && monthlyTopupRaw >= 0 ? monthlyTopupRaw : 0;
+  const monthlyTopupEndYMD = normalizeYMD(portfolioMonthlyTopupEndDateInput?.value || "") || "";
+  const monthlyTopupEndTs = monthlyTopupEndYMD ? ymdToUTCms(monthlyTopupEndYMD) : null;
   const allDates = chartData?.allDates || [];
   const seriesByBond = chartData?.seriesByBond || [];
   const defaultEndMonthKey = addMonthsToMonthKey(startMonthKey, 11);
@@ -1702,7 +1750,8 @@ function renderPortfolioChart(chartData) {
 
   let cumulative = startValue;
   const allPoints = monthRange.map((monthKey) => {
-    cumulative += monthlyTopup + (couponByMonth.get(monthKey) || 0);
+    const topupForMonth = !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? monthlyTopup : 0;
+    cumulative += topupForMonth + (couponByMonth.get(monthKey) || 0);
     return { monthKey, value: cumulative };
   });
   const selectedYear = ensurePortfolioChartYearOptions(allPoints);
@@ -1834,6 +1883,7 @@ function loadAll() {
     const portfolioStartDateRaw = localStorage.getItem(PORTFOLIO_START_DATE_KEY);
     const portfolioStartValueRaw = localStorage.getItem(PORTFOLIO_START_VALUE_KEY);
     const portfolioMonthlyTopupRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
+    const portfolioMonthlyTopupEndDateRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
     const bonds = bondsRaw ? sanitizeBondRows(JSON.parse(bondsRaw)) : defaultBondRows();
     const buys = buysRaw ? sortBuyRowsByDate(normalizeBuyRowsForUI(JSON.parse(buysRaw))).rows : defaultBuyRows();
     const holdings = holdingsRaw ? normalizeHoldingRowsForUI(JSON.parse(holdingsRaw)) : defaultHoldingRows();
@@ -1846,6 +1896,9 @@ function loadAll() {
     if (portfolioStartDateInput) portfolioStartDateInput.value = normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD();
     setPortfolioMoneyInputValue(portfolioStartValueInput, String(parseNumber(portfolioStartValueRaw) || 0));
     setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, String(parseNumber(portfolioMonthlyTopupRaw) || 0));
+    if (portfolioMonthlyTopupEndDateInput) {
+      portfolioMonthlyTopupEndDateInput.value = normalizeYMD(portfolioMonthlyTopupEndDateRaw || "") || "";
+    }
     loadCalculatorStates();
   } catch {
     writeRows(bondsTbody, bondTpl, defaultBondRows());
@@ -1853,6 +1906,7 @@ function loadAll() {
     writeRows(holdingsTbody, holdingTpl, defaultHoldingRows());
     if (taxRateInput) taxRateInput.value = "13";
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
+    if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
     setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, "0");
     loadCalculatorStates();
@@ -1889,20 +1943,43 @@ bindRowDelete(bondsTbody);
 bindRowDelete(buysTbody);
 bindRowDelete(holdingsTbody);
 
+function copyBuyRow(tr) {
+  if (!tr || tr.parentElement !== buysTbody) return;
+  if (tr.hasAttribute("data-empty-state")) return;
+
+  const dateInput = tr.querySelector('[data-field="date"]');
+  const itemsInput = tr.querySelector('[data-field="items"]');
+  if (!dateInput || !itemsInput) return;
+
+  clearTableEmptyState(buysTbody);
+
+  const node = buyTpl.content.cloneNode(true);
+  const newTr = node.querySelector("tr");
+  const newDateInput = newTr?.querySelector('[data-field="date"]');
+  const newItemsInput = newTr?.querySelector('[data-field="items"]');
+
+  if (newDateInput) newDateInput.value = dateInput.value || "";
+  if (newItemsInput) newItemsInput.value = itemsInput.value || "[]";
+
+  buysTbody.appendChild(node);
+  syncBuySummaries();
+
+}
+
 if (yieldTbody) {
   yieldTbody.addEventListener("click", (e) => {
-    const editBtn = e.target.closest('[data-action="edit-yield"]');
-    if (editBtn) {
-      const tr = editBtn.closest("tr");
-      if (tr && tr.parentElement === yieldTbody) openYieldModalForEdit(tr);
+    const btn = e.target.closest('[data-action="remove"]');
+    if (btn) {
+      const tr = btn.closest("tr");
+      if (tr) tr.remove();
+      saveYieldCalcState();
+      renderYieldCalculator();
       return;
     }
-    const btn = e.target.closest('[data-action="remove"]');
-    if (!btn) return;
-    const tr = btn.closest("tr");
-    if (tr) tr.remove();
-    saveYieldCalcState();
-    renderYieldCalculator();
+    const tr = e.target.closest("tr");
+    if (!tr || tr.parentElement !== yieldTbody) return;
+    if (tr.hasAttribute("data-empty-state")) return;
+    openYieldModalForEdit(tr);
   });
 }
 
@@ -1948,6 +2025,13 @@ document.querySelectorAll("th[data-sort-table][data-sort-field]").forEach((th) =
 
 buysTbody.addEventListener("click", (e) => {
   if (e.target.closest('[data-action="remove"]')) return;
+  const copyBtn = e.target.closest('[data-action="copy"]');
+  if (copyBtn) {
+    const tr = copyBtn.closest("tr");
+    if (!tr || tr.parentElement !== buysTbody) return;
+    copyBuyRow(tr);
+    return;
+  }
   if (e.target.closest("input[data-field]")) return;
   const tr = e.target.closest("tr");
   if (!tr || tr.parentElement !== buysTbody) return;
@@ -1966,6 +2050,7 @@ resetAllBtn.addEventListener("click", () => {
   localStorage.removeItem(PORTFOLIO_START_DATE_KEY);
   localStorage.removeItem(PORTFOLIO_START_VALUE_KEY);
   localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
+  localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
   localStorage.removeItem(ACCRUED_CALC_KEY);
   localStorage.removeItem(YIELD_CALC_KEY);
   if (taxRateInput) taxRateInput.value = "13";
@@ -1998,6 +2083,16 @@ if (portfolioChartYearSelect) {
 if (portfolioStartDateInput) {
   portfolioStartDateInput.addEventListener("input", () => {
     localStorage.setItem(PORTFOLIO_START_DATE_KEY, normalizeYMD(portfolioStartDateInput.value || "") || "");
+    renderAll();
+  });
+}
+
+if (portfolioMonthlyTopupEndDateInput) {
+  portfolioMonthlyTopupEndDateInput.addEventListener("input", () => {
+    localStorage.setItem(
+      PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY,
+      normalizeYMD(portfolioMonthlyTopupEndDateInput.value || "") || ""
+    );
     renderAll();
   });
 }
@@ -2132,6 +2227,11 @@ function syncDateSummaries() {
 
 function syncBuySummaries() {
   Array.from(buysTbody.querySelectorAll("tr")).forEach((tr) => {
+    const dateHidden = tr.querySelector('[data-field="date"]');
+    const dateDisplay = tr.querySelector('[data-display-for="date"]');
+    if (dateHidden && dateDisplay) {
+      dateDisplay.textContent = formatDateRuMonthWords(dateHidden.value);
+    }
     const itemsHidden = tr.querySelector('[data-field="items"]');
     const itemsDisplay = tr.querySelector('[data-display-for="items"]');
     const totalDisplay = tr.querySelector('[data-display-for="total"]');
@@ -2160,7 +2260,39 @@ function syncBuySummaries() {
   });
 }
 
+function formatDateRuMonthWords(ymd) {
+  const normalized = normalizeYMD(ymd || "");
+  if (!normalized) return "—";
+  const [y, m, d] = normalized.split("-").map((s) => Number(s));
+  // Форматируем через UTC, чтобы не зависеть от локального таймзоны при парсинге.
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(dt);
+}
+
 let monthPickerState = null; // { tr, months:number[], startDate:string, endDate:string }
+
+function isAllMonthsSelected(months) {
+  return Array.isArray(months) && months.length === 12;
+}
+
+function updateMonthModeUI() {
+  if (!monthPickerState) return;
+  const all = isAllMonthsSelected(monthPickerState.months);
+  if (monthModeAllBtn) monthModeAllBtn.classList.toggle("is-active", all);
+  if (monthModeCustomBtn) monthModeCustomBtn.classList.toggle("is-active", !all);
+}
+
+function setMonthMonths(months) {
+  if (!monthPickerState) return;
+  monthPickerState.months = Array.from(new Set(months)).filter((m) => Number.isInteger(m) && m >= 1 && m <= 12).sort((a, b) => a - b);
+  renderMonthGrid(monthPickerState.months);
+  updateMonthModeUI();
+}
 
 function openModalOverlay(overlay) {
   if (!overlay) return;
@@ -2214,6 +2346,7 @@ function renderMonthGrid(months) {
         monthPickerState.months = [...current, i].sort((a, b) => a - b);
       }
       renderMonthGrid(monthPickerState.months);
+      updateMonthModeUI();
     });
     monthGrid.appendChild(btn);
   }
@@ -2249,14 +2382,32 @@ bondsTbody.addEventListener("click", (e) => {
   if (monthStartDateInput) monthStartDateInput.value = monthPickerState.startDate;
   if (monthEndDateInput) monthEndDateInput.value = monthPickerState.endDate;
   renderMonthGrid(monthPickerState.months);
+  updateMonthModeUI();
   setMonthModalOpen(true);
 });
 
 if (monthClearBtn) {
   monthClearBtn.addEventListener("click", () => {
     if (!monthPickerState) return;
-    monthPickerState.months = [];
-    renderMonthGrid(monthPickerState.months);
+    setMonthMonths([]);
+  });
+}
+
+if (monthModeAllBtn) {
+  monthModeAllBtn.addEventListener("click", () => {
+    if (!monthPickerState) return;
+    setMonthMonths([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+}
+
+if (monthModeCustomBtn) {
+  monthModeCustomBtn.addEventListener("click", () => {
+    if (!monthPickerState) return;
+    if (isAllMonthsSelected(monthPickerState.months)) {
+      setMonthMonths([]);
+    } else {
+      updateMonthModeUI();
+    }
   });
 }
 
@@ -2306,10 +2457,9 @@ function fillYieldModalForm(row = {}) {
   setInputNumericValue(yieldModalPaymentsPerYearInput, row.paymentsPerYear, "4");
   setInputNumericValue(yieldModalPaidCouponsCountInput, row.paidCouponsCount, "0");
   setInputNumericValue(yieldModalNominalInput, row.nominal, "1000");
-  setInputNumericValue(yieldModalCleanPricePercentInput, row.cleanPricePercent, "95");
+  setInputNumericValue(yieldModalPurchasePriceInput, row.purchasePrice, "950");
   setInputNumericValue(yieldModalCouponRateInput, row.couponRate, "12");
   setInputNumericValue(yieldModalAccruedIncomeInput, row.accruedIncome, "0");
-  setInputNumericValue(yieldModalCommissionInput, row.commission, "0");
   setInputNumericValue(yieldModalRedemptionPriceInput, row.redemptionPrice, "1000");
 }
 
@@ -2321,10 +2471,9 @@ function getYieldModalRowData() {
     paymentsPerYear: String(Math.max(1, Math.round(parseNumber(yieldModalPaymentsPerYearInput?.value || "") || 0))),
     paidCouponsCount: String(Math.max(0, Math.round(parseNumber(yieldModalPaidCouponsCountInput?.value || "") || 0))),
     nominal: String(parseNumber(yieldModalNominalInput?.value || "") || 0),
-    cleanPricePercent: String(parseNumber(yieldModalCleanPricePercentInput?.value || "") || 0),
+    purchasePrice: String(parseNumber(yieldModalPurchasePriceInput?.value || "") || 0),
     couponRate: String(parseNumber(yieldModalCouponRateInput?.value || "") || 0),
     accruedIncome: String(parseNumber(yieldModalAccruedIncomeInput?.value || "") || 0),
-    commission: String(parseNumber(yieldModalCommissionInput?.value || "") || 0),
     redemptionPrice: String(parseNumber(yieldModalRedemptionPriceInput?.value || "") || 0),
   };
 }

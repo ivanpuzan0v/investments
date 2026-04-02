@@ -42,21 +42,32 @@
           </div>
 
           <div class="portfolioControls">
-            <label class="taxControl" for="portfolio-start-date">
-              <span>Дата старта</span>
-              <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input" type="date" />
-            </label>
-            <div class="taxControl portfolioTaxControl">
-              <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
-                <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                <span class="floatingField__label">Стартовая стоимость</span>
-              </label>
+            <div class="portfolioControls__group">
+              <div class="portfolioControls__groupTitle">Старт</div>
+              <div class="portfolioControls__groupFields">
+                <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
+                  <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+                  <span class="floatingField__label">Стартовая стоимость</span>
+                </label>
+                <label class="floatingField floatingField--portfolio" for="portfolio-start-date">
+                  <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
+                  <span class="floatingField__label">Дата старта</span>
+                </label>
+              </div>
             </div>
-            <div class="taxControl portfolioTaxControl">
-              <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
-                <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                <span class="floatingField__label">Ежемесячное пополнение</span>
-              </label>
+
+            <div class="portfolioControls__group">
+              <div class="portfolioControls__groupTitle">Пополнения</div>
+              <div class="portfolioControls__groupFields">
+                <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
+                  <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+                  <span class="floatingField__label">Ежемесячное пополнение</span>
+                </label>
+                <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup-end-date">
+                  <input id="portfolio-monthly-topup-end-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
+                  <span class="floatingField__label">До (включительно)</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -114,7 +125,7 @@
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="bond" scope="col">Облигация</th>
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="coupon" scope="col">Купон за 1 выплату</th>
                   <th data-sort-table="assets" data-sort-field="payoutPeriod" scope="col">Периодичность выплат</th>
-                  <th style="width: 56px;"></th>
+                  <th style="width: 96px;"></th>
                 </tr>
               </thead>
 
@@ -346,9 +357,14 @@
                 <tr>
                   <th scope="col">Облигация</th>
                   <th scope="col">Выплат в год</th>
+                  <th scope="col">Купонный доход</th>
+                  <th scope="col">Доход от погашения</th>
+                  <th scope="col">Итоговый доход</th>
+                  <th scope="col">Доход от вложений</th>
+                  <th scope="col">Срок вложений</th>
                   <th scope="col">Доходность купонная</th>
                   <th scope="col">Доходность к погашению</th>
-                  <th style="width: 96px;"></th>
+                  <th style="width: 56px;"></th>
                 </tr>
               </thead>
               <tbody id="yield-tbody"></tbody>
@@ -390,7 +406,8 @@
     <template id="txn-row-template">
       <tr>
         <td>
-          <input data-field="date" class="input" type="date" />
+          <input type="hidden" data-field="date" value="" />
+          <div class="buyTableDate" data-display-for="date">—</div>
         </td>
         <td>
           <input type="hidden" data-field="items" value="[]" />
@@ -400,9 +417,14 @@
           <div class="buySummary" data-display-for="total">0.00 ₽</div>
         </td>
         <td>
-          <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
-            ✕
-          </button>
+          <div class="buyRowActions">
+            <button type="button" class="iconBtn" data-action="copy" title="Скопировать покупку" aria-label="Скопировать покупку">
+              ⧉
+            </button>
+            <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
+              ✕
+            </button>
+          </div>
         </td>
       </tr>
     </template>
@@ -428,10 +450,9 @@
         <td>
           <input type="hidden" data-field="bondName" value="" />
           <input type="hidden" data-field="nominal" value="" />
-          <input type="hidden" data-field="cleanPricePercent" value="" />
+          <input type="hidden" data-field="purchasePrice" value="" />
           <input type="hidden" data-field="couponRate" value="" />
           <input type="hidden" data-field="accruedIncome" value="" />
-          <input type="hidden" data-field="commission" value="" />
           <input type="hidden" data-field="purchaseDate" value="" />
           <input type="hidden" data-field="maturityDate" value="" />
           <input type="hidden" data-field="paymentsPerYear" value="" />
@@ -443,6 +464,21 @@
           <div class="calcTableValue" data-display-for="paymentsPerYear">—</div>
         </td>
         <td>
+          <div class="calcTableValue" data-display-for="couponIncome">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="redemptionIncome">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="totalIncome">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="investmentReturn">—</div>
+        </td>
+        <td>
+          <div class="calcTableValue" data-display-for="holdingYears">—</div>
+        </td>
+        <td>
           <div class="calcTableValue" data-display-for="currentYield">—</div>
         </td>
         <td>
@@ -450,9 +486,6 @@
         </td>
         <td>
           <div class="calcTableActions">
-            <button type="button" class="iconBtn" data-action="edit-yield" title="Изменить строку" aria-label="Изменить строку">
-              ✎
-            </button>
             <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">
               ✕
             </button>
@@ -466,6 +499,10 @@
         <div class="modal__header">
           <div class="modal__title" id="month-modal-title">Выбор месяцев выплат</div>
           <button id="month-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="monthMode" aria-label="Режим выбора месяцев">
+          <button id="month-mode-all" type="button" class="btn btn--ghost monthModeBtn is-active">Весь год</button>
+          <button id="month-mode-custom" type="button" class="btn btn--ghost monthModeBtn">Отдельные месяцы</button>
         </div>
         <div id="month-grid" class="monthGrid" aria-label="Месяцы года"></div>
         <div class="modal__sectionTitle">Период выплат</div>
@@ -532,9 +569,9 @@
             <input id="yield-modal-nominal" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="1000" placeholder=" " />
             <span class="floatingField__label">Номинал</span>
           </label>
-          <label class="floatingField" for="yield-modal-clean-price-percent">
-            <input id="yield-modal-clean-price-percent" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="95" placeholder=" " />
-            <span class="floatingField__label">Чистая цена, % от номинала</span>
+          <label class="floatingField" for="yield-modal-purchase-price">
+            <input id="yield-modal-purchase-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="950" placeholder=" " />
+            <span class="floatingField__label">Цена покупки</span>
           </label>
           <label class="floatingField" for="yield-modal-coupon-rate">
             <input id="yield-modal-coupon-rate" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="12" placeholder=" " />
@@ -543,10 +580,6 @@
           <label class="floatingField" for="yield-modal-accrued-income">
             <input id="yield-modal-accrued-income" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
             <span class="floatingField__label">НКД при покупке</span>
-          </label>
-          <label class="floatingField" for="yield-modal-commission">
-            <input id="yield-modal-commission" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-            <span class="floatingField__label">Комиссия</span>
           </label>
           <label class="floatingField" for="yield-modal-redemption-price">
             <input id="yield-modal-redemption-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="1000" placeholder=" " />
