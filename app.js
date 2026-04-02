@@ -1223,6 +1223,8 @@ function onPortfolioChartPointerMove(e) {
   }
   const monthKey = zone.getAttribute("data-portfolio-month") || "";
   const value = parseNumber(zone.getAttribute("data-portfolio-value"));
+  const topup = parseNumber(zone.getAttribute("data-portfolio-topup"));
+  const coupon = parseNumber(zone.getAttribute("data-portfolio-coupon"));
   const x = parseNumber(zone.getAttribute("data-portfolio-x"));
   const y = parseNumber(zone.getAttribute("data-portfolio-y"));
   if (portfolioChartContent) {
@@ -1235,7 +1237,14 @@ function onPortfolioChartPointerMove(e) {
     }
   }
   const period = monthLabelFromKey(monthKey);
-  showChartTooltip("Стоимость портфеля", `${escapeHtml(period)} · ${escapeHtml(formatMoney(value))}`, e.clientX, e.clientY);
+  const topupStr = Number.isFinite(topup) ? formatMoney(topup) : "0.00 ₽";
+  const couponStr = Number.isFinite(coupon) ? formatMoney(coupon) : "0.00 ₽";
+  showChartTooltip(
+    "Стоимость портфеля",
+    `${escapeHtml(period)}<br/>Ежемесячные взносы: ${escapeHtml(topupStr)}<br/>Купоны: ${escapeHtml(couponStr)}<br/>Итого: ${escapeHtml(formatMoney(value))}`,
+    e.clientX,
+    e.clientY
+  );
 }
 
 function onPortfolioChartPointerLeave() {
@@ -1757,8 +1766,9 @@ function renderPortfolioChart(chartData) {
   let cumulative = startValue;
   const allPoints = monthRange.map((monthKey) => {
     const topupForMonth = !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? monthlyTopup : 0;
-    cumulative += topupForMonth + (couponByMonth.get(monthKey) || 0);
-    return { monthKey, value: cumulative };
+    const couponForMonth = couponByMonth.get(monthKey) || 0;
+    cumulative += topupForMonth + couponForMonth;
+    return { monthKey, value: cumulative, topup: topupForMonth, coupon: couponForMonth };
   });
   const selectedYear = ensurePortfolioChartYearOptions(allPoints);
   const points = selectedYear ? allPoints.filter((p) => getYearFromMonthKey(p.monthKey) === selectedYear) : allPoints;
@@ -1775,8 +1785,9 @@ function renderPortfolioChart(chartData) {
   }
 
   const firstPoint = points[0];
-  const firstPointMonthCoupon = couponByMonth.get(firstPoint.monthKey) || 0;
-  const periodStartValue = firstPoint.value - monthlyTopup - firstPointMonthCoupon;
+  const firstPointTopup = Number.isFinite(firstPoint.topup) ? firstPoint.topup : 0;
+  const firstPointMonthCoupon = Number.isFinite(firstPoint.coupon) ? firstPoint.coupon : (couponByMonth.get(firstPoint.monthKey) || 0);
+  const periodStartValue = firstPoint.value - firstPointTopup - firstPointMonthCoupon;
   const couponOnlyAdded = points.reduce((sum, point) => sum + (couponByMonth.get(point.monthKey) || 0), 0);
   const endValue = points[points.length - 1].value;
   portfolioStartTotalEl.textContent = formatMoney(periodStartValue);
@@ -1828,7 +1839,7 @@ function renderPortfolioChart(chartData) {
     const zoneWidth = points.length === 1 ? innerW : Math.max(12, xStep);
     const zoneX = points.length === 1 ? left : x - zoneWidth / 2;
     lines.push(
-      `<rect class="portfolioHoverZone" data-portfolio-month="${p.monthKey}" data-portfolio-value="${p.value}" data-portfolio-x="${x}" data-portfolio-y="${y}" x="${zoneX}" y="${top}" width="${zoneWidth}" height="${innerH}" fill="transparent"></rect>`
+      `<rect class="portfolioHoverZone" data-portfolio-month="${p.monthKey}" data-portfolio-value="${p.value}" data-portfolio-topup="${p.topup}" data-portfolio-coupon="${p.coupon}" data-portfolio-x="${x}" data-portfolio-y="${y}" x="${zoneX}" y="${top}" width="${zoneWidth}" height="${innerH}" fill="transparent"></rect>`
     );
   });
 
