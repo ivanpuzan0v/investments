@@ -60,6 +60,21 @@ const monthStartDateInput = document.getElementById("month-start-date");
 const monthEndDateInput = document.getElementById("month-end-date");
 const monthModeAllBtn = document.getElementById("month-mode-all");
 const monthModeCustomBtn = document.getElementById("month-mode-custom");
+
+const bondModalOverlay = document.getElementById("bond-modal-overlay");
+const bondModalClose = document.getElementById("bond-modal-close");
+const bondModalTitle = document.getElementById("bond-modal-title");
+const bondModalNameInput = document.getElementById("bond-modal-name");
+const bondModalCouponInput = document.getElementById("bond-modal-coupon");
+const bondModalOpenMonthPickerBtn = document.getElementById("bond-modal-open-month-picker");
+const bondModalPayoutMonthsInput = document.getElementById("bond-modal-payoutMonths");
+const bondModalPayoutMonthsSelect = document.getElementById("bond-modal-payoutMonths-select");
+const bondModalStartDateVisibleInput = document.getElementById("bond-modal-start-date");
+const bondModalEndDateVisibleInput = document.getElementById("bond-modal-end-date");
+const bondModalStartDateInput = document.getElementById("bond-modal-startDate");
+const bondModalEndDateInput = document.getElementById("bond-modal-endDate");
+const bondMonthPickerPanel = document.getElementById("bond-month-picker-panel");
+const bondModalSaveBtn = document.getElementById("bond-modal-save");
 const buyModalOverlay = document.getElementById("buy-modal-overlay");
 const buyModalClose = document.getElementById("buy-modal-close");
 const buyModalTitle = document.getElementById("buy-modal-title");
@@ -161,7 +176,20 @@ function writeRows(tbody, template, rows) {
           opt.selected = selected.includes(opt.value);
         });
       } else {
-        el.value = row[key];
+        const nextValue = String(row[key] ?? "");
+        if (el instanceof HTMLSelectElement && !el.multiple) {
+          // Если опция отсутствует, создаём её, чтобы значение не сбрасывалось в пустую строку.
+          if (nextValue) {
+            const hasOption = Array.from(el.options).some((o) => o.value === nextValue);
+            if (!hasOption) {
+              const opt = document.createElement("option");
+              opt.value = nextValue;
+              opt.textContent = nextValue;
+              el.appendChild(opt);
+            }
+          }
+        }
+        el.value = nextValue;
       }
     });
     tbody.appendChild(node);
@@ -1953,6 +1981,7 @@ function bindPortfolioMoneyInput(input, storageKey) {
 }
 
 function renderAll() {
+  syncHoldingsBondSelects();
   const layoutSnap = captureVisibleWidgetLayout();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const buys = sortBuyRowsByDate(readRows(buysTbody)).rows.filter(isBuyRowComplete);
@@ -2045,14 +2074,100 @@ function bindRowDelete(tbody) {
     scheduleSave();
   });
 
-  tbody.addEventListener("input", (e) => {
+  const onFieldChange = (e) => {
     if (e.target && e.target.matches("[data-field]")) scheduleSave();
-  });
+  };
+  tbody.addEventListener("input", onFieldChange);
+  // Для `select` событие `input` может не срабатывать, поэтому добавляем `change`.
+  tbody.addEventListener("change", onFieldChange);
 }
 
 bindRowDelete(bondsTbody);
 bindRowDelete(buysTbody);
 bindRowDelete(holdingsTbody);
+
+function normalizeBondKey(bond) {
+  return String(bond || "").trim().toUpperCase();
+}
+
+function propagateBondRename(oldBondKey, newBondKey) {
+  const oldKey = normalizeBondKey(oldBondKey);
+  const nextKey = normalizeBondKey(newBondKey);
+  if (!oldKey || !nextKey) return;
+  if (oldKey === nextKey) return;
+
+  // Обновляем текущий портфель
+  if (holdingsTbody) {
+    Array.from(holdingsTbody.querySelectorAll('[data-field="bond"]')).forEach((el) => {
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement)) return;
+      if (normalizeBondKey(el.value) !== oldKey) return;
+      if (el instanceof HTMLSelectElement) {
+        const hasOption = Array.from(el.options).some((o) => o.value === nextKey);
+        if (!hasOption) {
+          const opt = document.createElement("option");
+          opt.value = nextKey;
+          opt.textContent = nextKey;
+          el.appendChild(opt);
+        }
+      }
+      el.value = nextKey;
+    });
+  }
+
+  // Обновляем покупки (bond внутри items JSON)
+  if (buysTbody) {
+    Array.from(buysTbody.querySelectorAll('input[data-field="items"]')).forEach((itemsInput) => {
+      if (!(itemsInput instanceof HTMLInputElement)) return;
+      const tr = itemsInput.closest("tr");
+      if (!tr) return;
+
+      const items = parseBuyItems(itemsInput.value);
+      if (!items.length) return;
+
+      let changed = false;
+      const nextItems = items.map((i) => {
+        if (normalizeBondKey(i.bond) !== oldKey) return i;
+        changed = true;
+        return { ...i, bond: nextKey };
+      });
+
+      if (!changed) return;
+      itemsInput.value = JSON.stringify(nextItems);
+    });
+
+    // Обновляем отображение chips/totals в таблице покупок
+    syncBuySummaries();
+  }
+}
+
+// Чтобы переименование облигации в виджете "Облигации" отображалось везде,
+// на лету обновляем ссылки в покупках и текущем портфеле.
+bondsTbody?.addEventListener("focusin", (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement)) return;
+  if (!el.matches('input[data-field="bond"]')) return;
+  el.dataset.prevBondKey = normalizeBondKey(el.value);
+});
+
+bondsTbody?.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement)) return;
+  if (!el.matches('input[data-field="bond"]')) return;
+
+  const prevKey = normalizeBondKey(el.dataset.prevBondKey || "");
+  const nextKey = normalizeBondKey(el.value);
+
+  // Не распространяем пустое имя, чтобы не потерять связь при частичном вводе.
+  if (!nextKey) return;
+  if (!prevKey) {
+    el.dataset.prevBondKey = nextKey;
+    return;
+  }
+  if (prevKey === nextKey) return;
+
+  propagateBondRename(prevKey, nextKey);
+  el.dataset.prevBondKey = nextKey;
+});
 
 function copyBuyRow(tr) {
   if (!tr || tr.parentElement !== buysTbody) return;
@@ -2099,11 +2214,20 @@ if (yieldTbody) {
 }
 
 addBondBtn.addEventListener("click", () => {
-  clearTableEmptyState(bondsTbody);
-  bondsTbody.appendChild(bondTpl.content.cloneNode(true));
-  syncDateSummaries();
-  scheduleSave();
+  openBondModalNew();
 });
+
+if (bondsTbody) {
+  bondsTbody.addEventListener("click", (e) => {
+    const btnRemove = e.target.closest('[data-action="remove"]');
+    if (btnRemove) return;
+    if (e.target.closest('[data-action="open-month-picker"]')) return;
+    const tr = e.target.closest("tr");
+    if (!tr || tr.parentElement !== bondsTbody) return;
+    if (tr.hasAttribute("data-empty-state")) return;
+    openBondModalForEdit(tr);
+  });
+}
 
 addBuyBtn.addEventListener("click", () => {
   openBuyModal();
@@ -2111,8 +2235,11 @@ addBuyBtn.addEventListener("click", () => {
 
 if (addHoldingBtn) {
   addHoldingBtn.addEventListener("click", () => {
+    const availableBonds = getAvailableBondNames();
+    if (!availableBonds.length) return;
     clearTableEmptyState(holdingsTbody);
     holdingsTbody.appendChild(holdingTpl.content.cloneNode(true));
+    syncHoldingsBondSelects();
     scheduleSave();
   });
 }
@@ -2319,9 +2446,15 @@ loadAll();
 function syncDateSummaries() {
   Array.from(bondsTbody.querySelectorAll("tr")).forEach((tr) => {
     const monthsHidden = tr.querySelector('[data-field="payoutMonths"]');
+    const bondHidden = tr.querySelector('[data-field="bond"]');
+    const couponHidden = tr.querySelector('[data-field="coupon"]');
     const startHidden = tr.querySelector('[data-field="startDate"]');
     const endHidden = tr.querySelector('[data-field="endDate"]');
     const monthsBtn = tr.querySelector('[data-action="open-month-picker"]');
+    const bondDisplay = tr.querySelector('[data-display-for="bond"]');
+    const couponDisplay = tr.querySelector('[data-display-for="coupon"]');
+    const payoutCountDisplay = tr.querySelector('[data-display-for="payoutCount"]');
+    const payoutRangeDisplay = tr.querySelector('[data-display-for="payoutRange"]');
     if (!monthsHidden || !startHidden || !endHidden) return;
 
     const selected = parseMonthList(monthsHidden.value);
@@ -2330,6 +2463,34 @@ function syncDateSummaries() {
     startHidden.value = normalizeYMD(startHidden.value) || "";
     endHidden.value = normalizeYMD(endHidden.value) || "";
 
+    if (bondDisplay && bondHidden) {
+      const v = String(bondHidden.value || "").trim();
+      bondDisplay.textContent = v ? normalizeBondKey(v) : "—";
+    }
+
+    if (couponDisplay && couponHidden) {
+      const coupon = parseNumber(couponHidden.value);
+      couponDisplay.textContent = Number.isFinite(coupon) ? formatMoney(coupon) : "—";
+    }
+
+    if (payoutCountDisplay) {
+      const n = normalized.length;
+      if (!n) {
+        payoutCountDisplay.textContent = "—";
+      } else {
+        const text = n === 1 ? "выплата" : n >= 2 && n <= 4 ? "выплаты" : "выплат";
+        payoutCountDisplay.textContent = `${n} ${text} в год`;
+      }
+    }
+
+    if (payoutRangeDisplay) {
+      if (startHidden.value && endHidden.value) {
+        payoutRangeDisplay.textContent = `${formatMonthYearFromYMD(startHidden.value)} - ${formatMonthYearFromYMD(endHidden.value)}`;
+      } else {
+        payoutRangeDisplay.textContent = "—";
+      }
+    }
+
     if (monthsBtn) {
       if (normalized.length && startHidden.value && endHidden.value) {
         monthsBtn.textContent = `${formatMonthYearFromYMD(startHidden.value)} - ${formatMonthYearFromYMD(endHidden.value)}`;
@@ -2337,6 +2498,40 @@ function syncDateSummaries() {
         monthsBtn.textContent = "Выбрать даты";
       }
     }
+  });
+}
+
+function syncHoldingsBondSelects() {
+  if (!holdingsTbody) return;
+  const availableBonds = getAvailableBondNames();
+  const availableSet = new Set(availableBonds);
+
+  Array.from(holdingsTbody.querySelectorAll('select[data-field="bond"]')).forEach((select) => {
+    const current = normalizeBondKey(select.value);
+
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "—";
+    select.appendChild(placeholder);
+
+    for (const bond of availableBonds) {
+      const opt = document.createElement("option");
+      opt.value = bond;
+      opt.textContent = bond;
+      select.appendChild(opt);
+    }
+
+    // Если у пользователя уже сохранена облигация, которой сейчас нет в таблице,
+    // добавляем её как fallback, чтобы не потерять сохранённое значение.
+    if (current && !availableSet.has(current)) {
+      const opt = document.createElement("option");
+      opt.value = current;
+      opt.textContent = current;
+      select.appendChild(opt);
+    }
+
+    select.value = current && (availableSet.has(current) || Array.from(select.options).some((o) => o.value === current)) ? current : "";
   });
 }
 
@@ -2389,7 +2584,18 @@ function formatDateRuMonthWords(ymd) {
   }).format(dt);
 }
 
-let monthPickerState = null; // { tr, months:number[], startDate:string, endDate:string }
+// Поддерживает выбор месяцев и для строк таблицы, и для модальных форм
+// monthPickerState = {
+//   payoutMonthsInput: HTMLInputElement,
+//   startDateInput: HTMLInputElement,
+//   endDateInput: HTMLInputElement,
+//   months:number[],
+//   startDate:string,
+//   endDate:string,
+//   persistOnDone:boolean,
+//   onApply: (() => void) | null
+// }
+let monthPickerState = null;
 
 function isAllMonthsSelected(months) {
   return Array.isArray(months) && months.length === 12;
@@ -2407,6 +2613,9 @@ function setMonthMonths(months) {
   monthPickerState.months = Array.from(new Set(months)).filter((m) => Number.isInteger(m) && m >= 1 && m <= 12).sort((a, b) => a - b);
   renderMonthGrid(monthPickerState.months);
   updateMonthModeUI();
+  // Сразу сохраняем выбранные месяцы в hidden-поле модалки облигации.
+  applyMonthsToRow();
+  if (typeof monthPickerState.onApply === "function") monthPickerState.onApply();
 }
 
 function openModalOverlay(overlay) {
@@ -2448,34 +2657,37 @@ function renderMonthGrid(months) {
   if (!monthGrid) return;
   monthGrid.innerHTML = "";
   for (let i = 1; i <= 12; i += 1) {
+    const m = i;
+    const isActive = Array.isArray(months) && months.includes(m);
+
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = `monthBtn${months.includes(i) ? " is-active" : ""}`;
-    btn.textContent = MONTHS_RU[i - 1];
+    btn.className = `monthBtn${isActive ? " is-active" : ""}`;
+    btn.textContent = MONTHS_RU[m - 1];
+
     btn.addEventListener("click", () => {
       if (!monthPickerState) return;
       const current = monthPickerState.months;
-      if (current.includes(i)) {
-        monthPickerState.months = current.filter((m) => m !== i);
+      if (current.includes(m)) {
+        monthPickerState.months = current.filter((x) => x !== m);
       } else {
-        monthPickerState.months = [...current, i].sort((a, b) => a - b);
+        monthPickerState.months = [...current, m].sort((a, b) => a - b);
       }
       renderMonthGrid(monthPickerState.months);
       updateMonthModeUI();
+      applyMonthsToRow();
+      if (typeof monthPickerState.onApply === "function") monthPickerState.onApply();
     });
+
     monthGrid.appendChild(btn);
   }
 }
 
 function applyMonthsToRow() {
   if (!monthPickerState) return;
-  const hidden = monthPickerState.tr.querySelector('[data-field="payoutMonths"]');
-  const startHidden = monthPickerState.tr.querySelector('[data-field="startDate"]');
-  const endHidden = monthPickerState.tr.querySelector('[data-field="endDate"]');
-  if (!hidden || !startHidden || !endHidden) return;
-  hidden.value = Array.from(new Set(monthPickerState.months)).sort((a, b) => a - b).join(",");
-  startHidden.value = normalizeYMD(monthPickerState.startDate) || "";
-  endHidden.value = normalizeYMD(monthPickerState.endDate) || "";
+  const { payoutMonthsInput } = monthPickerState;
+  if (!payoutMonthsInput) return;
+  payoutMonthsInput.value = Array.from(new Set(monthPickerState.months)).sort((a, b) => a - b).join(",");
 }
 
 bondsTbody.addEventListener("click", (e) => {
@@ -2484,18 +2696,16 @@ bondsTbody.addEventListener("click", (e) => {
   const tr = btn.closest("tr");
   if (!tr) return;
   const hidden = tr.querySelector('[data-field="payoutMonths"]');
-  const startHidden = tr.querySelector('[data-field="startDate"]');
-  const endHidden = tr.querySelector('[data-field="endDate"]');
-  if (!hidden || !startHidden || !endHidden) return;
+  if (!hidden) return;
 
   monthPickerState = {
-    tr,
+    payoutMonthsInput: hidden,
     months: parseMonthList(hidden.value),
-    startDate: startHidden.value || "",
-    endDate: endHidden.value || "",
+    persistOnDone: true,
+    onApply: () => {
+      syncDateSummaries();
+    },
   };
-  if (monthStartDateInput) monthStartDateInput.value = monthPickerState.startDate;
-  if (monthEndDateInput) monthEndDateInput.value = monthPickerState.endDate;
   renderMonthGrid(monthPickerState.months);
   updateMonthModeUI();
   setMonthModalOpen(true);
@@ -2529,11 +2739,9 @@ if (monthModeCustomBtn) {
 if (monthDoneBtn) {
   monthDoneBtn.addEventListener("click", () => {
     if (monthPickerState) {
-      monthPickerState.startDate = monthStartDateInput?.value || "";
-      monthPickerState.endDate = monthEndDateInput?.value || "";
       applyMonthsToRow();
-      syncDateSummaries();
-      persistAndRender();
+      if (typeof monthPickerState.onApply === "function") monthPickerState.onApply();
+      if (monthPickerState.persistOnDone) persistAndRender();
     }
     monthPickerState = null;
     setMonthModalOpen(false);
@@ -2553,6 +2761,223 @@ if (monthModalOverlay) {
       monthPickerState = null;
       setMonthModalOpen(false);
     }
+  });
+}
+
+let bondModalEditingTr = null;
+let bondModalPrevBondKey = "";
+
+function setBondModalOpen(open) {
+  if (!bondModalOverlay) return;
+  if (open) openModalOverlay(bondModalOverlay);
+  else closeModalOverlay(bondModalOverlay);
+}
+
+function syncBondModalMonthSummary() {
+  // Не используется: месяц-выбор теперь сделан через multi-select.
+  return;
+}
+
+function initBondMonthPickerState() {
+  if (!bondModalPayoutMonthsInput) return;
+
+  let months = parseMonthList(bondModalPayoutMonthsInput.value);
+
+  monthPickerState = {
+    payoutMonthsInput: bondModalPayoutMonthsInput,
+    months,
+    persistOnDone: false,
+    onApply: null,
+  };
+
+  if (bondMonthPickerPanel) bondMonthPickerPanel.removeAttribute("hidden");
+  renderMonthGrid(monthPickerState.months);
+  updateMonthModeUI();
+  applyMonthsToRow(); // фиксируем нормализованное значение в hidden
+}
+
+function syncBondModalPayoutMonthsInputFromSelect() {
+  if (!bondModalPayoutMonthsInput || !bondModalPayoutMonthsSelect) return;
+
+  const months = Array.from(bondModalPayoutMonthsSelect.selectedOptions)
+    .map((o) => Number(o.value))
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12);
+
+  const uniqueSorted = Array.from(new Set(months)).sort((a, b) => a - b);
+  bondModalPayoutMonthsInput.value = uniqueSorted.join(",");
+}
+
+function openBondMonthPicker() {
+  if (!bondModalPayoutMonthsInput || !bondMonthPickerPanel) return;
+
+  if (!monthPickerState) initBondMonthPickerState();
+
+  // Показываем/прячем панель выбора внутри bond-модалки.
+  const nextOpen = bondMonthPickerPanel.hasAttribute("hidden");
+  if (nextOpen) bondMonthPickerPanel.removeAttribute("hidden");
+  else bondMonthPickerPanel.setAttribute("hidden", "");
+
+  // На всякий случай обновляем UI по текущим выбранным месяцам.
+  renderMonthGrid(monthPickerState.months);
+  updateMonthModeUI();
+  syncBondModalMonthSummary();
+}
+
+function fillBondModalFormFromRow(tr) {
+  if (!tr) return;
+  const bondInput = tr.querySelector('input[data-field="bond"]');
+  const couponInput = tr.querySelector('input[data-field="coupon"]');
+  const payoutMonthsInput = tr.querySelector('input[data-field="payoutMonths"]');
+  const startHidden = tr.querySelector('input[data-field="startDate"]');
+  const endHidden = tr.querySelector('input[data-field="endDate"]');
+  if (!bondInput || !couponInput || !payoutMonthsInput || !startHidden || !endHidden) return;
+
+  bondModalNameInput.value = String(bondInput.value || "").trim();
+  // Нормализуем купон на случай значений вида "36,5" из старых сохранений.
+  setInputNumericValue(bondModalCouponInput, parseNumber(couponInput.value), "");
+  bondModalPayoutMonthsInput.value = String(payoutMonthsInput.value || "").trim();
+  if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = String(startHidden.value || "").trim();
+  if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = String(endHidden.value || "").trim();
+  if (bondModalStartDateInput) bondModalStartDateInput.value = String(startHidden.value || "").trim();
+  if (bondModalEndDateInput) bondModalEndDateInput.value = String(endHidden.value || "").trim();
+
+  syncBondModalMonthSummary();
+}
+
+function getBondModalRowData() {
+  const bond = normalizeBondKey(bondModalNameInput?.value || "");
+  const coupon = parseNumber(bondModalCouponInput?.value || "");
+  const payoutMonths = String(bondModalPayoutMonthsInput?.value || "").trim();
+  const startDate = normalizeYMD(bondModalStartDateVisibleInput?.value || "") || "";
+  const endDate = normalizeYMD(bondModalEndDateVisibleInput?.value || "") || "";
+
+  return { bond, coupon, payoutMonths, startDate, endDate };
+}
+
+function openBondModalNew() {
+  bondModalEditingTr = null;
+  bondModalPrevBondKey = "";
+  if (bondModalTitle) bondModalTitle.textContent = "Новая облигация";
+  if (bondModalNameInput) bondModalNameInput.value = "";
+  if (bondModalCouponInput) bondModalCouponInput.value = "";
+  if (bondModalPayoutMonthsInput) bondModalPayoutMonthsInput.value = "";
+  if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = "";
+  if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = "";
+  if (bondModalStartDateInput) bondModalStartDateInput.value = "";
+  if (bondModalEndDateInput) bondModalEndDateInput.value = "";
+  initBondMonthPickerState();
+  setBondModalOpen(true);
+  if (bondModalNameInput) {
+    requestAnimationFrame(() => requestAnimationFrame(() => bondModalNameInput.focus()));
+  }
+}
+
+function openBondModalForEdit(tr) {
+  if (!tr || tr.closest("tbody") !== bondsTbody) return;
+  bondModalEditingTr = tr;
+  const bondInput = tr.querySelector('input[data-field="bond"]');
+  bondModalPrevBondKey = normalizeBondKey(bondInput?.value || "");
+  if (bondModalTitle) bondModalTitle.textContent = "Редактирование облигации";
+  fillBondModalFormFromRow(tr);
+  initBondMonthPickerState();
+  setBondModalOpen(true);
+  if (bondModalNameInput) {
+    requestAnimationFrame(() => requestAnimationFrame(() => bondModalNameInput.focus()));
+  }
+}
+
+function closeBondModal() {
+  bondModalEditingTr = null;
+  bondModalPrevBondKey = "";
+  monthPickerState = null;
+  if (bondMonthPickerPanel) bondMonthPickerPanel.setAttribute("hidden", "");
+  setBondModalOpen(false);
+}
+
+if (bondModalClose) {
+  bondModalClose.addEventListener("click", () => closeBondModal());
+}
+
+if (bondModalOverlay) {
+  bondModalOverlay.addEventListener("click", (e) => {
+    if (e.target === bondModalOverlay) closeBondModal();
+  });
+}
+
+if (bondModalOpenMonthPickerBtn) {
+  bondModalOpenMonthPickerBtn.addEventListener("click", () => {
+    // старый UI не используется после перехода на multi-select
+    initBondMonthPickerState();
+  });
+}
+
+// select[multiple] больше не используется; синхронизация идёт через клики по чипам.
+
+if (bondModalSaveBtn) {
+  bondModalSaveBtn.addEventListener("click", () => {
+    if (!bondModalNameInput || !bondModalCouponInput) return;
+    const row = getBondModalRowData();
+    if (!row.bond || !Number.isFinite(row.coupon) || row.coupon <= 0) return;
+
+    const months = parseMonthList(row.payoutMonths);
+    if (!months.length) return;
+    if (!row.startDate || !row.endDate) return;
+    const startTs = ymdToUTCms(row.startDate);
+    const endTs = ymdToUTCms(row.endDate);
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs) || endTs < startTs) return;
+
+    if (bondModalEditingTr) {
+      const tr = bondModalEditingTr;
+      const bondInput = tr.querySelector('input[data-field="bond"]');
+      const couponInput = tr.querySelector('input[data-field="coupon"]');
+      const payoutMonthsHidden = tr.querySelector('input[data-field="payoutMonths"]');
+      const startHidden = tr.querySelector('input[data-field="startDate"]');
+      const endHidden = tr.querySelector('input[data-field="endDate"]');
+      if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden) return;
+
+      const newKey = normalizeBondKey(row.bond);
+      const oldKey = bondModalPrevBondKey;
+
+      bondInput.value = row.bond;
+      couponInput.value = String(row.coupon);
+      payoutMonthsHidden.value = months.join(",");
+      startHidden.value = row.startDate;
+      endHidden.value = row.endDate;
+
+      syncDateSummaries();
+
+      if (oldKey && newKey && oldKey !== newKey) {
+        propagateBondRename(oldKey, newKey);
+      }
+
+      persistAndRender();
+      closeBondModal();
+      return;
+    }
+
+    // create new row
+    clearTableEmptyState(bondsTbody);
+    const node = bondTpl.content.cloneNode(true);
+    const tr = node.querySelector("tr");
+    if (!tr) return;
+
+    const bondInput = tr.querySelector('input[data-field="bond"]');
+    const couponInput = tr.querySelector('input[data-field="coupon"]');
+    const payoutMonthsHidden = tr.querySelector('input[data-field="payoutMonths"]');
+    const startHidden = tr.querySelector('input[data-field="startDate"]');
+    const endHidden = tr.querySelector('input[data-field="endDate"]');
+    if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden) return;
+
+    bondInput.value = row.bond;
+    couponInput.value = String(row.coupon);
+    payoutMonthsHidden.value = months.join(",");
+    startHidden.value = row.startDate;
+    endHidden.value = row.endDate;
+
+    bondsTbody.appendChild(node);
+    syncDateSummaries();
+    persistAndRender();
+    closeBondModal();
   });
 }
 
@@ -2927,6 +3352,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (buyModalOverlay && !buyModalOverlay.hidden) {
     closeBuyModal();
+    e.preventDefault();
+    return;
+  }
+  if (bondModalOverlay && !bondModalOverlay.hidden) {
+    closeBondModal();
     e.preventDefault();
     return;
   }

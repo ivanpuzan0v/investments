@@ -135,7 +135,7 @@
             </table>
           </div>
           <div class="widget__footerActions">
-            <button id="add-asset-row" class="btn" type="button">Добавить</button>
+          <button id="add-asset-row" class="btn" type="button">Добавить</button>
           </div>
         </div>
 
@@ -382,17 +382,20 @@
     <template id="asset-row-template">
       <tr>
         <td>
-          <input data-field="bond" class="input" placeholder="SU26238RMFS4" autocomplete="off" />
+          <input type="hidden" data-field="bond" value="" />
+          <div class="bondTableName" data-display-for="bond">—</div>
         </td>
         <td>
-          <input data-field="coupon" class="input input--num" inputmode="decimal" placeholder="36.50" />
+          <input type="hidden" data-field="coupon" value="" />
+          <div class="bondTableValue" data-display-for="coupon">—</div>
         </td>
         <td>
           <input type="hidden" data-field="payoutMonths" value="" />
           <input type="hidden" data-field="startDate" value="" />
           <input type="hidden" data-field="endDate" value="" />
-          <div class="dateCell">
-            <button type="button" class="dateBtn" data-action="open-month-picker">Выбрать даты</button>
+          <div class="bondPeriodText">
+            <div class="bondPeriodText__count" data-display-for="payoutCount">—</div>
+            <div class="bondPeriodText__range" data-display-for="payoutRange">—</div>
           </div>
         </td>
         <td>
@@ -435,7 +438,9 @@
     <template id="holding-row-template">
       <tr>
         <td>
-          <input data-field="bond" class="input" placeholder="SU26238RMFS4" autocomplete="off" />
+          <select data-field="bond" class="input bondSelect" aria-label="Облигация">
+            <option value="">—</option>
+          </select>
         </td>
         <td>
           <input data-field="quantity" class="input input--num" inputmode="numeric" pattern="[0-9]*" placeholder="10" />
@@ -497,25 +502,62 @@
       </tr>
     </template>
 
-    <div id="month-modal-overlay" class="modalOverlay" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="month-modal-title">
+    <div id="bond-modal-overlay" class="modalOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bond-modal-title">
         <div class="modal__header">
-          <div class="modal__title" id="month-modal-title">Выбор месяцев выплат</div>
-          <button id="month-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+          <div class="modal__title" id="bond-modal-title">Новая облигация</div>
+          <button id="bond-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
         </div>
-        <div class="monthMode" aria-label="Режим выбора месяцев">
-          <button id="month-mode-all" type="button" class="btn btn--ghost monthModeBtn is-active">Весь год</button>
-          <button id="month-mode-custom" type="button" class="btn btn--ghost monthModeBtn">Отдельные месяцы</button>
+
+        <div class="calculatorForm">
+          <label class="floatingField" for="bond-modal-name">
+            <input id="bond-modal-name" class="input floatingField__input" type="text" placeholder=" " autocomplete="off" />
+            <span class="floatingField__label">Название или тикер</span>
+          </label>
+
+          <label class="floatingField" for="bond-modal-coupon">
+            <input id="bond-modal-coupon" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
+            <span class="floatingField__label">Купон за 1 выплату</span>
+          </label>
         </div>
-        <div id="month-grid" class="monthGrid" aria-label="Месяцы года"></div>
+
         <div class="modal__sectionTitle">Период выплат</div>
-        <div class="periodWrap">
-          <input id="month-start-date" class="input" type="date" />
-          <input id="month-end-date" class="input" type="date" />
+        <div class="bondPeriodRow">
+          <div class="bondPeriodDatesRow">
+            <label class="floatingField floatingField--portfolio" for="bond-modal-start-date">
+              <input
+                id="bond-modal-start-date"
+                class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                type="date"
+                placeholder=" "
+              />
+              <span class="floatingField__label">Начало выплат</span>
+            </label>
+            <label class="floatingField floatingField--portfolio" for="bond-modal-end-date">
+              <input
+                id="bond-modal-end-date"
+                class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                type="date"
+                placeholder=" "
+              />
+              <span class="floatingField__label">Конец выплат</span>
+            </label>
+          </div>
+
+          <div id="bond-month-picker-panel" class="bondMonthPickerPanel">
+            <div class="bondMonthChips">
+              <div class="bondMonthChips__label">Месяцы выплат</div>
+              <div id="month-grid" class="monthGrid" aria-label="Месяцы года"></div>
+            </div>
+          </div>
         </div>
+
+        <input id="bond-modal-payoutMonths" type="hidden" value="" />
+        <input id="bond-modal-startDate" type="hidden" value="" />
+        <input id="bond-modal-endDate" type="hidden" value="" />
+
         <div class="modal__footer">
-          <button id="month-clear" class="btn btn--ghost" type="button">Очистить</button>
-          <button id="month-done" class="btn" type="button">Готово</button>
+          <button id="bond-modal-save" class="btn" type="button">Сохранить</button>
         </div>
       </div>
     </div>

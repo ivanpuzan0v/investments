@@ -457,6 +457,17 @@ select.input{
   text-align: left;
 }
 
+/* Убираем стрелочки у number-полей (Apple-like) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"]{
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .input[type="date"]{
   font-size: 12.5px;
   font-weight: 400;
@@ -609,6 +620,165 @@ select.input{
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* Таблица "Облигации": строки редактируются только через модалку */
+[data-widget="assets"] .table tbody tr{
+  cursor: pointer;
+}
+[data-widget="assets"] .table tbody td:last-child{
+  cursor: auto;
+}
+[data-widget="assets"] .bondPeriodText{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+[data-widget="assets"] .bondTableName,
+[data-widget="assets"] .bondTableValue{
+  white-space: nowrap;
+}
+[data-widget="assets"] .bondPeriodText__count,
+[data-widget="assets"] .bondPeriodText__range{
+  white-space: nowrap;
+  color: var(--text);
+}
+[data-widget="assets"] .bondPeriodText__range{
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+[data-widget="assets"] .table thead th,
+[data-widget="assets"] .table tbody td{
+  font-size: var(--fs-small);
+}
+
+.bondPeriodRow{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bondPeriodDatesRow{
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.bondPeriodDatesRow .floatingField--portfolio{
+  flex: 0 0 220px;
+  min-width: 220px;
+}
+.bondMonthPickerPanel{
+  margin-top: 0;
+  width: 100%;
+  flex: unset;
+  min-width: 0;
+}
+
+.bondMonthMultiField{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bondMonthMultiField__label{
+  font-size: var(--fs-small);
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.bondMonthChips{
+  width: 100%;
+}
+.bondMonthChips__label{
+  font-size: var(--fs-small);
+  font-weight: 650;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Месяцы в модалке облигации: серые chips по умолчанию, синие при выборе */
+.bondMonthChips .monthBtn{
+  background: rgba(242,242,247,0.95) !important;
+  color: rgba(20,20,24,0.92) !important;
+}
+.bondMonthChips .monthBtn.is-active{
+  background: #0071e3 !important;
+  color: #ffffff !important;
+}
+@media (prefers-color-scheme: dark){
+  .bondMonthChips .monthBtn{
+    background: rgba(60,60,67,0.28) !important;
+    color: var(--text) !important;
+  }
+  .bondMonthChips .monthBtn.is-active{
+    background: #0071e3 !important;
+    color: #ffffff !important;
+  }
+}
+
+.bondMonthMultiSelect{
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  overflow-y: auto;
+  padding: 9px 10px;
+  font-size: var(--fs-body);
+}
+
+.bondMonthDropdownField{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bondMonthDropdownField{
+  width: 100%;
+}
+.bondMonthDetails{
+  width: 100%;
+}
+.bondMonthDropdownSummary{
+  list-style: none;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 12px;
+  padding: 0 10px;
+  background: rgba(242,242,247,0.95);
+  color: #0071e3;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: var(--fs-ui);
+  line-height: 1;
+}
+.bondMonthDetails > summary::-webkit-details-marker{
+  display: none;
+}
+.bondMonthDropdownFooter{
+  padding-top: 10px;
+}
+
+.bondMonthCheckbox{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.18);
+  cursor: pointer;
+  user-select: none;
+}
+.bondMonthCheckbox input{
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: #007AFF;
+}
+.bondMonthCheckbox span{
+  white-space: nowrap;
 }
 
 .buyRowActions{
