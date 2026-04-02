@@ -49,6 +49,10 @@ const totalInvestedEl = document.getElementById("total-invested");
 const yieldAnnualEl = document.getElementById("yield-annual");
 const yieldAnnualLabelEl = document.getElementById("yield-annual-label");
 const yieldMonthlyEl = document.getElementById("yield-monthly");
+const yieldMonthlyLabelEl = document.getElementById("yield-monthly-label");
+const yieldMonthlyHelpBtn = document.getElementById("yield-monthly-help");
+const totalIncomeLabelEl = document.getElementById("total-income-label");
+const totalIncomeHelpBtn = document.getElementById("total-income-help");
 const taxRateInput = document.getElementById("tax-rate");
 const yearPiesEl = document.getElementById("year-pies");
 const monthModalOverlay = document.getElementById("month-modal-overlay");
@@ -1780,10 +1784,16 @@ function renderSummary(chartData, buys, holdings) {
   const totalNet = rows.reduce((sum, r) => sum + r.net, 0);
   const totalGrossEstimated = taxRate < 1 ? totalNet / (1 - taxRate) : totalNet;
   const totalTax = totalGrossEstimated - totalNet;
-
   totalGrossEl.textContent = formatMoney(totalGrossEstimated);
   totalTaxEl.textContent = formatMoney(totalTax);
   totalNetEl.textContent = formatMoney(totalNet);
+  if (totalIncomeLabelEl) totalIncomeLabelEl.textContent = "К выплате";
+  if (totalIncomeHelpBtn) {
+    totalIncomeHelpBtn.setAttribute(
+      "data-summary-help",
+      "К выплате: итоговая сумма купонов после налога. Формула: сумма всех net-выплат."
+    );
+  }
 
   if (totalInvestedEl) totalInvestedEl.textContent = formatMoney(totalInvested);
 
@@ -1825,6 +1835,15 @@ function renderSummary(chartData, buys, holdings) {
     yieldAnnualLabelEl.textContent = selectedYearForYield
       ? `Средняя доходность за ${selectedYearForYield} год`
       : "Средняя доходность за год";
+  }
+  if (yieldMonthlyLabelEl) {
+    yieldMonthlyLabelEl.textContent = "Среднемесячная доходность";
+  }
+  if (yieldMonthlyHelpBtn) {
+    yieldMonthlyHelpBtn.setAttribute(
+      "data-summary-help",
+      "Среднемесячная доходность по net-выплатам. Формула: (Всего выплат net / число месяцев с выплатами / Вложено) × 100%."
+    );
   }
   if (yieldAnnualEl) yieldAnnualEl.textContent = formatPercentValue(annualYieldPct);
   if (yieldMonthlyEl) yieldMonthlyEl.textContent = formatPercentValue(monthlyYieldPct);

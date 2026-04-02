@@ -218,7 +218,7 @@
               <div class="summaryTotals">
                 <div class="summaryStat">
                   <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат gross: сумма всех купонных выплат до удержания налога. Формула: выплаты net / (1 - ставка налога)." aria-label="Как считается показатель Всего выплат gross">?</button>
-                  <div class="summaryStat__label">Всего выплат (gross)</div>
+                  <div class="summaryStat__label">Всего выплат</div>
                   <div id="total-gross" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
@@ -227,8 +227,8 @@
                   <div id="total-tax" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="К выплате net: итоговая сумма купонов после налога. Формула: сумма всех net-выплат." aria-label="Как считается показатель К выплате net">?</button>
-                  <div class="summaryStat__label">К выплате (net)</div>
+                  <button id="total-income-help" type="button" class="summaryInfoBtn" data-summary-help="К выплате net: итоговая сумма купонов после налога. Формула: сумма всех net-выплат." aria-label="Как считается показатель К выплате">?</button>
+                  <div id="total-income-label" class="summaryStat__label">К выплате</div>
                   <div id="total-net" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
@@ -242,8 +242,8 @@
                   <div id="yield-annual" class="summaryStat__value">—</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по net-выплатам. Формула: (Всего выплат net / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность net">?</button>
-                  <div class="summaryStat__label">Среднемесячная доходность (net)</div>
+                  <button id="yield-monthly-help" type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по net-выплатам. Формула: (Всего выплат net / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность">?</button>
+                  <div id="yield-monthly-label" class="summaryStat__label">Среднемесячная доходность</div>
                   <div id="yield-monthly" class="summaryStat__value">—</div>
                 </div>
               </div>
