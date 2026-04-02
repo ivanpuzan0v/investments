@@ -167,7 +167,7 @@ body{
   display: inline-block;
   vertical-align: baseline;
   width: 100%;
-  max-width: 11.5rem;
+  max-width: none;
   margin: 0;
   padding: 0;
   border: none;
@@ -183,6 +183,7 @@ body{
   outline: none;
   cursor: pointer;
   accent-color: transparent;
+  white-space: nowrap;
 }
 [data-widget="plan"] .buyTableDate::-webkit-datetime-edit,
 [data-widget="plan"] .buyTableDate::-webkit-datetime-edit-fields-wrapper,
@@ -1235,6 +1236,12 @@ select.input{
 }
 [data-tab-panel="charts"] [data-widget="summary"] .tableWrap{
   margin-bottom: 12px;
+}
+[data-tab-panel="charts"] [data-widget="summary"] .table thead th{
+  font-size: var(--fs-small);
+}
+[data-tab-panel="charts"] [data-widget="summary"] .table tbody td{
+  font-size: var(--fs-ui);
 }
 @media (max-width: 980px){
   .summaryLayout{

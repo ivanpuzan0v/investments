@@ -47,6 +47,7 @@ const totalTaxEl = document.getElementById("total-tax");
 const totalNetEl = document.getElementById("total-net");
 const totalInvestedEl = document.getElementById("total-invested");
 const yieldAnnualEl = document.getElementById("yield-annual");
+const yieldAnnualLabelEl = document.getElementById("yield-annual-label");
 const yieldMonthlyEl = document.getElementById("yield-monthly");
 const taxRateInput = document.getElementById("tax-rate");
 const yearPiesEl = document.getElementById("year-pies");
@@ -1690,6 +1691,11 @@ function renderSummary(chartData, buys, holdings) {
       annualYieldPct = (totalNet / totalInvested) * (12 / Math.max(1, monthsSpan)) * 100;
       monthlyYieldPct = annualYieldPct / 12;
     }
+  }
+  if (yieldAnnualLabelEl) {
+    yieldAnnualLabelEl.textContent = selectedYearForYield
+      ? `Средняя доходность за ${selectedYearForYield} год`
+      : "Средняя доходность за год";
   }
   if (yieldAnnualEl) yieldAnnualEl.textContent = formatPercentValue(annualYieldPct);
   if (yieldMonthlyEl) yieldMonthlyEl.textContent = formatPercentValue(monthlyYieldPct);
