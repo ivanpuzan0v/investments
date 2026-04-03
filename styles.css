@@ -275,6 +275,109 @@ body{
   display: flex;
   gap: 10px;
   align-items: center;
+  /* Доп. зазор справа внутри карточки виджета до контролов (год, стратегия и т.д.) */
+  padding-inline-end: 6px;
+  box-sizing: border-box;
+}
+[data-widget="plan"] .planStrategyBar{
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: flex-start;
+}
+[data-widget="plan"] .planStrategyPanel{
+  border: 1px solid rgba(60,60,67,0.14);
+  background: rgba(255,255,255,0.18);
+  border-radius: 14px;
+  /* Сверху/слева/снизу 10px; справа больше — зазор от рамки до select */
+  padding: 10px 14px 10px 10px;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+}
+[data-widget="plan"] .planStrategyPanel .taxControl.planStrategyPanel__selectRow{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+[data-widget="plan"] .planStrategyPanel__selectRow > span{
+  text-align: left;
+}
+[data-widget="plan"] .planStrategyPanel__selectRow .taxControl__input{
+  width: max-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+[data-widget="plan"] .planStrategyPanel__actions{
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+[data-widget="plan"] .planStrategyPanel__actions .btn{
+  min-height: 36px;
+  width: max-content;
+  flex: 0 0 auto;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 8px 14px;
+  box-sizing: border-box;
+}
+@media (max-width: 520px){
+  [data-widget="plan"] .planStrategyPanel{
+    flex-direction: column;
+    align-items: stretch;
+    width: fit-content;
+    max-width: 100%;
+  }
+  [data-widget="plan"] .planStrategyPanel .taxControl.planStrategyPanel__selectRow{
+    width: 100%;
+    max-width: 100%;
+  }
+  [data-widget="plan"] .planStrategyPanel__actions{
+    flex-wrap: wrap;
+  }
+  [data-widget="plan"] .planStrategyPanel__actions .btn{
+    flex: 0 0 auto;
+  }
+}
+[data-widget="plan"] #buy-strategy-select{
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  field-sizing: content;
+  padding-left: 12px;
+}
+[data-widget="summary"] #summary-strategy-select{
+  min-width: 180px;
+}
+.btn.btn--danger{
+  background: rgba(242,242,247,0.95);
+  color: #ff3b30;
+}
+.btn.btn--danger:hover{
+  background: rgba(236,236,240,0.98);
+}
+.btn.btn--danger:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (prefers-color-scheme: dark){
+  [data-widget="plan"] .planStrategyPanel{
+    border-color: rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+  }
 }
 .widget__footerActions{
   margin-top: 14px;
@@ -449,8 +552,9 @@ body{
   box-shadow: none;
 }
 
+/* Запас под системную стрелку + отступ от неё до правой границы поля */
 select.input{
-  padding-right: 2.75rem;
+  padding-right: 3.5rem;
 }
 
 .input--num{
@@ -628,6 +732,8 @@ input[type="number"]{
 }
 [data-widget="assets"] .table tbody td:last-child{
   cursor: auto;
+  text-align: right;
+  padding-right: 8px;
 }
 [data-widget="assets"] .bondPeriodText{
   display: flex;
@@ -1229,7 +1335,7 @@ input[type="number"]{
   }
 }
 
-/* Выбор года на графике (padding справа — общее правило select.input) */
+/* Выбор года на графике (отступ справа у select — общее правило select.input) */
 #chart-year.taxControl__input{
   width: auto;
   min-width: 100px;
@@ -1464,6 +1570,10 @@ input[type="number"]{
 }
 [data-widget="holdings"] .table tbody td:last-child{
   text-align: right;
+}
+[data-widget="holdings"] .table thead th:first-child,
+[data-widget="holdings"] .table tbody td:first-child{
+  padding-inline-end: 18px;
 }
 @media (max-width: 1180px){
   [data-tab-panel="planning"]{

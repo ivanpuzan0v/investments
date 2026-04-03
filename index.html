@@ -124,6 +124,7 @@
                 <tr>
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="bond" scope="col">Облигация</th>
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="coupon" scope="col">Купон за 1 выплату</th>
+                  <th style="width: 130px;" data-sort-table="assets" data-sort-field="bondPrice" scope="col">Цена</th>
                   <th data-sort-table="assets" data-sort-field="payoutPeriod" scope="col">Периодичность выплат</th>
                   <th style="width: 96px;"></th>
                 </tr>
@@ -176,6 +177,19 @@
             </div>
           </div>
 
+          <div class="planStrategyBar">
+            <div class="planStrategyPanel">
+              <label class="taxControl planStrategyPanel__selectRow" for="buy-strategy-select">
+                <span>Стратегия</span>
+                <select id="buy-strategy-select" class="input taxControl__input" aria-label="Стратегия покупок облигаций"></select>
+              </label>
+              <div class="planStrategyPanel__actions">
+                <button id="buy-strategy-new-btn" class="btn btn--ghost" type="button">Создать</button>
+                <button id="buy-strategy-edit-btn" class="btn btn--ghost" type="button">Редактировать</button>
+              </div>
+            </div>
+          </div>
+
           <div class="tableWrap" role="region" aria-label="Таблица покупок облигаций">
             <table class="table">
               <thead>
@@ -209,6 +223,10 @@
               <label class="taxControl" for="tax-rate">
                 <span>Налог, %</span>
                 <input id="tax-rate" class="input input--num taxControl__input" type="number" min="0" max="100" step="0.1" value="13" />
+              </label>
+              <label class="taxControl" for="summary-strategy-select">
+                <span>Стратегия</span>
+                <select id="summary-strategy-select" class="input taxControl__input" aria-label="Стратегия для сводки и графиков"></select>
               </label>
             </div>
           </div>
@@ -390,6 +408,10 @@
           <div class="bondTableValue" data-display-for="coupon">—</div>
         </td>
         <td>
+          <input type="hidden" data-field="bondPrice" value="" />
+          <div class="bondTableValue" data-display-for="bondPrice">—</div>
+        </td>
+        <td>
           <input type="hidden" data-field="payoutMonths" value="" />
           <input type="hidden" data-field="startDate" value="" />
           <input type="hidden" data-field="endDate" value="" />
@@ -519,6 +541,11 @@
             <input id="bond-modal-coupon" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
             <span class="floatingField__label">Купон за 1 выплату</span>
           </label>
+
+          <label class="floatingField" for="bond-modal-bond-price">
+            <input id="bond-modal-bond-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
+            <span class="floatingField__label">Цена за 1 облигацию</span>
+          </label>
         </div>
 
         <div class="modal__sectionTitle">Период выплат</div>
@@ -578,6 +605,23 @@
 
         <div class="modal__footer">
           <button id="buy-save" class="btn" type="button">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="strategy-modal-overlay" class="modalOverlay" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="strategy-modal-title">
+        <div class="modal__header">
+          <div class="modal__title" id="strategy-modal-title">Новая стратегия</div>
+          <button id="strategy-modal-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <label class="floatingField" for="strategy-name-input">
+          <input id="strategy-name-input" class="input floatingField__input" type="text" placeholder=" " autocomplete="off" />
+          <span class="floatingField__label">Название стратегии</span>
+        </label>
+        <div class="modal__footer">
+          <button id="strategy-delete" class="btn btn--danger" type="button" hidden>Удалить стратегию</button>
+          <button id="strategy-save" class="btn" type="button">Сохранить</button>
         </div>
       </div>
     </div>

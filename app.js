@@ -9,6 +9,8 @@ const PORTFOLIO_START_DATE_KEY = "invest_planner_portfolio_start_date_v1";
 const PORTFOLIO_START_VALUE_KEY = "invest_planner_portfolio_start_value_v1";
 const PORTFOLIO_MONTHLY_TOPUP_KEY = "invest_planner_portfolio_monthly_topup_v1";
 const PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY = "invest_planner_portfolio_monthly_topup_end_date_v1";
+const BUY_STRATEGIES_KEY = "invest_planner_buy_strategies_v1";
+const ACTIVE_BUY_STRATEGY_KEY = "invest_planner_active_buy_strategy_v1";
 const ACCRUED_CALC_KEY = "invest_planner_accrued_calc_v1";
 const YIELD_CALC_KEY = "invest_planner_yield_calc_v1";
 
@@ -26,6 +28,10 @@ const addBondBtn = document.getElementById("add-asset-row");
 const addBuyBtn = document.getElementById("add-txn-row");
 const addHoldingBtn = document.getElementById("add-holding-row");
 const addYieldRowBtn = document.getElementById("add-yield-row");
+const buyStrategySelect = document.getElementById("buy-strategy-select");
+const summaryStrategySelect = document.getElementById("summary-strategy-select");
+const buyStrategyNewBtn = document.getElementById("buy-strategy-new-btn");
+const buyStrategyEditBtn = document.getElementById("buy-strategy-edit-btn");
 const resetAllBtn = document.getElementById("reset-all");
 const chartContent = document.getElementById("chart-content");
 const returnsChartSvg = document.getElementById("returns-chart");
@@ -70,6 +76,7 @@ const bondModalClose = document.getElementById("bond-modal-close");
 const bondModalTitle = document.getElementById("bond-modal-title");
 const bondModalNameInput = document.getElementById("bond-modal-name");
 const bondModalCouponInput = document.getElementById("bond-modal-coupon");
+const bondModalBondPriceInput = document.getElementById("bond-modal-bond-price");
 const bondModalOpenMonthPickerBtn = document.getElementById("bond-modal-open-month-picker");
 const bondModalPayoutMonthsInput = document.getElementById("bond-modal-payoutMonths");
 const bondModalPayoutMonthsSelect = document.getElementById("bond-modal-payoutMonths-select");
@@ -86,6 +93,12 @@ const buyDateInput = document.getElementById("buy-date");
 const buyItemsWrap = document.getElementById("buy-items");
 const buyAddItemBtn = document.getElementById("buy-add-item");
 const buySaveBtn = document.getElementById("buy-save");
+const strategyModalOverlay = document.getElementById("strategy-modal-overlay");
+const strategyModalClose = document.getElementById("strategy-modal-close");
+const strategyModalTitle = document.getElementById("strategy-modal-title");
+const strategyNameInput = document.getElementById("strategy-name-input");
+const strategyDeleteBtn = document.getElementById("strategy-delete");
+const strategySaveBtn = document.getElementById("strategy-save");
 const tabPortfolioBtn = document.getElementById("tab-portfolio");
 const tabPlanningBtn = document.getElementById("tab-planning");
 const tabChartsBtn = document.getElementById("tab-charts");
@@ -134,6 +147,14 @@ const tableSortState = {
   holdings: { field: "", dir: "asc" },
   summary: { field: "", dir: "asc" },
 };
+
+const DEFAULT_BUY_STRATEGY_ID = "strategy-default";
+/** @type {{id:string,name:string}[]} */
+let buyStrategies = [];
+/** @type {Map<string, any[]>} */
+let buyRowsByStrategyId = new Map();
+let activeBuyStrategyId = DEFAULT_BUY_STRATEGY_ID;
+let strategyModalEditingId = null;
 
 function readRows(tbody) {
   return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
@@ -217,7 +238,7 @@ function syncStaticTableEmptyStates() {
   if (bondsTbody && !bondsTbody.querySelector("tr")) {
     renderTableEmptyState(
       bondsTbody,
-      4,
+      5,
       "Список облигаций пока пуст",
       "Добавьте облигацию, укажите купон и выберите даты выплат, чтобы строить прогноз выплат."
     );
@@ -280,6 +301,7 @@ function getSortValue(row, field) {
     case "bond":
       return String(row.bond || "").trim().toUpperCase();
     case "coupon":
+    case "bondPrice":
     case "quantity": {
       const n = parseNumber(row[field]);
       return Number.isFinite(n) ? n : NaN;
@@ -410,6 +432,91 @@ function isBuyRowComplete(row) {
   const legacyPrice = parseNumber(row.price);
   const legacyQty = Math.round(parseNumber(row.quantity));
   return Boolean(dateYmd && legacyBond && Number.isFinite(legacyPrice) && Number.isFinite(legacyQty) && legacyQty > 0);
+}
+
+function getDefaultBuyStrategy() {
+  return { id: DEFAULT_BUY_STRATEGY_ID, name: "Основная" };
+}
+
+function normalizeStrategyName(name) {
+  return String(name || "").trim();
+}
+
+function createBuyStrategyId() {
+  return `strategy-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+}
+
+function getActiveStrategyBuysRows() {
+  const rows = buyRowsByStrategyId.get(activeBuyStrategyId);
+  return Array.isArray(rows) ? rows : [];
+}
+
+function readSanitizedBuysFromTable() {
+  return sortBuyRowsByDate(readRows(buysTbody).filter(isBuyRowComplete)).rows;
+}
+
+function saveCurrentBuysToActiveStrategy() {
+  buyRowsByStrategyId.set(activeBuyStrategyId, readSanitizedBuysFromTable());
+}
+
+function persistBuyStrategiesState() {
+  const strategiesPayload = Array.isArray(buyStrategies) && buyStrategies.length
+    ? buyStrategies.map((s) => ({ id: String(s.id || ""), name: normalizeStrategyName(s.name || "") })).filter((s) => s.id && s.name)
+    : [getDefaultBuyStrategy()];
+
+  const buysByStrategy = {};
+  strategiesPayload.forEach((s) => {
+    const rows = buyRowsByStrategyId.get(s.id);
+    buysByStrategy[s.id] = Array.isArray(rows) ? rows : [];
+  });
+
+  localStorage.setItem(
+    BUY_STRATEGIES_KEY,
+    JSON.stringify({
+      strategies: strategiesPayload,
+      buysByStrategy,
+    })
+  );
+  localStorage.setItem(ACTIVE_BUY_STRATEGY_KEY, activeBuyStrategyId);
+  // Совместимость со старой схемой: дублируем активную стратегию в старый ключ покупок.
+  localStorage.setItem(BUYS_KEY, JSON.stringify(getActiveStrategyBuysRows()));
+}
+
+function renderBuyStrategySelect() {
+  const optionsHtml = buyStrategies
+    .map((s) => `<option value="${escapeHtml(String(s.id))}">${escapeHtml(String(s.name))}</option>`)
+    .join("");
+  const hasActive = buyStrategies.some((s) => s.id === activeBuyStrategyId);
+  if (!hasActive && buyStrategies.length) activeBuyStrategyId = buyStrategies[0].id;
+
+  if (buyStrategySelect) {
+    buyStrategySelect.innerHTML = optionsHtml;
+    buyStrategySelect.value = activeBuyStrategyId;
+  }
+  if (summaryStrategySelect) {
+    summaryStrategySelect.innerHTML = optionsHtml;
+    summaryStrategySelect.value = activeBuyStrategyId;
+  }
+  if (buyStrategyEditBtn) {
+    const isDefault = activeBuyStrategyId === DEFAULT_BUY_STRATEGY_ID;
+    buyStrategyEditBtn.hidden = isDefault;
+  }
+}
+
+function switchActiveBuyStrategy(nextIdRaw) {
+  const nextId = String(nextIdRaw || "").trim();
+  if (!nextId || nextId === activeBuyStrategyId) return;
+  saveCurrentBuysToActiveStrategy();
+  const hasStrategy = buyStrategies.some((s) => s.id === nextId);
+  if (!hasStrategy) return;
+  activeBuyStrategyId = nextId;
+  const rows = getActiveStrategyBuysRows();
+  writeRows(buysTbody, buyTpl, Array.isArray(rows) && rows.length ? rows : defaultBuyRows());
+  syncBuySummaries();
+  syncStaticTableEmptyStates();
+  renderBuyStrategySelect();
+  persistBuyStrategiesState();
+  renderAll();
 }
 
 function sortBuyRowsByDate(rows) {
@@ -653,16 +760,13 @@ function renderYearPies(chartData) {
 
 function renderChartLegend(seriesByBond, palette) {
   if (!chartLegend) return;
-  const visibleSeries = seriesByBond.filter((series) => (series.points || []).some((point) => Number(point.amount) > 0));
-  if (!visibleSeries.length) {
-    chartLegend.innerHTML = "";
-    return;
-  }
-
-  chartLegend.innerHTML = visibleSeries
-    .map((series, idx) => {
-      const color = palette[idx % palette.length];
-      const safeBond = String(series.bond || `Bond ${idx + 1}`)
+  // Тот же sIdx, что у столбцов в renderChart (palette[sIdx]), а не порядковый номер среди «видимых» серий.
+  const chunks = seriesByBond
+    .map((series, sIdx) => {
+      const visible = (series.points || []).some((point) => Number(point.amount) > 0);
+      if (!visible) return "";
+      const color = palette[sIdx % palette.length];
+      const safeBond = String(series.bond || `Bond ${sIdx + 1}`)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
@@ -686,7 +790,12 @@ function renderChartLegend(seriesByBond, palette) {
         <span class="chartLegend__sum">${formatMoney(total)}</span>
       </span>`;
     })
-    .join("");
+    .filter((html) => html.length > 0);
+  if (!chunks.length) {
+    chartLegend.innerHTML = "";
+    return;
+  }
+  chartLegend.innerHTML = chunks.join("");
 }
 
 function formatAmount(amount) {
@@ -1139,6 +1248,60 @@ function clearAllChartHover() {
   document.querySelectorAll(".yearPie.yearPie--dimOthers").forEach((svg) => svg.classList.remove("yearPie--dimOthers"));
 }
 
+/**
+ * Hover по подписи месяца на оси X: суммы и текст месяца красим в те же цвета, что столбцы
+ * (у каждой суммы — свой столбец; у подписи месяца/года — цвет самого высокого столбца за месяц).
+ */
+function applyMonthAxisHoverHighlight(monthKey) {
+  if (!chartContent || !monthKey) return;
+  chartContent.classList.add("chartContent--dimOthers");
+
+  const bars = Array.from(chartContent.querySelectorAll(`.chartBar[data-bar-month="${monthKey}"]`)).filter(
+    (el) => el instanceof SVGElement
+  );
+  bars.forEach((el) => el.classList.add("chartHover--active"));
+
+  const barByMatch = new Map();
+  let topBar = /** @type {SVGElement | null} */ (null);
+  let topAmt = -1;
+  for (const barEl of bars) {
+    const m = normalizeBondKey(barEl.getAttribute("data-bar-match") || "");
+    if (m) barByMatch.set(m, barEl);
+    const amt = parseNumber(barEl.getAttribute("data-bar-amount"));
+    if (Number.isFinite(amt) && amt > topAmt) {
+      topAmt = amt;
+      topBar = barEl;
+    }
+  }
+
+  chartContent.querySelectorAll(`.chartValueLabel[data-label-month="${monthKey}"]`).forEach((el) => {
+    if (!(el instanceof SVGTextElement)) return;
+    el.classList.add("chartValueLabel--active");
+    const lm = normalizeBondKey(el.getAttribute("data-label-match") || "");
+    const barEl = barByMatch.get(lm);
+    const fill = barEl instanceof SVGElement ? String(barEl.getAttribute("fill") || "").trim() : "";
+    if (fill) {
+      el.setAttribute("fill", fill);
+      el.setAttribute("opacity", "0.98");
+    }
+  });
+
+  const axisFill =
+    topBar instanceof SVGElement
+      ? String(topBar.getAttribute("fill") || "").trim()
+      : bars[0] instanceof SVGElement
+        ? String(bars[0].getAttribute("fill") || "").trim()
+        : "";
+  chartContent.querySelectorAll(`.chartAxisLabel[data-axis-month="${monthKey}"]`).forEach((el) => {
+    if (!(el instanceof SVGTextElement)) return;
+    el.classList.add("chartText--active");
+    if (axisFill) {
+      el.setAttribute("fill", axisFill);
+      el.setAttribute("opacity", "0.98");
+    }
+  });
+}
+
 function monthLabelFromKey(monthKey) {
   const ml = formatMonthKey(monthKey);
   if (typeof ml === "string") return ml;
@@ -1213,24 +1376,7 @@ function onBarChartPointerMove(e) {
         return sum + (Number(parseNumber(barEl.getAttribute("data-bar-amount"))) || 0);
       }, 0);
 
-      // Выделяем все столбцы (все облигации) за этот месяц и обесцвечиваем остальные.
-      if (chartContent && monthKey) {
-        chartContent.classList.add("chartContent--dimOthers");
-        // Активируем все бары и подписи сумм в этом месяце.
-        document.querySelectorAll(`.chartBar[data-bar-month="${monthKey}"]`).forEach((el) => {
-          if (el instanceof SVGElement) el.classList.add("chartHover--active");
-        });
-        document.querySelectorAll(`.chartValueLabel[data-label-month="${monthKey}"]`).forEach((el) => {
-          if (el instanceof SVGTextElement) el.classList.add("chartValueLabel--active");
-        });
-        // Подсвечиваем сам месяц/год на оси.
-        document.querySelectorAll(`.chartAxisLabel[data-axis-month="${monthKey}"]`).forEach((el) => {
-          if (!(el instanceof SVGTextElement)) return;
-          el.classList.add("chartText--active");
-          el.setAttribute("fill", "#007AFF");
-          el.setAttribute("opacity", "0.98");
-        });
-      }
+      if (chartContent && monthKey) applyMonthAxisHoverHighlight(monthKey);
 
       const period = monthLabelFromKey(monthKey);
 
@@ -1493,6 +1639,18 @@ function buildMonthRange(startMonthKey, endMonthKey) {
     current = addMonthsToMonthKey(current, 1);
   }
   return result;
+}
+
+/** Сумма gross-купонов за календарный месяц по всем сериям — тот же расчёт, что у столбцов на графике выплат. */
+function getGrossCouponTotalForMonth(seriesByBond, monthKey) {
+  if (!monthKey) return 0;
+  let sum = 0;
+  for (const series of seriesByBond || []) {
+    for (const p of series.points || []) {
+      if (p.monthKey === monthKey) sum += Number(p.amount) || 0;
+    }
+  }
+  return sum;
 }
 
 function getTodayYMD() {
@@ -1893,19 +2051,11 @@ function renderPortfolioChart(chartData) {
   portfolioStartTotalEl.textContent = formatMoney(startValue);
 
   const monthRange = buildMonthRange(startMonthKey, lastMonthKey);
-  const couponByMonth = new Map();
-  monthRange.forEach((monthKey) => couponByMonth.set(monthKey, 0));
-  seriesByBond.forEach((series) => {
-    series.points.forEach((point) => {
-      if (!couponByMonth.has(point.monthKey)) return;
-      couponByMonth.set(point.monthKey, (couponByMonth.get(point.monthKey) || 0) + point.amount);
-    });
-  });
 
   let cumulative = startValue;
   const allPoints = monthRange.map((monthKey) => {
     const topupForMonth = !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? monthlyTopup : 0;
-    const couponForMonth = couponByMonth.get(monthKey) || 0;
+    const couponForMonth = getGrossCouponTotalForMonth(seriesByBond, monthKey);
     cumulative += topupForMonth + couponForMonth;
     return { monthKey, value: cumulative, topup: topupForMonth, coupon: couponForMonth };
   });
@@ -1925,9 +2075,11 @@ function renderPortfolioChart(chartData) {
 
   const firstPoint = points[0];
   const firstPointTopup = Number.isFinite(firstPoint.topup) ? firstPoint.topup : 0;
-  const firstPointMonthCoupon = Number.isFinite(firstPoint.coupon) ? firstPoint.coupon : (couponByMonth.get(firstPoint.monthKey) || 0);
+  const firstPointMonthCoupon = Number.isFinite(firstPoint.coupon)
+    ? firstPoint.coupon
+    : getGrossCouponTotalForMonth(seriesByBond, firstPoint.monthKey);
   const periodStartValue = firstPoint.value - firstPointTopup - firstPointMonthCoupon;
-  const couponOnlyAdded = points.reduce((sum, point) => sum + (couponByMonth.get(point.monthKey) || 0), 0);
+  const couponOnlyAdded = points.reduce((sum, point) => sum + (Number(point.coupon) || 0), 0);
   const endValue = points[points.length - 1].value;
   portfolioStartTotalEl.textContent = formatMoney(periodStartValue);
   portfolioCouponTotalEl.textContent = formatMoney(couponOnlyAdded);
@@ -2022,8 +2174,10 @@ function persistAndRender() {
   const buysSorted = sortResult.rows;
   const holdings = sanitizeHoldingRows(readRows(holdingsTbody));
   localStorage.setItem(BONDS_KEY, JSON.stringify(bonds));
+  buyRowsByStrategyId.set(activeBuyStrategyId, buysSorted);
   localStorage.setItem(BUYS_KEY, JSON.stringify(buysSorted));
   localStorage.setItem(HOLDINGS_KEY, JSON.stringify(holdings));
+  persistBuyStrategiesState();
   // Перерисовываем строки только если реально поменялся порядок.
   if (sortResult.didSort) {
     writeRows(buysTbody, buyTpl, buysSorted);
@@ -2043,14 +2197,53 @@ function loadAll() {
     const portfolioStartValueRaw = localStorage.getItem(PORTFOLIO_START_VALUE_KEY);
     const portfolioMonthlyTopupRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
     const portfolioMonthlyTopupEndDateRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
+    const buyStrategiesRaw = localStorage.getItem(BUY_STRATEGIES_KEY);
+    const activeBuyStrategyRaw = localStorage.getItem(ACTIVE_BUY_STRATEGY_KEY);
     const bonds = bondsRaw ? sanitizeBondRows(JSON.parse(bondsRaw)) : defaultBondRows();
-    const buys = buysRaw ? sortBuyRowsByDate(normalizeBuyRowsForUI(JSON.parse(buysRaw))).rows : defaultBuyRows();
+    const buysLegacy = buysRaw ? sortBuyRowsByDate(normalizeBuyRowsForUI(JSON.parse(buysRaw))).rows : defaultBuyRows();
     const holdings = holdingsRaw ? normalizeHoldingRowsForUI(JSON.parse(holdingsRaw)) : defaultHoldingRows();
     const taxRaw = localStorage.getItem(TAX_RATE_KEY);
 
+    let nextStrategies = [];
+    let nextRowsByStrategy = new Map();
+    if (buyStrategiesRaw) {
+      try {
+        const parsed = JSON.parse(buyStrategiesRaw);
+        const parsedStrategies = Array.isArray(parsed?.strategies) ? parsed.strategies : [];
+        parsedStrategies.forEach((s) => {
+          const id = String(s?.id || "").trim();
+          const name = normalizeStrategyName(s?.name || "");
+          if (!id || !name) return;
+          nextStrategies.push({ id, name });
+        });
+        const parsedByStrategy = parsed?.buysByStrategy && typeof parsed.buysByStrategy === "object" ? parsed.buysByStrategy : {};
+        nextStrategies.forEach((s) => {
+          const rowsRaw = parsedByStrategy[s.id];
+          const rows = Array.isArray(rowsRaw) ? sortBuyRowsByDate(normalizeBuyRowsForUI(rowsRaw)).rows : [];
+          nextRowsByStrategy.set(s.id, rows);
+        });
+      } catch {
+        nextStrategies = [];
+        nextRowsByStrategy = new Map();
+      }
+    }
+
+    if (!nextStrategies.length) {
+      const base = getDefaultBuyStrategy();
+      nextStrategies = [base];
+      nextRowsByStrategy.set(base.id, buysLegacy);
+    }
+
+    buyStrategies = nextStrategies;
+    buyRowsByStrategyId = nextRowsByStrategy;
+    const hasStoredActive = buyStrategies.some((s) => s.id === String(activeBuyStrategyRaw || "").trim());
+    activeBuyStrategyId = hasStoredActive ? String(activeBuyStrategyRaw || "").trim() : buyStrategies[0].id;
+    const activeBuys = getActiveStrategyBuysRows();
+
     writeRows(bondsTbody, bondTpl, Array.isArray(bonds) && bonds.length ? bonds : defaultBondRows());
-    writeRows(buysTbody, buyTpl, Array.isArray(buys) && buys.length ? buys : defaultBuyRows());
+    writeRows(buysTbody, buyTpl, Array.isArray(activeBuys) && activeBuys.length ? activeBuys : defaultBuyRows());
     writeRows(holdingsTbody, holdingTpl, Array.isArray(holdings) && holdings.length ? holdings : defaultHoldingRows());
+    renderBuyStrategySelect();
     if (taxRateInput && taxRaw !== null) taxRateInput.value = String(parseNumber(taxRaw) || 13);
     if (portfolioStartDateInput) portfolioStartDateInput.value = normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD();
     setPortfolioMoneyInputValue(portfolioStartValueInput, String(parseNumber(portfolioStartValueRaw) || 0));
@@ -2063,6 +2256,10 @@ function loadAll() {
     writeRows(bondsTbody, bondTpl, defaultBondRows());
     writeRows(buysTbody, buyTpl, defaultBuyRows());
     writeRows(holdingsTbody, holdingTpl, defaultHoldingRows());
+    buyStrategies = [getDefaultBuyStrategy()];
+    buyRowsByStrategyId = new Map([[DEFAULT_BUY_STRATEGY_ID, []]]);
+    activeBuyStrategyId = DEFAULT_BUY_STRATEGY_ID;
+    renderBuyStrategySelect();
     if (taxRateInput) taxRateInput.value = "13";
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
     if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
@@ -2252,6 +2449,18 @@ addBuyBtn.addEventListener("click", () => {
   openBuyModal();
 });
 
+if (buyStrategySelect) {
+  buyStrategySelect.addEventListener("change", () => {
+    switchActiveBuyStrategy(buyStrategySelect.value);
+  });
+}
+
+if (summaryStrategySelect) {
+  summaryStrategySelect.addEventListener("change", () => {
+    switchActiveBuyStrategy(summaryStrategySelect.value);
+  });
+}
+
 if (addHoldingBtn) {
   addHoldingBtn.addEventListener("click", () => {
     const availableBonds = getAvailableBondNames();
@@ -2303,6 +2512,8 @@ buysTbody.addEventListener("click", (e) => {
 resetAllBtn.addEventListener("click", () => {
   localStorage.removeItem(BONDS_KEY);
   localStorage.removeItem(BUYS_KEY);
+  localStorage.removeItem(BUY_STRATEGIES_KEY);
+  localStorage.removeItem(ACTIVE_BUY_STRATEGY_KEY);
   localStorage.removeItem(HOLDINGS_KEY);
   localStorage.removeItem(TAX_RATE_KEY);
   localStorage.removeItem(ACTIVE_TAB_KEY);
@@ -2474,6 +2685,8 @@ function syncDateSummaries() {
     const couponDisplay = tr.querySelector('[data-display-for="coupon"]');
     const payoutCountDisplay = tr.querySelector('[data-display-for="payoutCount"]');
     const payoutRangeDisplay = tr.querySelector('[data-display-for="payoutRange"]');
+    const bondPriceHidden = tr.querySelector('[data-field="bondPrice"]');
+    const bondPriceDisplay = tr.querySelector('[data-display-for="bondPrice"]');
     if (!monthsHidden || !startHidden || !endHidden) return;
 
     const selected = parseMonthList(monthsHidden.value);
@@ -2490,6 +2703,11 @@ function syncDateSummaries() {
     if (couponDisplay && couponHidden) {
       const coupon = parseNumber(couponHidden.value);
       couponDisplay.textContent = Number.isFinite(coupon) ? formatMoney(coupon) : "—";
+    }
+
+    if (bondPriceDisplay && bondPriceHidden) {
+      const bp = parseNumber(bondPriceHidden.value);
+      bondPriceDisplay.textContent = Number.isFinite(bp) && bp > 0 ? formatMoney(bp) : "—";
     }
 
     if (payoutCountDisplay) {
@@ -2573,7 +2791,11 @@ function syncBuySummaries() {
       return;
     }
 
-    itemsDisplay.innerHTML = `<div class="buyChips">${items
+    const itemsSorted = [...items].sort((a, b) =>
+      String(a.bond || "").localeCompare(String(b.bond || ""), "ru", { numeric: true, sensitivity: "base" })
+    );
+
+    itemsDisplay.innerHTML = `<div class="buyChips">${itemsSorted
       .map((i) => {
         const detail = `${formatQuantityRu(i.quantity)} × ${formatMoney(i.price)}`;
         const tip = `${i.bond} — ${detail}`;
@@ -2854,6 +3076,8 @@ function fillBondModalFormFromRow(tr) {
   bondModalNameInput.value = String(bondInput.value || "").trim();
   // Нормализуем купон на случай значений вида "36,5" из старых сохранений.
   setInputNumericValue(bondModalCouponInput, parseNumber(couponInput.value), "");
+  const priceHidden = tr.querySelector('input[data-field="bondPrice"]');
+  if (bondModalBondPriceInput) setInputNumericValue(bondModalBondPriceInput, parseNumber(priceHidden?.value || ""), "");
   bondModalPayoutMonthsInput.value = String(payoutMonthsInput.value || "").trim();
   if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = String(startHidden.value || "").trim();
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = String(endHidden.value || "").trim();
@@ -2869,8 +3093,10 @@ function getBondModalRowData() {
   const payoutMonths = String(bondModalPayoutMonthsInput?.value || "").trim();
   const startDate = normalizeYMD(bondModalStartDateVisibleInput?.value || "") || "";
   const endDate = normalizeYMD(bondModalEndDateVisibleInput?.value || "") || "";
+  const bondPriceRaw = parseNumber(bondModalBondPriceInput?.value || "");
+  const bondPrice = Number.isFinite(bondPriceRaw) && bondPriceRaw > 0 ? String(bondPriceRaw) : "";
 
-  return { bond, coupon, payoutMonths, startDate, endDate };
+  return { bond, coupon, payoutMonths, startDate, endDate, bondPrice };
 }
 
 function openBondModalNew() {
@@ -2879,6 +3105,7 @@ function openBondModalNew() {
   if (bondModalTitle) bondModalTitle.textContent = "Новая облигация";
   if (bondModalNameInput) bondModalNameInput.value = "";
   if (bondModalCouponInput) bondModalCouponInput.value = "";
+  if (bondModalBondPriceInput) bondModalBondPriceInput.value = "";
   if (bondModalPayoutMonthsInput) bondModalPayoutMonthsInput.value = "";
   if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = "";
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = "";
@@ -2952,7 +3179,8 @@ if (bondModalSaveBtn) {
       const payoutMonthsHidden = tr.querySelector('input[data-field="payoutMonths"]');
       const startHidden = tr.querySelector('input[data-field="startDate"]');
       const endHidden = tr.querySelector('input[data-field="endDate"]');
-      if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden) return;
+      const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
+      if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden) return;
 
       const newKey = normalizeBondKey(row.bond);
       const oldKey = bondModalPrevBondKey;
@@ -2962,6 +3190,7 @@ if (bondModalSaveBtn) {
       payoutMonthsHidden.value = months.join(",");
       startHidden.value = row.startDate;
       endHidden.value = row.endDate;
+      bondPriceHidden.value = row.bondPrice || "";
 
       syncDateSummaries();
 
@@ -2985,13 +3214,15 @@ if (bondModalSaveBtn) {
     const payoutMonthsHidden = tr.querySelector('input[data-field="payoutMonths"]');
     const startHidden = tr.querySelector('input[data-field="startDate"]');
     const endHidden = tr.querySelector('input[data-field="endDate"]');
-    if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden) return;
+    const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
+    if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden) return;
 
     bondInput.value = row.bond;
     couponInput.value = String(row.coupon);
     payoutMonthsHidden.value = months.join(",");
     startHidden.value = row.startDate;
     endHidden.value = row.endDate;
+    bondPriceHidden.value = row.bondPrice || "";
 
     bondsTbody.appendChild(node);
     syncDateSummaries();
@@ -3070,6 +3301,10 @@ let buyModalEditingTr = null;
 /** Блокирует обработчики input/change во время перестроения модалки (срыв DOM даёт ложные события) */
 let buyModalRenderLock = false;
 
+function newBuyModalItem() {
+  return { bond: "", price: "", quantity: "", priceUserEdited: false };
+}
+
 function syncBuyModalItemsFromDom() {
   if (!buyItemsWrap) return;
   const fields = buyItemsWrap.querySelectorAll("input[data-buy-idx], select[data-buy-idx]");
@@ -3086,6 +3321,7 @@ function syncBuyModalItemsFromDom() {
       bond: prev && typeof prev.bond === "string" ? prev.bond : "",
       price: prev && typeof prev.price === "string" ? prev.price : "",
       quantity: prev && typeof prev.quantity === "string" ? prev.quantity : "",
+      priceUserEdited: Boolean(prev && prev.priceUserEdited),
     };
   });
 
@@ -3098,6 +3334,10 @@ function syncBuyModalItemsFromDom() {
     next[idx][field] = el.value;
   });
 
+  for (let i = 0; i < next.length; i++) {
+    if (!String(next[i].price || "").trim()) next[i].priceUserEdited = false;
+  }
+
   buyModalItems.length = 0;
   buyModalItems.push(...next);
 }
@@ -3105,11 +3345,13 @@ function syncBuyModalItemsFromDom() {
 function buyRowItemsToModalState(tr) {
   const itemsInput = tr.querySelector('[data-field="items"]');
   const parsed = parseBuyItems(itemsInput?.value);
-  if (!parsed.length) return [{ bond: "", price: "", quantity: "" }];
+  if (!parsed.length) return [newBuyModalItem()];
   return parsed.map((i) => ({
     bond: i.bond,
     price: formatAmount(i.price),
     quantity: formatQuantityInt(i.quantity),
+    // Сохранённые покупки не перезаписываем ценой из справочника при смене облигации.
+    priceUserEdited: true,
   }));
 }
 
@@ -3126,10 +3368,128 @@ function getAvailableBondNames() {
     .sort((a, b) => a.localeCompare(b, "ru"));
 }
 
+/** Плановая цена из карточки облигации (для автоподстановки в покупках). */
+function getBondReferencePrice(bondRaw) {
+  const want = normalizeBondKey(bondRaw);
+  if (!want || !bondsTbody) return NaN;
+  for (const tr of bondsTbody.querySelectorAll("tr")) {
+    const bondH = tr.querySelector('[data-field="bond"]');
+    if (!bondH || normalizeBondKey(bondH.value) !== want) continue;
+    const ph = tr.querySelector('[data-field="bondPrice"]');
+    const p = parseNumber(ph?.value ?? "");
+    return Number.isFinite(p) && p > 0 ? p : NaN;
+  }
+  return NaN;
+}
+
 function setBuyModalOpen(open) {
   if (!buyModalOverlay) return;
   if (open) openModalOverlay(buyModalOverlay);
   else closeModalOverlay(buyModalOverlay);
+}
+
+function setStrategyModalOpen(open) {
+  if (!strategyModalOverlay) return;
+  if (open) openModalOverlay(strategyModalOverlay);
+  else closeModalOverlay(strategyModalOverlay);
+}
+
+function openStrategyModalCreate() {
+  strategyModalEditingId = null;
+  if (strategyModalTitle) strategyModalTitle.textContent = "Новая стратегия";
+  if (strategyNameInput) strategyNameInput.value = "";
+  if (strategyDeleteBtn) strategyDeleteBtn.setAttribute("hidden", "");
+  setStrategyModalOpen(true);
+  if (strategyNameInput) {
+    requestAnimationFrame(() => requestAnimationFrame(() => strategyNameInput.focus()));
+  }
+}
+
+function openStrategyModalEdit() {
+  const current = buyStrategies.find((s) => s.id === activeBuyStrategyId);
+  if (!current) return;
+  if (current.id === DEFAULT_BUY_STRATEGY_ID) return;
+
+  strategyModalEditingId = current.id;
+  if (strategyModalTitle) strategyModalTitle.textContent = "Редактирование стратегии";
+  if (strategyNameInput) strategyNameInput.value = current.name;
+  if (strategyDeleteBtn) strategyDeleteBtn.removeAttribute("hidden");
+  setStrategyModalOpen(true);
+  if (strategyNameInput) {
+    requestAnimationFrame(() => requestAnimationFrame(() => strategyNameInput.focus()));
+  }
+}
+
+function closeStrategyModal() {
+  strategyModalEditingId = null;
+  if (strategyModalTitle) strategyModalTitle.textContent = "Новая стратегия";
+  if (strategyNameInput) strategyNameInput.value = "";
+  if (strategyDeleteBtn) strategyDeleteBtn.setAttribute("hidden", "");
+  setStrategyModalOpen(false);
+}
+
+function createBuyStrategy(nameRaw) {
+  const name = normalizeStrategyName(nameRaw);
+  if (!name) return false;
+  const exists = buyStrategies.some((s) => s.name.toLocaleLowerCase("ru") === name.toLocaleLowerCase("ru"));
+  if (exists) return false;
+
+  saveCurrentBuysToActiveStrategy();
+  const id = createBuyStrategyId();
+  buyStrategies.push({ id, name });
+  buyRowsByStrategyId.set(id, []);
+  activeBuyStrategyId = id;
+  renderBuyStrategySelect();
+  writeRows(buysTbody, buyTpl, defaultBuyRows());
+  syncBuySummaries();
+  syncStaticTableEmptyStates();
+  persistBuyStrategiesState();
+  renderAll();
+  return true;
+}
+
+function renameActiveStrategy(nameRaw) {
+  const name = normalizeStrategyName(nameRaw);
+  if (!name) return false;
+  if (!strategyModalEditingId || strategyModalEditingId === DEFAULT_BUY_STRATEGY_ID) return false;
+  const current = buyStrategies.find((s) => s.id === strategyModalEditingId);
+  if (!current) return false;
+
+  const exists = buyStrategies.some(
+    (s) => s.id !== strategyModalEditingId && s.name.toLocaleLowerCase("ru") === name.toLocaleLowerCase("ru")
+  );
+  if (exists) return false;
+
+  current.name = name;
+  renderBuyStrategySelect();
+  persistBuyStrategiesState();
+  renderAll();
+  return true;
+}
+
+function deleteActiveBuyStrategy() {
+  if (activeBuyStrategyId === DEFAULT_BUY_STRATEGY_ID) return false;
+  const toDelete = activeBuyStrategyId;
+  buyStrategies = buyStrategies.filter((s) => s.id !== toDelete);
+  buyRowsByStrategyId.delete(toDelete);
+
+  // На всякий случай гарантируем, что "Основная" существует.
+  if (!buyStrategies.some((s) => s.id === DEFAULT_BUY_STRATEGY_ID)) {
+    buyStrategies.unshift(getDefaultBuyStrategy());
+    if (!buyRowsByStrategyId.has(DEFAULT_BUY_STRATEGY_ID)) {
+      buyRowsByStrategyId.set(DEFAULT_BUY_STRATEGY_ID, []);
+    }
+  }
+
+  activeBuyStrategyId = DEFAULT_BUY_STRATEGY_ID;
+  const rows = getActiveStrategyBuysRows();
+  writeRows(buysTbody, buyTpl, Array.isArray(rows) && rows.length ? rows : defaultBuyRows());
+  syncBuySummaries();
+  syncStaticTableEmptyStates();
+  renderBuyStrategySelect();
+  persistBuyStrategiesState();
+  renderAll();
+  return true;
 }
 
 function renderBuyModalItems() {
@@ -3169,11 +3529,23 @@ function renderBuyModalItems() {
       <button type="button" class="iconBtn" data-buy-action="remove" data-buy-idx="${idx}" aria-label="Удалить">✕</button>
     `;
       const bondSelect = row.querySelector('[data-buy-field="bond"]');
+      const priceInput = row.querySelector('input[data-buy-field="price"]');
       if (bondSelect) {
         const want = String(item.bond || "").trim().toUpperCase();
         const opt = Array.from(bondSelect.options).find((o) => o.value.toUpperCase() === want);
         if (opt) bondSelect.value = opt.value;
         else if (want) bondSelect.value = want;
+      }
+      if (bondSelect && priceInput && !buyModalItems[idx].priceUserEdited) {
+        const b = String(bondSelect.value || "").trim();
+        if (b && !String(priceInput.value || "").trim()) {
+          const ref = getBondReferencePrice(b);
+          if (Number.isFinite(ref)) {
+            const formatted = formatAmount(ref);
+            priceInput.value = formatted;
+            buyModalItems[idx].price = formatted;
+          }
+        }
       }
       buyItemsWrap.appendChild(row);
     });
@@ -3185,7 +3557,7 @@ function renderBuyModalItems() {
 function openBuyModal() {
   buyModalEditingTr = null;
   if (buyModalTitle) buyModalTitle.textContent = BUY_MODAL_TITLE_NEW;
-  buyModalItems = [{ bond: "", price: "", quantity: "" }];
+  buyModalItems = [newBuyModalItem()];
   if (buyDateInput) buyDateInput.value = "";
   renderBuyModalItems();
   setBuyModalOpen(true);
@@ -3239,6 +3611,30 @@ if (buyItemsWrap) {
     const field = el.getAttribute("data-buy-field");
     if (!Number.isInteger(idx) || idx < 0 || idx >= buyModalItems.length || !field) return;
     buyModalItems[idx][field] = el.value;
+
+    if (field === "price" && el instanceof HTMLInputElement) {
+      buyModalItems[idx].priceUserEdited = String(el.value || "").trim() !== "";
+    }
+
+    if (field === "bond" && el instanceof HTMLSelectElement && buyItemsWrap) {
+      const priceInput = buyItemsWrap.querySelector(`input[data-buy-field="price"][data-buy-idx="${idx}"]`);
+      if (!priceInput || buyModalItems[idx].priceUserEdited) return;
+      const b = String(el.value || "").trim();
+      if (!b) {
+        priceInput.value = "";
+        buyModalItems[idx].price = "";
+        return;
+      }
+      const ref = getBondReferencePrice(b);
+      if (Number.isFinite(ref)) {
+        const formatted = formatAmount(ref);
+        priceInput.value = formatted;
+        buyModalItems[idx].price = formatted;
+      } else {
+        priceInput.value = "";
+        buyModalItems[idx].price = "";
+      }
+    }
   };
   buyItemsWrap.addEventListener("input", onBuyItemFieldChanged);
   buyItemsWrap.addEventListener("change", onBuyItemFieldChanged);
@@ -3250,7 +3646,7 @@ if (buyItemsWrap) {
     const idx = Number(btn.getAttribute("data-buy-idx"));
     if (!Number.isInteger(idx) || idx < 0 || idx >= buyModalItems.length) return;
     buyModalItems.splice(idx, 1);
-    if (!buyModalItems.length) buyModalItems.push({ bond: "", price: "", quantity: "" });
+    if (!buyModalItems.length) buyModalItems.push(newBuyModalItem());
     renderBuyModalItems();
   });
 }
@@ -3258,8 +3654,49 @@ if (buyItemsWrap) {
 if (buyAddItemBtn) {
   buyAddItemBtn.addEventListener("click", () => {
     syncBuyModalItemsFromDom();
-    buyModalItems.push({ bond: "", price: "", quantity: "" });
+    buyModalItems.push(newBuyModalItem());
     renderBuyModalItems();
+  });
+}
+
+if (buyStrategyNewBtn) {
+  buyStrategyNewBtn.addEventListener("click", () => {
+    openStrategyModalCreate();
+  });
+}
+
+if (buyStrategyEditBtn) {
+  buyStrategyEditBtn.addEventListener("click", () => {
+    openStrategyModalEdit();
+  });
+}
+
+if (strategyModalClose) {
+  strategyModalClose.addEventListener("click", () => closeStrategyModal());
+}
+
+if (strategyModalOverlay) {
+  strategyModalOverlay.addEventListener("click", (e) => {
+    if (e.target === strategyModalOverlay) closeStrategyModal();
+  });
+}
+
+if (strategySaveBtn) {
+  strategySaveBtn.addEventListener("click", () => {
+    const ok = strategyModalEditingId
+      ? renameActiveStrategy(strategyNameInput?.value || "")
+      : createBuyStrategy(strategyNameInput?.value || "");
+    if (!ok) return;
+    closeStrategyModal();
+  });
+}
+
+if (strategyDeleteBtn) {
+  strategyDeleteBtn.addEventListener("click", () => {
+    if (!strategyModalEditingId) return;
+    const ok = deleteActiveBuyStrategy();
+    if (!ok) return;
+    closeStrategyModal();
   });
 }
 
@@ -3371,6 +3808,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (buyModalOverlay && !buyModalOverlay.hidden) {
     closeBuyModal();
+    e.preventDefault();
+    return;
+  }
+  if (strategyModalOverlay && !strategyModalOverlay.hidden) {
+    closeStrategyModal();
     e.preventDefault();
     return;
   }
