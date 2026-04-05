@@ -96,6 +96,10 @@
               <div id="portfolio-coupon-total" class="summaryStat__value">0.00</div>
             </div>
             <div class="summaryStat">
+              <div class="summaryStat__label">Ежемесячные пополнения</div>
+              <div id="portfolio-topup-total" class="summaryStat__value">0.00</div>
+            </div>
+            <div class="summaryStat">
               <div class="summaryStat__label">Стоимость на конец периода</div>
               <div id="portfolio-end-total" class="summaryStat__value">0.00</div>
             </div>
@@ -168,7 +172,118 @@
           </div>
         </div>
 
-        <!-- Row 2 (wide bottom widget) -->
+        <!-- Автопланирование -->
+        <div class="card widget widget--wide" data-widget="planning-scaffold">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Автопланирование</div>
+              <div class="widget__hint">Покупки по дням месяца и периоду; доходность — купоны в год на рубль затрат с НКД; реинвест — купоны за прошлый календарный месяц один раз за месяц (к первой удачной дате пополнения). «Сохранить» дополняет строки стратегии (одна дата — одна строка, позиции суммируются).</div>
+            </div>
+          </div>
+          <div class="autoPlanWidget" id="planning-scaffold-body" aria-label="Параметры автопланирования">
+            <div class="autoPlanWidget__fields">
+              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-start">
+                <input
+                  id="auto-plan-start"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                  aria-label="Дата начала инвестиций"
+                />
+                <span class="floatingField__label">Начало инвестиций</span>
+              </label>
+              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-end">
+                <input
+                  id="auto-plan-end"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                  aria-label="Дата окончания инвестиций"
+                />
+                <span class="floatingField__label">Окончание инвестиций</span>
+              </label>
+            </div>
+
+            <div class="autoPlanWidget__section">
+              <div class="autoPlanWidget__sectionLabel">Облигации для автопланирования</div>
+              <div id="auto-plan-bonds" class="autoPlanBonds" role="group" aria-label="Облигации из таблицы для автопланирования"></div>
+            </div>
+
+            <div class="autoPlanWidget__section">
+              <div class="autoPlanWidget__sectionLabel">Дни месяца для пополнения счёта из своих средств</div>
+              <div id="auto-plan-topup-days" class="planScheduleDays" role="group" aria-label="Дни месяца пополнения">
+                <button type="button" class="planScheduleDayChip" data-day="1" aria-pressed="false">1</button>
+                <button type="button" class="planScheduleDayChip" data-day="2" aria-pressed="false">2</button>
+                <button type="button" class="planScheduleDayChip" data-day="3" aria-pressed="false">3</button>
+                <button type="button" class="planScheduleDayChip" data-day="4" aria-pressed="false">4</button>
+                <button type="button" class="planScheduleDayChip" data-day="5" aria-pressed="false">5</button>
+                <button type="button" class="planScheduleDayChip" data-day="6" aria-pressed="false">6</button>
+                <button type="button" class="planScheduleDayChip" data-day="7" aria-pressed="false">7</button>
+                <button type="button" class="planScheduleDayChip" data-day="8" aria-pressed="false">8</button>
+                <button type="button" class="planScheduleDayChip" data-day="9" aria-pressed="false">9</button>
+                <button type="button" class="planScheduleDayChip" data-day="10" aria-pressed="false">10</button>
+                <button type="button" class="planScheduleDayChip" data-day="11" aria-pressed="false">11</button>
+                <button type="button" class="planScheduleDayChip" data-day="12" aria-pressed="false">12</button>
+                <button type="button" class="planScheduleDayChip" data-day="13" aria-pressed="false">13</button>
+                <button type="button" class="planScheduleDayChip" data-day="14" aria-pressed="false">14</button>
+                <button type="button" class="planScheduleDayChip" data-day="15" aria-pressed="false">15</button>
+                <button type="button" class="planScheduleDayChip" data-day="16" aria-pressed="false">16</button>
+                <button type="button" class="planScheduleDayChip" data-day="17" aria-pressed="false">17</button>
+                <button type="button" class="planScheduleDayChip" data-day="18" aria-pressed="false">18</button>
+                <button type="button" class="planScheduleDayChip" data-day="19" aria-pressed="false">19</button>
+                <button type="button" class="planScheduleDayChip" data-day="20" aria-pressed="false">20</button>
+                <button type="button" class="planScheduleDayChip" data-day="21" aria-pressed="false">21</button>
+                <button type="button" class="planScheduleDayChip" data-day="22" aria-pressed="false">22</button>
+                <button type="button" class="planScheduleDayChip" data-day="23" aria-pressed="false">23</button>
+                <button type="button" class="planScheduleDayChip" data-day="24" aria-pressed="false">24</button>
+                <button type="button" class="planScheduleDayChip" data-day="25" aria-pressed="false">25</button>
+                <button type="button" class="planScheduleDayChip" data-day="26" aria-pressed="false">26</button>
+                <button type="button" class="planScheduleDayChip" data-day="27" aria-pressed="false">27</button>
+                <button type="button" class="planScheduleDayChip" data-day="28" aria-pressed="false">28</button>
+                <button type="button" class="planScheduleDayChip" data-day="29" aria-pressed="false">29</button>
+                <button type="button" class="planScheduleDayChip" data-day="30" aria-pressed="false">30</button>
+                <button type="button" class="planScheduleDayChip" data-day="31" aria-pressed="false">31</button>
+              </div>
+              <div class="autoPlanWidget__topupAmount">
+                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--topupAmount" for="auto-plan-topup-amount">
+                  <input
+                    id="auto-plan-topup-amount"
+                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder=" "
+                    inputmode="decimal"
+                    aria-label="Сумма пополнения на каждую выбранную дату месяца"
+                  />
+                  <span class="floatingField__label">Сумма пополнения на дату</span>
+                </label>
+              </div>
+              <p class="autoPlanWidget__topupHint">Одна и та же сумма для каждого выбранного дня месяца.</p>
+            </div>
+
+            <div class="autoPlanWidget__reinvest">
+              <label class="planScheduleReinvest">
+                <input id="auto-plan-reinvest" type="checkbox" />
+                <span>Учитывать реинвестирование купонов от облигаций</span>
+              </label>
+            </div>
+
+            <div class="autoPlanWidget__strategy">
+              <label class="taxControl autoPlanWidget__strategySelect" for="auto-plan-strategy">
+                <span>Сохранить в стратегию</span>
+                <select
+                  id="auto-plan-strategy"
+                  class="input taxControl__input autoPlanWidget__strategyInput"
+                  aria-label="Стратегия для сохранения результата автопланирования"
+                ></select>
+              </label>
+              <button id="auto-plan-save-strategy-btn" class="btn autoPlanWidget__saveBtn" type="button">Сохранить в стратегию</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2b (wide) -->
         <div class="card widget widget--wide" data-widget="plan">
           <div class="widget__header">
             <div>

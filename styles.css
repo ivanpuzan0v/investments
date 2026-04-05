@@ -146,6 +146,182 @@ body{
 .widget--wide{
   grid-column: 1 / -1;
 }
+[data-widget="planning-scaffold"] .autoPlanWidget{
+  margin-top: 4px;
+}
+.autoPlanWidget__fields{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.autoPlanWidget__field.floatingField--portfolio{
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 280px;
+}
+.autoPlanWidget__field.floatingField--portfolio .floatingField__input{
+  width: 100%;
+}
+.autoPlanWidget__section{
+  margin-top: 16px;
+}
+.autoPlanWidget__sectionLabel{
+  font-size: var(--fs-small);
+  font-weight: 650;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.autoPlanWidget__topupAmount{
+  margin-top: 14px;
+}
+.autoPlanWidget__field--topupAmount.floatingField--portfolio{
+  flex: 0 1 280px;
+  min-width: 180px;
+  max-width: 320px;
+}
+.autoPlanWidget__field--topupAmount.floatingField--portfolio .floatingField__input{
+  width: 100%;
+}
+.autoPlanWidget__topupHint{
+  margin: 8px 0 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.35;
+  max-width: 42rem;
+}
+.planScheduleDays{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.planScheduleDayChip{
+  appearance: none;
+  border: 1px solid rgba(60,60,67,0.2);
+  background: rgba(242,242,247,0.9);
+  color: var(--text);
+  min-width: 36px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.planScheduleDayChip:not(.planScheduleDayChip--selected):hover{
+  background: rgba(236,236,240,0.98);
+}
+.planScheduleDayChip--selected{
+  background: #007aff;
+  border-color: rgba(0,122,255,0.85);
+  color: #fff;
+}
+.planScheduleDayChip--selected:hover{
+  background: #4da3ff;
+  border-color: rgba(255,255,255,0.28);
+}
+.planScheduleDayChip:focus-visible{
+  outline: 2px solid rgba(0,122,255,0.55);
+  outline-offset: 2px;
+}
+@media (prefers-color-scheme: dark){
+  .planScheduleDayChip{
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.08);
+  }
+  .planScheduleDayChip:not(.planScheduleDayChip--selected):hover{
+    background: rgba(255,255,255,0.12);
+  }
+  .planScheduleDayChip--selected{
+    background: #0a84ff;
+    border-color: rgba(10,132,255,0.9);
+    color: #fff;
+  }
+  .planScheduleDayChip--selected:hover{
+    background: #64b5ff;
+    border-color: rgba(255,255,255,0.22);
+  }
+}
+.autoPlanBonds{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  min-height: 28px;
+  font-size: var(--fs-ui);
+}
+.autoPlanBondPick{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text);
+}
+.autoPlanBondPick input{
+  flex-shrink: 0;
+}
+.autoPlanBonds__empty{
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.4;
+}
+.autoPlanWidget__reinvest{
+  margin-top: 14px;
+}
+.planScheduleReinvest{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--fs-ui);
+  color: var(--text);
+  cursor: pointer;
+  line-height: 1.35;
+}
+.planScheduleReinvest input{
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.autoPlanWidget__strategy{
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.autoPlanWidget__strategySelect{
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 420px;
+  align-items: flex-end;
+}
+.autoPlanWidget__strategySelect .taxControl__input{
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+.autoPlanWidget__strategyInput{
+  min-width: 180px;
+}
+.autoPlanWidget__saveBtn{
+  flex: 0 0 auto;
+  align-self: flex-end;
+  margin-bottom: 2px;
+}
+@media (max-width: 520px){
+  .autoPlanWidget__strategy{
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .autoPlanWidget__strategySelect{
+    max-width: none;
+    width: 100%;
+  }
+  .autoPlanWidget__saveBtn{
+    align-self: stretch;
+    width: 100%;
+  }
+}
 [data-widget="plan"]{
   margin-bottom: 22px;
 }
@@ -1352,7 +1528,7 @@ input[type="number"]{
 }
 .portfolioTotals{
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }
