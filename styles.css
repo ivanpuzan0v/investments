@@ -146,6 +146,19 @@ body{
 .widget--wide{
   grid-column: 1 / -1;
 }
+/* Слева «Облигации» на высоту портфеля + стратегии; справа портфель и под ним настройка стратегии */
+[data-tab-panel="planning"] [data-widget="assets"]{
+  grid-row: 1 / span 2;
+  grid-column: 1;
+}
+[data-tab-panel="planning"] [data-widget="holdings"]{
+  grid-row: 1;
+  grid-column: 2;
+}
+[data-tab-panel="planning"] [data-widget="buy-strategy"]{
+  grid-row: 2;
+  grid-column: 2;
+}
 [data-widget="planning-scaffold"] .autoPlanWidget{
   margin-top: 4px;
 }
@@ -414,6 +427,12 @@ body{
 @media (max-width: 980px){
   .grid{ grid-template-columns: 1fr; }
   .widget--wide{ grid-column: auto; }
+  [data-tab-panel="planning"] [data-widget="assets"],
+  [data-tab-panel="planning"] [data-widget="holdings"],
+  [data-tab-panel="planning"] [data-widget="buy-strategy"]{
+    grid-row: auto;
+    grid-column: auto;
+  }
   [data-tab-panel="calculators"]{ grid-template-columns: 1fr; }
 }
 
@@ -455,87 +474,28 @@ body{
   padding-inline-end: 6px;
   box-sizing: border-box;
 }
-[data-widget="plan"] .planStrategyBar{
-  margin-bottom: 14px;
-  display: flex;
-  justify-content: flex-start;
-}
-[data-widget="plan"] .planStrategyPanel{
-  border: 1px solid rgba(60,60,67,0.14);
-  background: rgba(255,255,255,0.18);
-  border-radius: 14px;
-  /* Сверху/слева/снизу 10px; справа больше — зазор от рамки до select */
-  padding: 10px 14px 10px 10px;
-  width: fit-content;
-  max-width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 10px 12px;
-}
-[data-widget="plan"] .planStrategyPanel .taxControl.planStrategyPanel__selectRow{
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  flex: 0 0 auto;
-  width: max-content;
+[data-widget="buy-strategy"] .buyStrategyTable__select{
+  width: 100%;
   max-width: 100%;
   min-width: 0;
-  gap: 6px;
-}
-[data-widget="plan"] .planStrategyPanel__selectRow > span{
-  text-align: left;
-}
-[data-widget="plan"] .planStrategyPanel__selectRow .taxControl__input{
-  width: max-content;
-  max-width: 100%;
   box-sizing: border-box;
 }
-[data-widget="plan"] .planStrategyPanel__actions{
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-[data-widget="plan"] .planStrategyPanel__actions .btn{
-  min-height: 36px;
-  width: max-content;
-  flex: 0 0 auto;
-  justify-content: center;
+[data-widget="buy-strategy"] .buyStrategyTable__thActions{
+  width: 1%;
   white-space: nowrap;
-  padding: 8px 14px;
-  box-sizing: border-box;
+  text-align: right;
 }
-@media (max-width: 520px){
-  [data-widget="plan"] .planStrategyPanel{
-    flex-direction: column;
-    align-items: stretch;
-    width: fit-content;
-    max-width: 100%;
-  }
-  [data-widget="plan"] .planStrategyPanel .taxControl.planStrategyPanel__selectRow{
-    width: 100%;
-    max-width: 100%;
-  }
-  [data-widget="plan"] .planStrategyPanel__actions{
-    flex-wrap: wrap;
-  }
-  [data-widget="plan"] .planStrategyPanel__actions .btn{
-    flex: 0 0 auto;
-  }
+[data-widget="buy-strategy"] .buyStrategyTable tbody td:last-child{
+  vertical-align: middle;
+  text-align: right;
 }
-[data-widget="plan"] #buy-strategy-select{
-  width: max-content;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  field-sizing: content;
-  padding-left: 12px;
+[data-widget="buy-strategy"] .buyStrategyTable__rowActions{
+  justify-content: flex-end;
 }
 [data-widget="summary"] #summary-strategy-select{
+  min-width: 180px;
+}
+[data-widget="plan"] #buy-strategy-header-select{
   min-width: 180px;
 }
 .btn.btn--danger{
@@ -548,12 +508,6 @@ body{
 .btn.btn--danger:disabled{
   opacity: 0.5;
   cursor: not-allowed;
-}
-@media (prefers-color-scheme: dark){
-  [data-widget="plan"] .planStrategyPanel{
-    border-color: rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.04);
-  }
 }
 .widget__footerActions{
   margin-top: 14px;
@@ -1241,6 +1195,9 @@ input[type="number"]{
   pointer-events: none;
   stroke-dasharray: 4 4;
 }
+.portfolioHoverDot{
+  pointer-events: none;
+}
 .yearPie--dimOthers .yearPieSlice:not(.chartHover--active){
   opacity: 0.4;
   filter: grayscale(0.5) brightness(0.9);
@@ -1433,6 +1390,10 @@ input[type="number"]{
   min-width: 116px;
   max-width: 148px;
 }
+.portfolioChartStrategySelect{
+  min-width: 180px;
+  max-width: 220px;
+}
 .portfolioControls{
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1622,37 +1583,108 @@ input[type="number"]{
 }
 
 .yearPies{
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
   margin-bottom: 0;
 }
-.yearPieCard{
+.yearPiePanel{
   border: 1px solid rgba(60,60,67,0.14);
   background: rgba(255,255,255,0.2);
   border-radius: 12px;
-  padding: 10px;
+  padding: 12px 12px 10px;
 }
-.yearPieCard__title{
+.yearPiePanel__chart{
+  min-width: 0;
+}
+.yearPiePanel__head{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.yearPiePanel__headYear{
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.yearPiePanel__headSum{
+  font-size: var(--fs-body);
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+}
+.yearPiePanel__empty{
+  text-align: center;
+  padding: 20px 8px;
   font-size: var(--fs-small);
   color: var(--muted);
 }
-.yearPieCard__sum{
-  margin-top: 4px;
-  font-size: var(--fs-body);
-  font-weight: 650;
-}
 .yearPie{
   width: 100%;
-  max-width: 120px;
-  margin: 6px auto 0;
+  max-width: 160px;
+  margin: 8px auto 0;
   display: block;
 }
 .yearPieLegend{
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: 10px;
+}
+.yearPieYearSeg{
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  margin-top: 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(60,60,67,0.08);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.yearPieYearSeg::-webkit-scrollbar{
+  display: none;
+}
+.yearPieYearSeg__btn{
+  flex: 1 1 0;
+  min-width: 52px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+.yearPieYearSeg__btn:hover{
+  color: var(--text);
+  background: rgba(60,60,67,0.06);
+}
+.yearPieYearSeg__btn.is-active{
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  color: var(--text);
+}
+.yearPieYearSeg__btn:focus-visible{
+  outline: 2px solid #007AFF;
+  outline-offset: 2px;
+}
+@media (prefers-color-scheme: dark){
+  .yearPieYearSeg{
+    background: rgba(120,120,128,0.18);
+  }
+  .yearPieYearSeg__btn:hover{
+    background: rgba(120,120,128,0.14);
+  }
+  .yearPieYearSeg__btn.is-active{
+    background: rgba(44,44,46,0.94);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
 }
 .yearPieLegend__item{
   display: grid;

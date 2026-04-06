@@ -76,9 +76,17 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Стоимость портфеля</div>
-              <div class="widget__hint">График показывает, как будет меняться стоимость портфеля с учётом пополнений и купонных выплат по месяцам</div>
+              <div class="widget__hint">График показывает, как будет меняться стоимость портфеля с учётом пополнений и купонных выплат по месяцам. Набор покупок берётся из выбранной стратегии (независимо от активной на вкладке «Планирование»).</div>
             </div>
             <div class="widget__headerRight">
+              <label class="taxControl" for="portfolio-chart-strategy-select">
+                <span>Стратегия</span>
+                <select
+                  id="portfolio-chart-strategy-select"
+                  class="input taxControl__input portfolioChartStrategySelect"
+                  aria-label="Стратегия для графика стоимости портфеля"
+                ></select>
+              </label>
               <label class="taxControl" for="portfolio-chart-year">
                 <span>Год</span>
                 <select id="portfolio-chart-year" class="input taxControl__input portfolioChartYearSelect" aria-label="Год для графика портфеля"></select>
@@ -172,12 +180,102 @@
           </div>
         </div>
 
+        <div class="card widget" data-widget="buy-strategy">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Настройка стратегии</div>
+              <div class="widget__hint">Выберите стратегию покупок или создайте новую — строки в таблице «Покупки облигаций» относятся к активной стратегии</div>
+            </div>
+          </div>
+          <div class="tableWrap" role="region" aria-label="Выбор стратегии покупок">
+            <table class="table buyStrategyTable">
+              <thead>
+                <tr>
+                  <th scope="col">Стратегия</th>
+                  <th scope="col" class="buyStrategyTable__thActions">Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <select
+                      id="buy-strategy-select"
+                      class="input taxControl__input buyStrategyTable__select"
+                      aria-label="Стратегия покупок облигаций"
+                    ></select>
+                  </td>
+                  <td>
+                    <div class="buyRowActions buyStrategyTable__rowActions">
+                      <button
+                        id="buy-strategy-edit-btn"
+                        class="iconBtn"
+                        type="button"
+                        title="Редактировать стратегию"
+                        aria-label="Редактировать стратегию"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="18"
+                          height="18"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 20h9"></path>
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        id="buy-strategy-duplicate-btn"
+                        class="iconBtn"
+                        type="button"
+                        title="Дублировать стратегию"
+                        aria-label="Дублировать стратегию"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="18"
+                          height="18"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      </button>
+                      <button
+                        id="buy-strategy-delete-btn"
+                        class="iconBtn"
+                        type="button"
+                        title="Удалить стратегию"
+                        aria-label="Удалить стратегию"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="widget__footerActions">
+            <button id="buy-strategy-new-btn" class="btn" type="button">Создать</button>
+          </div>
+        </div>
+
         <!-- Автопланирование -->
         <div class="card widget widget--wide" data-widget="planning-scaffold">
           <div class="widget__header">
             <div>
               <div class="widget__title">Автопланирование</div>
-              <div class="widget__hint">Покупки по дням месяца и периоду; доходность — купоны в год на рубль затрат с НКД; реинвест — купоны за прошлый календарный месяц один раз за месяц (к первой удачной дате пополнения). «Сохранить» дополняет строки стратегии (одна дата — одна строка, позиции суммируются).</div>
+              <div class="widget__hint">Покупки по дням месяца и периоду; чистая цена из таблицы (НКД не считается). На каждую дату бюджет идёт в наиболее выгодные из отмеченных бумаг; одну и ту же облигацию можно докупать и спустя месяцы после выплаты купона, если по доходности она всё ещё выигрывает. Для не-ежемесячных выплат добавляется небольшой бонус в начале купонного периода (после выплаты); при 12 выплатах в год поправка не используется. Скоринг — купоны в год на рубль чистой цены. Реинвест — купоны за прошлый месяц один раз за месяц. «Сохранить» дополняет строки стратегии.</div>
             </div>
           </div>
           <div class="autoPlanWidget" id="planning-scaffold-body" aria-label="Параметры автопланирования">
@@ -288,20 +386,17 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Покупки облигаций</div>
-              <div class="widget__hint">Добавьте планируемые покупки облигаций на дату, чтобы рассчитывать ожидаемые будущие выплаты. Нажмите на строку, чтобы изменить</div>
+              <div class="widget__hint">Добавьте планируемые покупки облигаций на дату, чтобы рассчитывать ожидаемые будущие выплаты. Нажмите на строку, чтобы изменить. Стратегию можно сменить справа или в виджете «Настройка стратегии»</div>
             </div>
-          </div>
-
-          <div class="planStrategyBar">
-            <div class="planStrategyPanel">
-              <label class="taxControl planStrategyPanel__selectRow" for="buy-strategy-select">
+            <div class="widget__headerRight">
+              <label class="taxControl" for="buy-strategy-header-select">
                 <span>Стратегия</span>
-                <select id="buy-strategy-select" class="input taxControl__input" aria-label="Стратегия покупок облигаций"></select>
+                <select
+                  id="buy-strategy-header-select"
+                  class="input taxControl__input"
+                  aria-label="Стратегия покупок облигаций"
+                ></select>
               </label>
-              <div class="planStrategyPanel__actions">
-                <button id="buy-strategy-new-btn" class="btn btn--ghost" type="button">Создать</button>
-                <button id="buy-strategy-edit-btn" class="btn btn--ghost" type="button">Редактировать</button>
-              </div>
             </div>
           </div>
 
@@ -332,7 +427,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Сводка по облигациям и выплатам</div>
-              <div class="widget__hint">Выплаты net, вложения в покупки и простая доходность после налога по прогнозу купонов</div>
+              <div class="widget__hint">Выплаты net, вложения и доходность; справа — одна круговая диаграмма по облигациям и годам (переключатель под легендой).</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="tax-rate">
@@ -370,12 +465,12 @@
                   <div id="total-invested" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Средняя доходность по net-выплатам за выбранный год. Формула: (Всего выплат net за год / Вложено) × 100%." aria-label="Как считается показатель Средняя доходность за год">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой справа: (сумма net-купонов за этот календарный год) / (сумма вложений по покупкам с датой в этот же год — только цена×количество, без купонов) × 100%." aria-label="Как считается показатель Средняя доходность за год">?</button>
                   <div id="yield-annual-label" class="summaryStat__label">Средняя доходность за год</div>
                   <div id="yield-annual" class="summaryStat__value">—</div>
                 </div>
                 <div class="summaryStat">
-                  <button id="yield-monthly-help" type="button" class="summaryInfoBtn" data-summary-help="Среднемесячная доходность по net-выплатам. Формула: (Всего выплат net / число месяцев с выплатами / Вложено) × 100%." aria-label="Как считается показатель Среднемесячная доходность">?</button>
+                  <button id="yield-monthly-help" type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой: (выплаты net за год ÷ вложения за год) ÷ 12 × 100% — доля от вложений в среднем за календарный месяц. Без годов выплат: по всему горизонту и всем вложениям, деление на число месяцев горизонта." aria-label="Как считается показатель Среднемесячная доходность">?</button>
                   <div id="yield-monthly-label" class="summaryStat__label">Среднемесячная доходность</div>
                   <div id="yield-monthly" class="summaryStat__value">—</div>
                 </div>
@@ -398,7 +493,7 @@
             </div>
 
             <div class="summaryLayout__right">
-              <div id="year-pies" class="yearPies" aria-label="Круговые диаграммы выплат по годам"></div>
+              <div id="year-pies" class="yearPies" aria-label="Диаграмма выплат net по облигациям за выбранный год"></div>
             </div>
           </div>
         </div>
@@ -480,7 +575,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Сравнение доходности облигаций</div>
-              <div class="widget__hint">Добавляйте строки, чтобы сравнивать текущую доходность и приблизительную доходность к погашению по нескольким облигациям</div>
+              <div class="widget__hint">Расчёт от цены покупки одной облигации, НКД при покупке, номинала, купона в рублях за одну выплату, числа выплат в года, уже полученных купонов и дат покупки и погашения</div>
             </div>
           </div>
 
@@ -490,7 +585,7 @@
                 <tr>
                   <th scope="col">Облигация</th>
                   <th scope="col">Выплат в год</th>
-                  <th scope="col">Купонный доход</th>
+                  <th scope="col">Купоны к получению</th>
                   <th scope="col">Доход от погашения</th>
                   <th scope="col">Итоговый доход</th>
                   <th scope="col">Доход от вложений</th>
@@ -507,7 +602,7 @@
             <button id="add-yield-row" class="btn" type="button">Добавить</button>
           </div>
 
-          <div id="yield-formula" class="calculatorNote">Доходность к погашению считается по приближённой формуле для купонной облигации.</div>
+          <div id="yield-formula" class="calculatorNote">Грязная цена = цена покупки + НКД. Купоны к получению = купон за выплату × оставшиеся выплаты. Текущая доходность = (купон × выплат в год) / грязная цена. Доходность к погашению ≈ полный денежный результат / грязная цена / срок в годах.</div>
         </div>
       </section>
     </main>
@@ -596,7 +691,7 @@
           <input type="hidden" data-field="bondName" value="" />
           <input type="hidden" data-field="nominal" value="" />
           <input type="hidden" data-field="purchasePrice" value="" />
-          <input type="hidden" data-field="couponRate" value="" />
+          <input type="hidden" data-field="couponPerPayment" value="" />
           <input type="hidden" data-field="accruedIncome" value="" />
           <input type="hidden" data-field="purchaseDate" value="" />
           <input type="hidden" data-field="maturityDate" value="" />
@@ -777,9 +872,9 @@
             <input id="yield-modal-purchase-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="950" placeholder=" " />
             <span class="floatingField__label">Цена покупки</span>
           </label>
-          <label class="floatingField" for="yield-modal-coupon-rate">
-            <input id="yield-modal-coupon-rate" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="12" placeholder=" " />
-            <span class="floatingField__label">Ставка купона, % годовых</span>
+          <label class="floatingField" for="yield-modal-coupon-per-payment">
+            <input id="yield-modal-coupon-per-payment" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="30" placeholder=" " />
+            <span class="floatingField__label">Купон за 1 выплату, ₽</span>
           </label>
           <label class="floatingField" for="yield-modal-accrued-income">
             <input id="yield-modal-accrued-income" class="input input--num floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
