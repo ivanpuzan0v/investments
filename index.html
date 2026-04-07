@@ -5,18 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=2" />
+    <link rel="stylesheet" href="./styles.css?v=9" />
+    <script>
+      (function () {
+        try {
+          var k = "invest_planner_theme_v1";
+          var raw = localStorage.getItem(k);
+          var dark = false;
+          if (raw === "dark") dark = true;
+          else if (raw === "light") dark = false;
+          else dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>
     <header class="topbar">
       <div class="topbar__inner">
-        <div>
+        <div class="topbar__brand">
           <div class="title">Планирование инвестиций</div>
-          <div class="subtitle">Сайт для планирования облигационного портфеля, купонных выплат и расчёта доходности</div>
+          <p class="subtitle">Облигации, купоны и доходность в одном интерфейсе.</p>
         </div>
 
         <div class="topbar__actions">
+          <label class="themePicker" for="theme-select">
+            <span class="themePicker__label">Тема</span>
+            <select id="theme-select" class="input themeSelect" aria-label="Тема оформления">
+              <option value="system">Как в системе</option>
+              <option value="light">Светлая</option>
+              <option value="dark">Тёмная</option>
+            </select>
+          </label>
           <button id="reset-all" class="btn btn--ghost" type="button" title="Сбросить локальные данные">
             Сбросить
           </button>
@@ -37,7 +58,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Параметры портфеля</div>
-              <div class="widget__hint">Укажите дату старта, начальную стоимость портфеля и ежемесячные пополнения для расчёта его динамики</div>
+              <div class="widget__hint">Старт, пополнения и горизонт — для модели стоимости.</div>
             </div>
           </div>
 
@@ -76,7 +97,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Стоимость портфеля</div>
-              <div class="widget__hint">График показывает, как будет меняться стоимость портфеля с учётом пополнений и купонных выплат по месяцам. Набор покупок берётся из выбранной стратегии (независимо от активной на вкладке «Планирование»).</div>
+              <div class="widget__hint">Стоимость по месяцам с пополнениями и купонами. Покупки — из выбранной стратегии.</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="portfolio-chart-strategy-select">
@@ -126,7 +147,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Облигации</div>
-              <div class="widget__hint">Добавьте облигации, которые планируете покупать в портфель, чтобы учитывать их купоны и даты выплат</div>
+              <div class="widget__hint">Тикеры, купоны и календарь выплат для расчётов.</div>
             </div>
           </div>
 
@@ -156,7 +177,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Текущий портфель</div>
-              <div class="widget__hint">Добавьте облигации, которые уже есть в портфеле, чтобы учитывать их в расчётах и графиках</div>
+              <div class="widget__hint">Текущие позиции для графиков и купонов.</div>
             </div>
           </div>
 
@@ -184,7 +205,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Настройка стратегии</div>
-              <div class="widget__hint">Выберите стратегию покупок или создайте новую — строки в таблице «Покупки облигаций» относятся к активной стратегии</div>
+              <div class="widget__hint">Таблица покупок привязана к выбранной стратегии.</div>
             </div>
           </div>
           <div class="tableWrap" role="region" aria-label="Выбор стратегии покупок">
@@ -275,7 +296,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Автопланирование</div>
-              <div class="widget__hint">Покупки по дням месяца и периоду; чистая цена из таблицы (НКД не считается). На каждую дату бюджет идёт в наиболее выгодные из отмеченных бумаг; одну и ту же облигацию можно докупать и спустя месяцы после выплаты купона, если по доходности она всё ещё выигрывает. Для не-ежемесячных выплат добавляется небольшой бонус в начале купонного периода (после выплаты); при 12 выплатах в год поправка не используется. Скоринг — купоны в год на рубль чистой цены. Реинвест — купоны за прошлый месяц один раз за месяц. «Сохранить» дополняет строки стратегии.</div>
+              <div class="widget__hint">Покупки по датам из чистой цены в таблице. Бюджет распределяется по доходности; реинвест — купоны за прошлый месяц. Кнопка добавляет строки в стратегию.</div>
             </div>
           </div>
           <div class="autoPlanWidget" id="planning-scaffold-body" aria-label="Параметры автопланирования">
@@ -303,12 +324,12 @@
             </div>
 
             <div class="autoPlanWidget__section">
-              <div class="autoPlanWidget__sectionLabel">Облигации для автопланирования</div>
+              <div class="autoPlanWidget__sectionLabel">Облигации</div>
               <div id="auto-plan-bonds" class="autoPlanBonds" role="group" aria-label="Облигации из таблицы для автопланирования"></div>
             </div>
 
             <div class="autoPlanWidget__section">
-              <div class="autoPlanWidget__sectionLabel">Дни месяца для пополнения счёта из своих средств</div>
+              <div class="autoPlanWidget__sectionLabel">Дни пополнения</div>
               <div id="auto-plan-topup-days" class="planScheduleDays" role="group" aria-label="Дни месяца пополнения">
                 <button type="button" class="planScheduleDayChip" data-day="1" aria-pressed="false">1</button>
                 <button type="button" class="planScheduleDayChip" data-day="2" aria-pressed="false">2</button>
@@ -357,7 +378,7 @@
                   <span class="floatingField__label">Сумма пополнения на дату</span>
                 </label>
               </div>
-              <p class="autoPlanWidget__topupHint">Одна и та же сумма для каждого выбранного дня месяца.</p>
+              <p class="autoPlanWidget__topupHint">Одна сумма на каждый выбранный день.</p>
             </div>
 
             <div class="autoPlanWidget__reinvest">
@@ -386,9 +407,17 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Покупки облигаций</div>
-              <div class="widget__hint">Добавьте планируемые покупки облигаций на дату, чтобы рассчитывать ожидаемые будущие выплаты. Нажмите на строку, чтобы изменить. Стратегию можно сменить справа или в виджете «Настройка стратегии»</div>
+              <div class="widget__hint">План по датам; правка — по строке. Фильтр по году показывает только строки этого года.</div>
             </div>
             <div class="widget__headerRight">
+              <label class="taxControl" for="buy-table-year-filter">
+                <span>Год</span>
+                <select
+                  id="buy-table-year-filter"
+                  class="input taxControl__input buyTableYearFilter"
+                  aria-label="Показать покупки за год"
+                ></select>
+              </label>
               <label class="taxControl" for="buy-strategy-header-select">
                 <span>Стратегия</span>
                 <select
@@ -427,7 +456,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Сводка по облигациям и выплатам</div>
-              <div class="widget__hint">Выплаты net, вложения и доходность; справа — одна круговая диаграмма по облигациям и годам (переключатель под легендой).</div>
+              <div class="widget__hint">Выплаты, вложения, налог и доходность. Справа — доли по облигациям и годам.</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="tax-rate">
@@ -502,7 +531,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">График выплат купонов (gross)</div>
-              <div class="widget__hint">Сумма выплат по месяцам до налога на основе облигаций и покупок</div>
+              <div class="widget__hint">Валовые выплаты по месяцам (до налога).</div>
             </div>
             <div class="widget__headerRight">
               <label class="taxControl" for="chart-year">
@@ -526,7 +555,7 @@
           <div class="widget__header">
             <div>
               <div class="widget__title">Накопленный купонный доход</div>
-              <div class="widget__hint">Расчёт НКД по номиналу, ставке купона и дням внутри купонного периода</div>
+              <div class="widget__hint">НКД от номинала, ставки и дат купонного периода.</div>
             </div>
           </div>
 
@@ -568,14 +597,14 @@
             </div>
           </div>
 
-          <div id="accrued-formula" class="calculatorNote">Формула: НКД = Номинал × Ставка купона / 100 × Дней с прошлого купона / 365.</div>
+          <div id="accrued-formula" class="calculatorNote">НКД = номинал × ставка / 100 × дни с прошлого купона / 365.</div>
         </div>
 
         <div class="card widget widget--wide" data-widget="calculator-yield">
           <div class="widget__header">
             <div>
               <div class="widget__title">Сравнение доходности облигаций</div>
-              <div class="widget__hint">Расчёт от цены покупки одной облигации, НКД при покупке, номинала, купона в рублях за одну выплату, числа выплат в года, уже полученных купонов и дат покупки и погашения</div>
+              <div class="widget__hint">Доходность от цены, НКД, купонов и срока до погашения.</div>
             </div>
           </div>
 
@@ -602,7 +631,7 @@
             <button id="add-yield-row" class="btn" type="button">Добавить</button>
           </div>
 
-          <div id="yield-formula" class="calculatorNote">Грязная цена = цена покупки + НКД. Купоны к получению = купон за выплату × оставшиеся выплаты. Текущая доходность = (купон × выплат в год) / грязная цена. Доходность к погашению ≈ полный денежный результат / грязная цена / срок в годах.</div>
+          <div id="yield-formula" class="calculatorNote">Грязная цена = покупка + НКД. Купонная доходность ≈ (купон × выплат в год) / грязная цена; к погашению — с учётом потока купонов и срока.</div>
         </div>
       </section>
     </main>
@@ -639,7 +668,7 @@
     </template>
 
     <template id="txn-row-template">
-      <tr>
+      <tr class="buyTable__dataRow">
         <td>
           <input type="hidden" data-field="date" value="" />
           <div class="buyTableDate" data-display-for="date">—</div>

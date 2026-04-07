@@ -17,6 +17,8 @@ const BUY_STRATEGIES_KEY = "invest_planner_buy_strategies_v1";
 const ACTIVE_BUY_STRATEGY_KEY = "invest_planner_active_buy_strategy_v1";
 const ACCRUED_CALC_KEY = "invest_planner_accrued_calc_v1";
 const YIELD_CALC_KEY = "invest_planner_yield_calc_v1";
+/** localStorage: «light» | «dark» | «system» (по умолчанию — как в ОС). */
+const THEME_PREF_KEY = "invest_planner_theme_v1";
 
 const bondsTbody = document.getElementById("assets-tbody");
 const buysTbody = document.getElementById("txns-tbody");
@@ -33,6 +35,7 @@ const addBuyBtn = document.getElementById("add-txn-row");
 const addHoldingBtn = document.getElementById("add-holding-row");
 const addYieldRowBtn = document.getElementById("add-yield-row");
 const buyStrategySelect = document.getElementById("buy-strategy-select");
+const buyTableYearFilterSelect = document.getElementById("buy-table-year-filter");
 const buyStrategyHeaderSelect = document.getElementById("buy-strategy-header-select");
 const summaryStrategySelect = document.getElementById("summary-strategy-select");
 const autoPlanStrategySelect = document.getElementById("auto-plan-strategy");
@@ -146,6 +149,7 @@ const yieldModalCouponPerPaymentInput = document.getElementById("yield-modal-cou
 const yieldModalAccruedIncomeInput = document.getElementById("yield-modal-accrued-income");
 const yieldModalRedemptionPriceInput = document.getElementById("yield-modal-redemption-price");
 const yieldSaveBtn = document.getElementById("yield-save");
+const themeSelect = document.getElementById("theme-select");
 
 const DATE_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTHS_RU = [
@@ -180,6 +184,58 @@ let autoPlanBondPickerSig = "";
 /** Кэш данных сводки для переключения года без повторного расчёта из DOM. */
 let lastSummaryPieChartData = null;
 
+function getThemePreference() {
+  try {
+    const v = localStorage.getItem(THEME_PREF_KEY);
+    if (v === "light" || v === "dark" || v === "system") return v;
+  } catch {
+    /* ignore */
+  }
+  return "system";
+}
+
+function systemPrefersDark() {
+  return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
+/** @returns {"light"|"dark"} */
+function effectiveThemeFromPreference(pref) {
+  if (pref === "dark") return "dark";
+  if (pref === "light") return "light";
+  return systemPrefersDark() ? "dark" : "light";
+}
+
+function applyDocumentTheme(effective) {
+  document.documentElement.setAttribute("data-theme", effective);
+  document.documentElement.style.colorScheme = effective === "dark" ? "dark" : "light";
+}
+
+function initThemeUi() {
+  const pref = getThemePreference();
+  applyDocumentTheme(effectiveThemeFromPreference(pref));
+  if (themeSelect) {
+    themeSelect.value = pref;
+    themeSelect.addEventListener("change", () => {
+      const next = String(themeSelect.value || "").trim();
+      if (next !== "light" && next !== "dark" && next !== "system") return;
+      try {
+        localStorage.setItem(THEME_PREF_KEY, next);
+      } catch {
+        /* ignore */
+      }
+      applyDocumentTheme(effectiveThemeFromPreference(next));
+    });
+  }
+  if (window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onSchemeChange = () => {
+      if (getThemePreference() !== "system") return;
+      applyDocumentTheme(effectiveThemeFromPreference("system"));
+    };
+    mq.addEventListener("change", onSchemeChange);
+  }
+}
+
 function readRows(tbody) {
   return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
     const row = {};
@@ -192,6 +248,47 @@ function readRows(tbody) {
       }
     });
     return row;
+  });
+}
+
+function refreshBuyYearFilterUi() {
+  if (!buyTableYearFilterSelect || !buysTbody) return;
+  if (buysTbody.querySelector('tr[data-empty-state="1"]')) {
+    buyTableYearFilterSelect.innerHTML = `<option value="">${escapeHtml("Все годы")}</option>`;
+    buyTableYearFilterSelect.value = "";
+    return;
+  }
+
+  const rows = Array.from(buysTbody.querySelectorAll("tr.buyTable__dataRow"));
+  const yearsSet = new Set();
+  for (const tr of rows) {
+    const ymd = normalizeYMD(tr.querySelector('[data-field="date"]')?.value || "");
+    if (ymd.length >= 4) yearsSet.add(ymd.slice(0, 4));
+  }
+  const sorted = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  const prev = String(buyTableYearFilterSelect.value || "").trim();
+
+  buyTableYearFilterSelect.innerHTML =
+    `<option value="">${escapeHtml("Все годы")}</option>` +
+    sorted.map((yy) => `<option value="${escapeHtml(yy)}">${escapeHtml(yy)}</option>`).join("");
+
+  if (prev && sorted.includes(prev)) buyTableYearFilterSelect.value = prev;
+  else buyTableYearFilterSelect.value = "";
+
+  applyBuyYearFilter();
+}
+
+function applyBuyYearFilter() {
+  if (!buysTbody) return;
+  const y = buyTableYearFilterSelect ? String(buyTableYearFilterSelect.value || "").trim() : "";
+  Array.from(buysTbody.querySelectorAll("tr.buyTable__dataRow")).forEach((tr) => {
+    if (!y) {
+      tr.hidden = false;
+      return;
+    }
+    const ymd = normalizeYMD(tr.querySelector('[data-field="date"]')?.value || "");
+    const rowY = ymd.length >= 4 ? ymd.slice(0, 4) : "";
+    tr.hidden = rowY !== y;
   });
 }
 
@@ -243,6 +340,9 @@ function writeRows(tbody, template, rows) {
     });
     tbody.appendChild(node);
   });
+  if (tbody === buysTbody) {
+    refreshBuyYearFilterUi();
+  }
 }
 
 function renderTableEmptyState(tbody, colSpan, title, hint) {
@@ -1997,11 +2097,15 @@ function buildPayoutSeries(bonds, buys, holdings) {
       return [{ dateYMD, dateUTCms, bond, quantity }];
     });
 
-  /** Портфель: условная дата владения — начало обращения по карточке, иначе купоны до «сегодня» не попадали в график. */
+  /** Портфель: для помесячной модели считаем, что владение начинается с 1-го числа месяца начала обращения. */
   const holdingsAsBuys = parseHoldingItems(holdings).map((item) => {
     const bondKey = normalizeBondKey(item.bond);
     const bondMeta = normalizedBonds.find((b) => b.matchBond === bondKey);
     let dateYMD = bondMeta?.startDate ? normalizeYMD(bondMeta.startDate) || bondMeta.startDate : "";
+    if (dateYMD) {
+      const mk = toMonthKeyFromYMD(dateYMD);
+      if (mk) dateYMD = `${mk}-01`;
+    }
     if (!dateYMD) dateYMD = getTodayYMD();
     let dateUTCms = ymdToUTCms(dateYMD);
     if (dateUTCms == null || !Number.isFinite(dateUTCms)) {
@@ -2025,17 +2129,19 @@ function buildPayoutSeries(bonds, buys, holdings) {
 
     const startTs = ymdToUTCms(bondRow.startDate);
     const endTs = ymdToUTCms(bondRow.endDate);
+    const startMonthKey = toMonthKeyFromYMD(bondRow.startDate);
+    const endMonthKey = toMonthKeyFromYMD(bondRow.endDate);
     const start = new Date(startTs);
     const end = new Date(endTs);
 
     for (let y = start.getUTCFullYear(); y <= end.getUTCFullYear(); y += 1) {
       bondRow.payoutMonths.forEach((monthNum) => {
         const monthIndex = monthNum - 1;
+        const monthKey = `${String(y).padStart(4, "0")}-${String(monthNum).padStart(2, "0")}`;
+        if (startMonthKey && monthKeyToUTCms(monthKey) < monthKeyToUTCms(startMonthKey)) return;
+        if (endMonthKey && monthKeyToUTCms(monthKey) > monthKeyToUTCms(endMonthKey)) return;
         const paymentDate = new Date(Date.UTC(y, monthIndex, 1));
         const paymentTs = paymentDate.getTime();
-        if (paymentTs < startTs || paymentTs > endTs) return;
-
-        const monthKey = `${String(y).padStart(4, "0")}-${String(monthNum).padStart(2, "0")}`;
         allDateSet.add(monthKey);
 
         const quantityAtDate = normalizedBuys
@@ -2573,6 +2679,8 @@ function persistAndRender() {
   // Перерисовываем строки только если реально поменялся порядок.
   if (sortResult.didSort) {
     writeRows(buysTbody, buyTpl, buysSorted);
+  } else {
+    refreshBuyYearFilterUi();
   }
   syncBuySummaries();
   syncStaticTableEmptyStates();
@@ -2874,10 +2982,10 @@ function grossCouponsForCalendarMonth(monthKey, bondConfigs, buyEvents) {
   let sum = 0;
   for (const br of bondConfigs) {
     if (!br.payoutMonths.includes(monthNum)) continue;
-    const startTs = ymdToUTCms(br.startDate);
-    const endTs = ymdToUTCms(br.endDate);
-    if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) continue;
-    if (paymentTs < startTs || paymentTs > endTs) continue;
+    const startMonthKey = toMonthKeyFromYMD(br.startDate);
+    const endMonthKey = toMonthKeyFromYMD(br.endDate);
+    if (startMonthKey && monthKeyToUTCms(monthKey) < monthKeyToUTCms(startMonthKey)) continue;
+    if (endMonthKey && monthKeyToUTCms(monthKey) > monthKeyToUTCms(endMonthKey)) continue;
     const q = quantityHeldAtPaymentTs(br.matchBond, paymentTs, buyEvents);
     sum += q * br.coupon;
   }
@@ -3325,6 +3433,7 @@ bondsTbody?.addEventListener("input", (e) => {
 
 function copyBuyRow(tr) {
   if (!tr || tr.parentElement !== buysTbody) return;
+  if (!tr.classList.contains("buyTable__dataRow")) return;
   if (tr.hasAttribute("data-empty-state")) return;
 
   const dateInput = tr.querySelector('[data-field="date"]');
@@ -3390,6 +3499,12 @@ addBuyBtn.addEventListener("click", () => {
 if (buyStrategySelect) {
   buyStrategySelect.addEventListener("change", () => {
     switchActiveBuyStrategy(buyStrategySelect.value);
+  });
+}
+
+if (buyTableYearFilterSelect) {
+  buyTableYearFilterSelect.addEventListener("change", () => {
+    applyBuyYearFilter();
   });
 }
 
@@ -3622,6 +3737,7 @@ document.addEventListener("click", (e) => {
 
 setActiveTab(localStorage.getItem(ACTIVE_TAB_KEY) || "planning");
 
+initThemeUi();
 bindChartTooltips();
 updateSortableHeaders();
 loadAll();
@@ -3727,7 +3843,7 @@ function syncHoldingsBondSelects() {
 }
 
 function syncBuySummaries() {
-  Array.from(buysTbody.querySelectorAll("tr")).forEach((tr) => {
+  Array.from(buysTbody.querySelectorAll("tr.buyTable__dataRow")).forEach((tr) => {
     const dateHidden = tr.querySelector('[data-field="date"]');
     const dateDisplay = tr.querySelector('[data-display-for="date"]');
     if (dateHidden && dateDisplay) {
@@ -4617,6 +4733,7 @@ function openBuyModal() {
 
 function openBuyModalForEdit(tr) {
   if (!tr || tr.closest("tbody") !== buysTbody) return;
+  if (!tr.classList.contains("buyTable__dataRow")) return;
   buyModalEditingTr = tr;
   if (buyModalTitle) buyModalTitle.textContent = BUY_MODAL_TITLE_EDIT;
   const dateInput = tr.querySelector('[data-field="date"]');
