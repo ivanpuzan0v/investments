@@ -379,6 +379,26 @@
                 </label>
               </div>
               <p class="autoPlanWidget__topupHint">Одна сумма на каждый выбранный день.</p>
+              <div class="autoPlanWidget__priceDrift">
+                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--priceDrift" for="auto-plan-price-drift-pct">
+                  <input
+                    id="auto-plan-price-drift-pct"
+                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                    type="number"
+                    min="0"
+                    max="99"
+                    step="0.01"
+                    placeholder=" "
+                    inputmode="decimal"
+                    aria-label="Ожидаемое удорожание чистой цены облигаций в месяц, процентов"
+                  />
+                  <span class="floatingField__label">Удорожание цены в месяц, %</span>
+                </label>
+                <p class="autoPlanWidget__priceDriftHint">
+                  Составная модель от месяца «Начало инвестиций»: цена лота для распределения бюджета = цена из таблицы × (1 + %/100)<sup>n</sup>,
+                  n — число полных месяцев до месяца покупки. Пусто или 0 — без сдвига.
+                </p>
+              </div>
             </div>
 
             <div class="autoPlanWidget__reinvest">
@@ -540,7 +560,7 @@
             <div class="widget__headerRight">
               <label class="taxControl" for="chart-year">
                 <span>Год</span>
-                <select id="chart-year" class="input taxControl__input" aria-label="Год для графика"></select>
+                <select id="chart-year" class="input taxControl__input" aria-label="Год для графика выплат или за все время"></select>
               </label>
             </div>
           </div>

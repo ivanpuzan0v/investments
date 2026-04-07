@@ -163,6 +163,56 @@ test("reinvest simulation uses all coupon sources, including non-selected bonds"
   }
 });
 
+test("horizon prefers bond with more future coupons when nominal yield is equal", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        {
+          bond: "SHORT",
+          coupon: "10",
+          bondPrice: "100",
+          payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12",
+          startDate: "2025-01-01",
+          endDate: "2026-12-31",
+        },
+        {
+          bond: "LONG",
+          coupon: "10",
+          bondPrice: "100",
+          payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12",
+          startDate: "2025-01-01",
+          endDate: "2030-12-31",
+        },
+      ],
+      holdings: [],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["SHORT", "LONG"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2026-05-01";
+    document.getElementById("auto-plan-end").value = "2026-05-31";
+    document.getElementById("auto-plan-topup-amount").value = "200";
+    document.getElementById("auto-plan-reinvest").checked = false;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    const result = window.generateAutoPlanBuyRows();
+    assert.equal(result.ok, true, result.message || "expected successful generation");
+
+    const rows = parseRowItems(result.rows);
+    assert.equal(rows.length, 1);
+    const byBond = qtyByBond(rows[0].items);
+    assert.equal(byBond.get("LONG"), 2, "longer horizon should take all lots at equal coupon/price");
+    assert.equal(byBond.get("SHORT") || 0, 0);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("budget is allocated to the best-yield bond", async () => {
   const { dom, window, document } = await setupApp();
   try {
@@ -194,6 +244,52 @@ test("budget is allocated to the best-yield bond", async () => {
     const byBond = qtyByBond(rows[0].items);
     assert.equal(byBond.get("HIGH"), 2, "100 topup + 100 coupons from HIGH holdings => 2 lots of HIGH");
     assert.equal(byBond.get("LOW") || 0, 0, "LOW should not receive budget when HIGH yield score is better");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("monthly price drift reduces lot count on later purchase dates", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        { bond: "AAA", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
+      ],
+      holdings: [],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["AAA"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2026-05-01";
+    document.getElementById("auto-plan-end").value = "2026-07-31";
+    document.getElementById("auto-plan-topup-amount").value = "500";
+    document.getElementById("auto-plan-reinvest").checked = false;
+    document.getElementById("auto-plan-diversify").checked = false;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    document.getElementById("auto-plan-price-drift-pct").value = "";
+    const noDrift = window.generateAutoPlanBuyRows();
+    assert.equal(noDrift.ok, true, noDrift.message || "expected successful generation");
+    const rows0 = parseRowItems(noDrift.rows);
+    const july0 = rows0.find((r) => String(r.date || "").startsWith("2026-07"));
+    assert.ok(july0, "expected a July purchase");
+    assert.equal(qtyByBond(july0.items).get("AAA"), 5, "500 / 100 = 5 lots without drift");
+
+    document.getElementById("auto-plan-price-drift-pct").value = "10";
+    const withDrift = window.generateAutoPlanBuyRows();
+    assert.equal(withDrift.ok, true, withDrift.message || "expected successful generation");
+    const rows1 = parseRowItems(withDrift.rows);
+    const july1 = rows1.find((r) => String(r.date || "").startsWith("2026-07"));
+    assert.ok(july1);
+    assert.equal(qtyByBond(july1.items).get("AAA"), 4, "two months from May: factor 1.1^2, price 121, 500/121 -> 4 lots");
+    const may1 = rows1.find((r) => String(r.date || "").startsWith("2026-05"));
+    assert.ok(may1);
+    assert.equal(qtyByBond(may1.items).get("AAA"), 5, "May still at base price");
   } finally {
     dom.window.close();
   }

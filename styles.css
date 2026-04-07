@@ -285,6 +285,27 @@ html[data-theme="dark"] .tabBtn.is-active{
   line-height: 1.35;
   max-width: 42rem;
 }
+.autoPlanWidget__priceDrift{
+  margin-top: 14px;
+}
+.autoPlanWidget__field--priceDrift.floatingField--portfolio{
+  flex: 0 1 280px;
+  min-width: 180px;
+  max-width: 320px;
+}
+.autoPlanWidget__field--priceDrift.floatingField--portfolio .floatingField__input{
+  width: 100%;
+}
+.autoPlanWidget__priceDriftHint{
+  margin: 8px 0 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.35;
+  max-width: 48rem;
+}
+.autoPlanWidget__priceDriftHint sup{
+  font-size: 0.75em;
+}
 .planScheduleDays{
   display: flex;
   flex-wrap: wrap;

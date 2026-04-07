@@ -128,6 +128,61 @@ test("renderSummary calculates gross, tax, net and invested totals", async () =>
   }
 });
 
+test("coupon payout chart can show all years when chart-year is all time", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    document.getElementById("chart-year").value = "__all__";
+    window.localStorage.setItem("invest_planner_chart_year_v1", "__all__");
+
+    const chartData = {
+      allDates: ["2025-06", "2026-01", "2027-03"],
+      seriesByBond: [
+        {
+          bond: "AAA",
+          matchBond: "AAA",
+          points: [
+            { monthKey: "2025-06", amount: 1 },
+            { monthKey: "2026-01", amount: 2 },
+            { monthKey: "2027-03", amount: 3 },
+          ],
+        },
+      ],
+    };
+
+    window.renderChart(chartData);
+
+    const years = Array.from(
+      document.querySelectorAll("#chart-content .chartAxisLabel--interactive[data-axis-month]")
+    )
+      .map((el) => el.getAttribute("data-axis-month"))
+      .filter(Boolean);
+    assert.deepEqual(years, ["2025", "2026", "2027"]);
+
+    const chartDataTwoMonthsOneYear = {
+      allDates: ["2026-01", "2026-06", "2027-03"],
+      seriesByBond: [
+        {
+          bond: "AAA",
+          matchBond: "AAA",
+          points: [
+            { monthKey: "2026-01", amount: 2 },
+            { monthKey: "2026-06", amount: 5 },
+            { monthKey: "2027-03", amount: 3 },
+          ],
+        },
+      ],
+    };
+    window.renderChart(chartDataTwoMonthsOneYear);
+    const y2026 = document.querySelector(
+      '#chart-content .chartAxisLabel--interactive[data-axis-month="2026"]'
+    );
+    assert.ok(y2026, "one column per calendar year");
+    assert.equal(Number(y2026.getAttribute("data-axis-total")), 7);
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("renderPortfolioChart aggregates start, topups, coupons and end value", async () => {
   const { dom, window, document } = await setupApp();
   try {
