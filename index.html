@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=9" />
+    <link rel="stylesheet" href="./styles.css?v=13" />
     <script>
       (function () {
         try {
@@ -99,7 +99,7 @@
               <div class="widget__title">Стоимость портфеля</div>
               <div class="widget__hint">Стоимость по месяцам с пополнениями и купонами. Покупки — из выбранной стратегии.</div>
             </div>
-            <div class="widget__headerRight">
+            <div class="widget__headerRight widget__headerRight--stackedSelects">
               <label class="taxControl" for="portfolio-chart-strategy-select">
                 <span>Стратегия</span>
                 <select
@@ -384,7 +384,11 @@
             <div class="autoPlanWidget__reinvest">
               <label class="planScheduleReinvest">
                 <input id="auto-plan-reinvest" type="checkbox" />
-                <span>Учитывать реинвестирование купонов от облигаций</span>
+                <span>Реинвестирование</span>
+              </label>
+              <label class="planScheduleReinvest">
+                <input id="auto-plan-diversify" type="checkbox" />
+                <span>Диверсификация</span>
               </label>
             </div>
 
@@ -409,7 +413,7 @@
               <div class="widget__title">Покупки облигаций</div>
               <div class="widget__hint">План по датам; правка — по строке. Фильтр по году показывает только строки этого года.</div>
             </div>
-            <div class="widget__headerRight">
+            <div class="widget__headerRight widget__headerRight--stackedSelects">
               <label class="taxControl" for="buy-table-year-filter">
                 <span>Год</span>
                 <select
@@ -458,7 +462,7 @@
               <div class="widget__title">Сводка по облигациям и выплатам</div>
               <div class="widget__hint">Выплаты, вложения, налог и доходность. Справа — доли по облигациям и годам.</div>
             </div>
-            <div class="widget__headerRight">
+            <div class="widget__headerRight widget__headerRight--stackedSelects">
               <label class="taxControl" for="tax-rate">
                 <span>Налог, %</span>
                 <input id="tax-rate" class="input input--num taxControl__input" type="number" min="0" max="100" step="0.1" value="13" />

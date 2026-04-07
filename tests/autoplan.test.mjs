@@ -198,3 +198,46 @@ test("budget is allocated to the best-yield bond", async () => {
     dom.window.close();
   }
 });
+
+test("diversification spreads budget across selected bonds", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        { bond: "AAA", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
+        { bond: "BBB", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
+      ],
+      holdings: [],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["AAA", "BBB"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2026-05-01";
+    document.getElementById("auto-plan-end").value = "2026-05-31";
+    document.getElementById("auto-plan-topup-amount").value = "200";
+    document.getElementById("auto-plan-reinvest").checked = false;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    document.getElementById("auto-plan-diversify").checked = false;
+    const noDiversify = window.generateAutoPlanBuyRows();
+    assert.equal(noDiversify.ok, true, noDiversify.message || "expected successful generation");
+    const noDivItems = JSON.parse(noDiversify.rows[0].items);
+    const noDivByBond = qtyByBond(noDivItems);
+    assert.equal(noDivByBond.get("AAA"), 2, "without diversification, budget should go to first-best bond");
+    assert.equal(noDivByBond.get("BBB") || 0, 0);
+
+    document.getElementById("auto-plan-diversify").checked = true;
+    const diversify = window.generateAutoPlanBuyRows();
+    assert.equal(diversify.ok, true, diversify.message || "expected successful generation");
+    const divItems = JSON.parse(diversify.rows[0].items);
+    const divByBond = qtyByBond(divItems);
+    assert.equal(divByBond.get("AAA"), 1);
+    assert.equal(divByBond.get("BBB"), 1);
+  } finally {
+    dom.window.close();
+  }
+});

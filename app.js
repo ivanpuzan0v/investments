@@ -43,6 +43,7 @@ const autoPlanStartInput = document.getElementById("auto-plan-start");
 const autoPlanEndInput = document.getElementById("auto-plan-end");
 const autoPlanTopupAmountInput = document.getElementById("auto-plan-topup-amount");
 const autoPlanReinvestCheckbox = document.getElementById("auto-plan-reinvest");
+const autoPlanDiversifyCheckbox = document.getElementById("auto-plan-diversify");
 const autoPlanSaveStrategyBtn = document.getElementById("auto-plan-save-strategy-btn");
 const buyStrategyNewBtn = document.getElementById("buy-strategy-new-btn");
 const buyStrategyEditBtn = document.getElementById("buy-strategy-edit-btn");
@@ -265,7 +266,7 @@ function refreshBuyYearFilterUi() {
     const ymd = normalizeYMD(tr.querySelector('[data-field="date"]')?.value || "");
     if (ymd.length >= 4) yearsSet.add(ymd.slice(0, 4));
   }
-  const sorted = Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  const sorted = Array.from(yearsSet).sort((a, b) => a.localeCompare(b));
   const prev = String(buyTableYearFilterSelect.value || "").trim();
 
   buyTableYearFilterSelect.innerHTML =
@@ -2995,11 +2996,13 @@ function grossCouponsForCalendarMonth(monthKey, bondConfigs, buyEvents) {
 /**
  * Распределение бюджета по чистой цене из таблицы (НКД не оценивается).
  * На дату покупки жадно выбираются наиболее выгодные бумаги; не требуется покупать каждую отмеченную.
+ * В режиме diversification=true используется убывающий скор по уже набранному количеству,
+ * чтобы распределять бюджет между несколькими бумагами (но не обязательно всеми).
  * Скор: (купон×число выплат в год) / чистая цена; для не-ежемесячных — небольшой бонус в «ранней» фазе периода
  * (после выплаты купона можно докупать ещё долго, если базовая доходность лучше других).
  * Для 12 выплат в год бонус по фазе периода не применяется.
  */
-function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd) {
+function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd, diversification = false) {
   const prelim = bondConfigs
     .map((b) => {
       const row = autoPlanBondScheduleShape(b);
@@ -3034,8 +3037,11 @@ function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd) {
     let best = null;
     let bestScore = -1;
     for (const e of entries) {
-      if (e.clean <= B + 1e-9 && e.yieldScore > bestScore) {
-        bestScore = e.yieldScore;
+      if (e.clean > B + 1e-9) continue;
+      const pickedQty = qtyByBond[e.bond] || 0;
+      const effectiveScore = diversification ? e.yieldScore / (pickedQty + 1) : e.yieldScore;
+      if (effectiveScore > bestScore) {
+        bestScore = effectiveScore;
         best = e;
       }
     }
@@ -3096,6 +3102,7 @@ function generateAutoPlanBuyRows() {
   const topup = parseNumber(autoPlanTopupAmountInput?.value ?? "");
   const dayNums = getSelectedAutoPlanDayNums();
   const reinvest = Boolean(autoPlanReinvestCheckbox?.checked);
+  const diversification = Boolean(autoPlanDiversifyCheckbox?.checked);
   const selectedKeys = getSelectedAutoPlanBondKeys();
   const bondConfigs = readAutoPlanBondConfigs(selectedKeys);
 
@@ -3160,7 +3167,7 @@ function generateAutoPlanBuyRows() {
     }
     budget = roundRub2(budget);
 
-    const items = allocateAutoPlanBudget(budget, bondConfigs, dateYmd);
+    const items = allocateAutoPlanBudget(budget, bondConfigs, dateYmd, diversification);
     if (!items.length) continue;
 
     if (applyReinvest) reinvestFromPrevMonthUsedForPurchaseMonth.add(purchaseMonthKey);
