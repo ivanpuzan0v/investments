@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=13" />
+    <link rel="stylesheet" href="./styles.css?v=20" />
     <script>
       (function () {
         try {
@@ -51,6 +51,7 @@
         <button id="tab-planning" class="tabBtn is-active" type="button" data-tab-target="planning">Планирование</button>
         <button id="tab-charts" class="tabBtn" type="button" data-tab-target="charts">Графики</button>
         <button id="tab-calculators" class="tabBtn" type="button" data-tab-target="calculators">Калькуляторы</button>
+        <button id="tab-strategy" class="tabBtn" type="button" data-tab-target="strategy">Стратегия</button>
       </section>
 
       <section id="tab-panel-portfolio" class="grid tabPanel" data-tab-panel="portfolio" hidden>
@@ -658,6 +659,87 @@
           <div id="yield-formula" class="calculatorNote">Грязная цена = покупка + НКД. Купонная доходность ≈ (купон × выплат в год) / грязная цена; к погашению — с учётом потока купонов и срока.</div>
         </div>
       </section>
+
+      <section id="tab-panel-strategy" class="grid tabPanel tabPanel--strategy" data-tab-panel="strategy" hidden>
+        <div class="strategyTabShell card" data-widget="strategy-shell">
+          <aside class="strategyTabShell__aside strategyTabShell__aside--left" aria-label="Стратегии и облигации">
+            <div class="strategyTabShell__strategiesPane">
+              <div class="strategyTabShell__head">
+                <div class="widget__title strategyTabShell__title">Стратегии</div>
+                <button id="strategy-tab-new-strategy" class="strategyTabShell__addBtn" type="button" title="Новая стратегия" aria-label="Новая стратегия">
+                  +
+                </button>
+              </div>
+              <ul id="strategy-tab-strategy-list" class="strategyTabShell__list" role="list"></ul>
+            </div>
+            <div class="strategyTabShell__bondsPane" aria-label="Облигации для портфеля">
+              <div class="strategyTabShell__bondsHead">
+                <div class="widget__title strategyTabShell__title strategyTabShell__title--bonds">Облигации</div>
+                <button id="strategy-tab-new-bond" class="strategyTabShell__addBtn" type="button" title="Добавить облигацию" aria-label="Добавить облигацию">
+                  +
+                </button>
+              </div>
+              <p class="widget__hint strategyTabShell__hint strategyTabShell__hint--bonds">
+                Общий справочник с «Планированием»: добавьте строку или откройте для правки.
+              </p>
+              <ul id="strategy-tab-bonds-list" class="strategyTabShell__bondsList" role="list"></ul>
+            </div>
+          </aside>
+
+          <div class="strategyTabShell__center" role="region" aria-label="Центральная область стратегии">
+            <div id="strategy-pane-buys" class="strategyTabShell__pane strategyTabShell__pane--buys" aria-label="Планы">
+              <div class="strategyTabShell__mainHead">
+                <div class="strategyTabShell__mainHeadText">
+                  <div class="widget__title strategyTabShell__title">Планы</div>
+                  <div class="widget__hint strategyTabShell__hint">План активной стратегии: строка — правка (включая дату), кнопка — новая покупка.</div>
+                </div>
+                <button id="strategy-tab-add-buy" type="button" class="btn strategyTabShell__addBuyBtn">Добавить покупку</button>
+              </div>
+              <div class="tableWrap strategyTabShell__tableWrap">
+                <table class="table strategyTabShell__table">
+                  <thead>
+                    <tr>
+                      <th style="width: 200px;">Дата</th>
+                      <th>Состав</th>
+                      <th style="width: 140px;">Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody id="strategy-tab-buys-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div id="strategy-pane-charts" class="strategyTabShell__pane strategyTabShell__pane--charts" hidden aria-label="Динамика"></div>
+            <div id="strategy-pane-portfolio" class="strategyTabShell__pane strategyTabShell__pane--portfolio" hidden aria-label="Портфель"></div>
+          </div>
+
+          <aside class="strategyTabShell__aside strategyTabShell__aside--right" aria-label="Отображение и подсказка">
+            <div class="strategyTabShell__displaySection">
+              <div class="strategyTabShell__head">
+                <div class="widget__title strategyTabShell__title">Отображение</div>
+              </div>
+              <ul id="strategy-tab-display-list" class="strategyTabShell__list" role="list">
+                <li class="strategyTabShell__displayNavRow is-active">
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="buys">Планы</button>
+                </li>
+                <li class="strategyTabShell__displayNavRow">
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="charts">Динамика</button>
+                </li>
+                <li class="strategyTabShell__displayNavRow">
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="portfolio">Портфель</button>
+                </li>
+              </ul>
+            </div>
+            <div class="strategyTabShell__displayHintSection">
+              <div class="strategyTabShell__head">
+                <div class="widget__title strategyTabShell__title strategyTabShell__title--bonds">Подсказка</div>
+              </div>
+              <p class="widget__hint strategyTabShell__hint strategyTabShell__hint--bonds">
+                Планы — таблица покупок по датам. Динамика — график выплат купонов. Портфель — параметры и стоимость (как на вкладке «Портфель»).
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
     </main>
 
     <template id="asset-row-template">
@@ -846,7 +928,8 @@
         <input id="bond-modal-startDate" type="hidden" value="" />
         <input id="bond-modal-endDate" type="hidden" value="" />
 
-        <div class="modal__footer">
+        <div class="modal__footer modal__footer--bond">
+          <button id="bond-modal-delete" class="btn btn--danger" type="button" hidden>Удалить облигацию</button>
           <button id="bond-modal-save" class="btn" type="button">Сохранить</button>
         </div>
       </div>
@@ -885,6 +968,19 @@
         <div class="modal__footer">
           <button id="strategy-delete" class="btn btn--danger" type="button" hidden>Удалить стратегию</button>
           <button id="strategy-save" class="btn" type="button">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="strategy-actions-overlay" class="modalOverlay" hidden>
+      <div class="modal modal--actions" role="dialog" aria-modal="true" aria-labelledby="strategy-actions-title">
+        <div class="modal__header">
+          <div class="modal__title" id="strategy-actions-title">Стратегия</div>
+          <button id="strategy-actions-close" class="iconBtn modal__closeBtn" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="strategyActionsModal__actions">
+          <button id="strategy-actions-rename" class="btn strategyActionsModal__btn" type="button">Переименовать</button>
+          <button id="strategy-actions-delete" class="btn btn--danger strategyActionsModal__btn" type="button">Удалить стратегию</button>
         </div>
       </div>
     </div>
