@@ -2,6 +2,10 @@ const BONDS_KEY = "invest_planner_bonds_v2";
 const BUYS_KEY = "invest_planner_bond_buys_v2";
 const HOLDINGS_KEY = "invest_planner_holdings_v1";
 const TAX_RATE_KEY = "invest_planner_tax_rate_v1";
+/** «net» | «gross» — как показывать купоны на графике выплат. */
+const COUPON_DISPLAY_MODE_KEY = "invest_planner_coupon_display_mode_v1";
+/** Комиссия за сделку, % (число в localStorage). */
+const TRADE_COMMISSION_PCT_KEY = "invest_planner_trade_commission_pct_v1";
 const ACTIVE_TAB_KEY = "invest_planner_active_tab_v1";
 const CHART_YEAR_KEY = "invest_planner_chart_year_v1";
 const SUMMARY_PIE_YEAR_KEY = "invest_planner_summary_pie_year_v1";
@@ -129,11 +133,6 @@ const strategyModalTitle = document.getElementById("strategy-modal-title");
 const strategyNameInput = document.getElementById("strategy-name-input");
 const strategyDeleteBtn = document.getElementById("strategy-delete");
 const strategySaveBtn = document.getElementById("strategy-save");
-const tabPortfolioBtn = document.getElementById("tab-portfolio");
-const tabPlanningBtn = document.getElementById("tab-planning");
-const tabChartsBtn = document.getElementById("tab-charts");
-const tabCalculatorsBtn = document.getElementById("tab-calculators");
-const tabStrategyBtn = document.getElementById("tab-strategy");
 const portfolioPanel = document.getElementById("tab-panel-portfolio");
 const planningPanel = document.getElementById("tab-panel-planning");
 const chartsPanel = document.getElementById("tab-panel-charts");
@@ -145,9 +144,18 @@ const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
 const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-strategy");
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
 const strategyTabAddBuyBtn = document.getElementById("strategy-tab-add-buy");
+const strategyTabAutoPlanBtn = document.getElementById("strategy-tab-auto-plan-btn");
+const autoPlanModalOverlay = document.getElementById("auto-plan-modal-overlay");
+const autoPlanModalBody = document.getElementById("auto-plan-modal-body");
+const autoPlanModalClose = document.getElementById("auto-plan-modal-close");
+let autoPlanScaffoldRestore = null;
 const strategyPaneBuys = document.getElementById("strategy-pane-buys");
 const strategyPaneCharts = document.getElementById("strategy-pane-charts");
 const strategyPanePortfolio = document.getElementById("strategy-pane-portfolio");
+const strategySidebarTaxInput = document.getElementById("strategy-sidebar-tax-rate");
+const strategyCouponDisplayNetRadio = document.getElementById("strategy-coupon-display-net");
+const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon-display-gross");
+const strategySidebarCommissionInput = document.getElementById("strategy-sidebar-commission-pct");
 const accruedNominalInput = document.getElementById("accrued-nominal");
 const accruedCouponRateInput = document.getElementById("accrued-coupon-rate");
 const accruedLastCouponDateInput = document.getElementById("accrued-last-coupon-date");
@@ -281,6 +289,27 @@ function readRows(tbody) {
   });
 }
 
+/** Строки данных без плейсхолдера «пустая таблица» (tr[data-empty-state]). */
+function readRowsSkippingPlaceholder(tbody) {
+  if (!tbody) return [];
+  return Array.from(tbody.querySelectorAll("tr:not([data-empty-state])")).map((tr) => {
+    const row = {};
+    tr.querySelectorAll("input[data-field], select[data-field], textarea[data-field]").forEach((el) => {
+      const key = el.getAttribute("data-field");
+      if (el instanceof HTMLSelectElement && el.multiple) {
+        row[key] = Array.from(el.selectedOptions).map((o) => o.value).join(",");
+      } else {
+        row[key] = (el.value || "").trim();
+      }
+    });
+    return row;
+  });
+}
+
+function bondTableHasRealRows() {
+  return Boolean(bondsTbody?.querySelector("tr:not([data-empty-state])"));
+}
+
 function refreshBuyYearFilterUi() {
   if (!buyTableYearFilterSelect || !buysTbody) return;
   if (buysTbody.querySelector('tr[data-empty-state="1"]')) {
@@ -324,8 +353,9 @@ function applyBuyYearFilter() {
 
 function ensureChartsWidgetsInChartsTab() {
   if (!strategyPaneCharts || !chartsPanel) return;
-  while (strategyPaneCharts.firstChild) {
-    chartsPanel.appendChild(strategyPaneCharts.firstChild);
+  const returnsWidget = strategyPaneCharts.querySelector('[data-widget="returns"]');
+  if (returnsWidget && returnsWidget.parentNode === strategyPaneCharts) {
+    chartsPanel.appendChild(returnsWidget);
   }
 }
 
@@ -339,15 +369,24 @@ function ensureChartsWidgetsInStrategyPane() {
 
 function ensurePortfolioWidgetsInPortfolioTab() {
   if (!strategyPanePortfolio || !portfolioPanel) return;
-  while (strategyPanePortfolio.firstChild) {
-    portfolioPanel.appendChild(strategyPanePortfolio.firstChild);
-  }
+  const controls = strategyPanePortfolio.querySelector('[data-widget="portfolio-controls"]');
+  const value = strategyPanePortfolio.querySelector('[data-widget="portfolio-value"]');
+  if (controls && controls.parentNode === strategyPanePortfolio) portfolioPanel.appendChild(controls);
+  if (value && value.parentNode === strategyPanePortfolio) portfolioPanel.appendChild(value);
 }
 
 function ensurePortfolioWidgetsInStrategyPane() {
   if (!strategyPanePortfolio || !portfolioPanel) return;
-  while (portfolioPanel.firstChild) {
-    strategyPanePortfolio.appendChild(portfolioPanel.firstChild);
+  const controls = portfolioPanel.querySelector('[data-widget="portfolio-controls"]');
+  const value = portfolioPanel.querySelector('[data-widget="portfolio-value"]');
+  const emptyEl = document.getElementById("strategy-portfolio-empty");
+  const mainHead = document.getElementById("strategy-portfolio-mainhead");
+  if (controls && controls.parentNode === portfolioPanel) strategyPanePortfolio.appendChild(controls);
+  if (value && value.parentNode === portfolioPanel) strategyPanePortfolio.appendChild(value);
+  if (mainHead && emptyEl && controls && value) {
+    mainHead.after(controls);
+    controls.after(emptyEl);
+    emptyEl.after(value);
   }
 }
 
@@ -402,26 +441,14 @@ function applyStrategyCenterViewFromStorage() {
   setStrategyCenterView(mode);
 }
 
-function setActiveTab(tab) {
-  const nextTab = ["portfolio", "planning", "charts", "calculators", "strategy"].includes(tab) ? tab : "planning";
-  if (nextTab !== "strategy") {
-    ensureChartsWidgetsInChartsTab();
-    ensurePortfolioWidgetsInPortfolioTab();
-  }
-  if (portfolioPanel) portfolioPanel.hidden = nextTab !== "portfolio";
-  if (planningPanel) planningPanel.hidden = nextTab !== "planning";
-  if (chartsPanel) chartsPanel.hidden = nextTab !== "charts";
-  if (calculatorsPanel) calculatorsPanel.hidden = nextTab !== "calculators";
-  if (strategyPanel) strategyPanel.hidden = nextTab !== "strategy";
-  if (tabPortfolioBtn) tabPortfolioBtn.classList.toggle("is-active", nextTab === "portfolio");
-  if (tabPlanningBtn) tabPlanningBtn.classList.toggle("is-active", nextTab === "planning");
-  if (tabChartsBtn) tabChartsBtn.classList.toggle("is-active", nextTab === "charts");
-  if (tabCalculatorsBtn) tabCalculatorsBtn.classList.toggle("is-active", nextTab === "calculators");
-  if (tabStrategyBtn) tabStrategyBtn.classList.toggle("is-active", nextTab === "strategy");
-  localStorage.setItem(ACTIVE_TAB_KEY, nextTab);
-  if (nextTab === "strategy") {
-    applyStrategyCenterViewFromStorage();
-  }
+function setActiveTab(_tab) {
+  if (portfolioPanel) portfolioPanel.hidden = true;
+  if (planningPanel) planningPanel.hidden = true;
+  if (chartsPanel) chartsPanel.hidden = true;
+  if (calculatorsPanel) calculatorsPanel.hidden = true;
+  if (strategyPanel) strategyPanel.hidden = false;
+  localStorage.setItem(ACTIVE_TAB_KEY, "strategy");
+  applyStrategyCenterViewFromStorage();
 }
 
 function writeRows(tbody, template, rows) {
@@ -512,10 +539,13 @@ function syncStaticTableEmptyStates() {
   }
 }
 
-function buildSvgEmptyState(title, hint) {
-  return `<text x="450" y="160" text-anchor="middle" fill="currentColor" opacity="0.78" font-size="20" font-weight="600">${escapeHtml(
+function buildSvgEmptyState(title, hint, w = 900, h = 360) {
+  const cx = w / 2;
+  const yTitle = h / 2 - 18;
+  const yHint = h / 2 + 20;
+  return `<text x="${cx}" y="${yTitle}" text-anchor="middle" fill="currentColor" opacity="0.78" font-size="20" font-weight="600">${escapeHtml(
     title
-  )}</text><text x="450" y="190" text-anchor="middle" fill="currentColor" opacity="0.6" font-size="15">${escapeHtml(hint)}</text>`;
+  )}</text><text x="${cx}" y="${yHint}" text-anchor="middle" fill="currentColor" opacity="0.6" font-size="15">${escapeHtml(hint)}</text>`;
 }
 
 function updateSortableHeaders() {
@@ -2101,6 +2131,80 @@ function getTaxRateDecimal() {
   return clamped / 100;
 }
 
+/** true — на графике купонов показывать суммы после налога (net). По умолчанию gross (как раньше). */
+function getCouponDisplayUsesNet() {
+  if (strategyCouponDisplayGrossRadio?.checked) return false;
+  if (strategyCouponDisplayNetRadio?.checked) return true;
+  const v = localStorage.getItem(COUPON_DISPLAY_MODE_KEY);
+  if (v === "net") return true;
+  if (v === "gross") return false;
+  return false;
+}
+
+/** Доля комиссии от суммы сделки (0–1). */
+function getTradeCommissionFraction() {
+  const raw = strategySidebarCommissionInput ? parseNumber(strategySidebarCommissionInput.value) : 0;
+  if (!Number.isFinite(raw)) return 0;
+  return Math.max(0, Math.min(100, raw)) / 100;
+}
+
+function updateReturnsChartWidgetCopy() {
+  const w = document.querySelector('[data-widget="returns"]');
+  if (!w) return;
+  const titleEl = w.querySelector(".widget__title");
+  const hintEl = w.querySelector(".widget__hint");
+  const net = getCouponDisplayUsesNet();
+  if (titleEl) {
+    titleEl.textContent = net ? "График выплат купонов (net)" : "График выплат купонов (gross)";
+  }
+  if (hintEl) {
+    hintEl.textContent = net
+      ? "Выплаты по месяцам после удержания налога."
+      : "Валовые выплаты по месяцам (до налога).";
+  }
+}
+
+function syncStrategySidebarTaxFromMain() {
+  if (taxRateInput && strategySidebarTaxInput) {
+    strategySidebarTaxInput.value = taxRateInput.value;
+  }
+}
+
+function persistStrategySidebarParamsToStorage() {
+  if (strategyCouponDisplayGrossRadio?.checked) {
+    localStorage.setItem(COUPON_DISPLAY_MODE_KEY, "gross");
+  } else {
+    localStorage.setItem(COUPON_DISPLAY_MODE_KEY, "net");
+  }
+  if (strategySidebarCommissionInput) {
+    localStorage.setItem(TRADE_COMMISSION_PCT_KEY, String(parseNumber(strategySidebarCommissionInput.value) || 0));
+  }
+}
+
+function loadStrategySidebarParamsFromStorage() {
+  const taxRaw = localStorage.getItem(TAX_RATE_KEY);
+  if (strategySidebarTaxInput && taxRaw !== null) {
+    strategySidebarTaxInput.value = String(parseNumber(taxRaw) || 13);
+  } else if (strategySidebarTaxInput && taxRateInput) {
+    strategySidebarTaxInput.value = taxRateInput.value;
+  }
+
+  const modeRaw = localStorage.getItem(COUPON_DISPLAY_MODE_KEY);
+  if (strategyCouponDisplayNetRadio && strategyCouponDisplayGrossRadio) {
+    if (modeRaw === "net") {
+      strategyCouponDisplayNetRadio.checked = true;
+    } else {
+      strategyCouponDisplayGrossRadio.checked = true;
+    }
+  }
+
+  const commRaw = localStorage.getItem(TRADE_COMMISSION_PCT_KEY);
+  if (strategySidebarCommissionInput) {
+    strategySidebarCommissionInput.value =
+      commRaw !== null && commRaw !== undefined ? String(parseNumber(commRaw) || 0) : "0";
+  }
+}
+
 function parseMonthList(raw) {
   return String(raw || "")
     .split(",")
@@ -2359,6 +2463,93 @@ function buildPayoutSeries(bonds, buys, holdings) {
   return { allDates, seriesByBond };
 }
 
+/** Совпадает с веткой «пустой SVG» в renderChart (net или gross, год или всё время). */
+let lastCouponReturnsChartRenderedEmpty = false;
+
+/** Совпадает с веткой «пустой SVG» в renderPortfolioChart. */
+let lastPortfolioChartRenderedEmpty = false;
+
+function syncStrategyDynamicsEmptyState() {
+  const emptyEl = document.getElementById("strategy-charts-empty");
+  const pane = strategyPaneCharts;
+  const returnsWidget = document.querySelector('[data-widget="returns"]');
+  if (!emptyEl || !pane || !returnsWidget) return;
+  const inStrategy = pane.contains(returnsWidget);
+  const isEmpty = lastCouponReturnsChartRenderedEmpty;
+  if (inStrategy) {
+    if (isEmpty) {
+      emptyEl.removeAttribute("hidden");
+      returnsWidget.setAttribute("hidden", "");
+    } else {
+      emptyEl.setAttribute("hidden", "");
+      returnsWidget.removeAttribute("hidden");
+    }
+  } else {
+    emptyEl.setAttribute("hidden", "");
+    returnsWidget.removeAttribute("hidden");
+  }
+}
+
+function syncStrategyPortfolioEmptyState() {
+  const pane = strategyPanePortfolio;
+  const emptyEl = document.getElementById("strategy-portfolio-empty");
+  const controls = document.querySelector('[data-widget="portfolio-controls"]');
+  const value = document.querySelector('[data-widget="portfolio-value"]');
+  if (!pane || !emptyEl || !controls || !value) return;
+  const inStrategy = pane.contains(controls) && pane.contains(value);
+  if (!inStrategy) {
+    emptyEl.setAttribute("hidden", "");
+    controls.removeAttribute("hidden");
+    value.removeAttribute("hidden");
+    return;
+  }
+  const showEmpty = lastPortfolioChartRenderedEmpty;
+  if (showEmpty) {
+    emptyEl.removeAttribute("hidden");
+    value.setAttribute("hidden", "");
+  } else {
+    emptyEl.setAttribute("hidden", "");
+    value.removeAttribute("hidden");
+  }
+  controls.removeAttribute("hidden");
+}
+
+/** Данные последнего графика выплат — для перерисовки при изменении размера контейнера. */
+let lastCouponPayoutChartData = null;
+let returnsChartResizeObserverBound = false;
+
+/**
+ * Размер области графика в координатах viewBox: ширина — по контейнеру, высота — по отведённой области (CSS).
+ */
+function measureReturnsChartViewport() {
+  const wrap = returnsChartSvg?.closest(".chartWrap");
+  let wPx = wrap?.clientWidth ?? 0;
+  let hPx = wrap?.clientHeight ?? 0;
+  if (wPx <= 0 && returnsChartSvg) {
+    const r = returnsChartSvg.getBoundingClientRect();
+    wPx = r.width;
+    hPx = r.height;
+  }
+  const w = Math.max(380, Math.min(2000, Math.floor(wPx > 0 ? wPx : 520)));
+  const h = Math.max(280, Math.min(920, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.23))));
+  return { w, h };
+}
+
+function ensureReturnsChartResizeObserver() {
+  if (returnsChartResizeObserverBound || typeof ResizeObserver === "undefined" || !returnsChartSvg) return;
+  const wrap = returnsChartSvg.closest(".chartWrap");
+  if (!wrap) return;
+  let t = 0;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      if (lastCouponPayoutChartData) renderChart(lastCouponPayoutChartData);
+    }, 100);
+  });
+  ro.observe(wrap);
+  returnsChartResizeObserverBound = true;
+}
+
 /** Минимальная высота каждого ненулевого сегмента составного столбца (px). */
 const CHART_STACK_MIN_SEG_PX = 10;
 
@@ -2407,10 +2598,15 @@ function chartStackTopSegmentPathD(x, yTop, w, h, rRaw) {
 }
 
 function renderChart(chartData) {
+  lastCouponReturnsChartRenderedEmpty = false;
+  lastCouponPayoutChartData = chartData;
   hideChartTooltip();
   clearAllChartHover();
-  const allDatesRaw = chartData?.allDates || [];
-  const seriesByBondRaw = chartData?.seriesByBond || [];
+  updateReturnsChartWidgetCopy();
+  const taxR = getTaxRateDecimal();
+  const forView = getCouponDisplayUsesNet() ? toNetChartData(chartData, taxR) : chartData;
+  const allDatesRaw = forView?.allDates || [];
+  const seriesByBondRaw = forView?.seriesByBond || [];
   const selectedYear = ensureChartYearOptions(chartData);
   const isCouponChartAllTime = selectedYear === PORTFOLIO_CHART_YEAR_ALL;
   const allDates = isCouponChartAllTime
@@ -2458,29 +2654,29 @@ function renderChart(chartData) {
       return map;
     });
   }
-  const W = 800;
-  const H = 360;
-  const left = 20;
+  const { w: W, h: H } = measureReturnsChartViewport();
+  const left = 40;
   const right = 12;
-  const top = 24;
-  const bottom = 42;
+  const top = 18;
+  const bottom = 56;
   const innerW = W - left - right;
   const innerH = H - top - bottom;
 
   const lines = [];
 
-  for (let i = 0; i <= 4; i += 1) {
-    const y = top + (innerH / 4) * i;
-    lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
-  }
-
   if (!visibleDates.length || !seriesByBond.length) {
+    lastCouponReturnsChartRenderedEmpty = true;
     if (chartLegend) chartLegend.innerHTML = "";
     const emptyTitle = isCouponChartAllTime
       ? "Нет выплат за весь выбранный период"
       : "Нет выплат за выбранный год";
-    lines.push(buildSvgEmptyState(emptyTitle, "Добавьте облигации и даты купонов, чтобы построить график выплат."));
+    const emptyH = Math.max(260, Math.min(H, 320));
+    lines.push(
+      buildSvgEmptyState(emptyTitle, "Добавьте облигации и даты купонов, чтобы построить график выплат.", W, emptyH)
+    );
     chartContent.innerHTML = lines.join("");
+    if (returnsChartSvg) returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${emptyH}`);
+    ensureReturnsChartResizeObserver();
     return;
   }
 
@@ -2494,7 +2690,12 @@ function renderChart(chartData) {
   const safeMaxY = maxY <= 0 ? 1 : maxY * 1.15;
 
   const groupWidth = innerW / visibleDates.length;
-  const barWidth = Math.max(14, Math.min(36, groupWidth * 0.52));
+  const barWidth = Math.max(12, Math.min(48, groupWidth * 0.54));
+
+  for (let i = 0; i <= 4; i += 1) {
+    const y = top + (innerH / 4) * i;
+    lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
+  }
 
   visibleDates.forEach((bucketKey, dateIdx) => {
     const activeBars = seriesByBond
@@ -2564,16 +2765,30 @@ function renderChart(chartData) {
       );
     } else {
       const monthLabel = formatMonthKey(bucketKey);
-      lines.push(
-        `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 28}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11">${monthLabel.month}</text>`
-      );
-      lines.push(
-        `<text class="chartAxisLabel" data-axis-month="${bucketKey}" data-default-fill="currentColor" data-default-opacity="0.62" x="${labelX}" y="${H - 12}" text-anchor="middle" fill="currentColor" opacity="0.62" font-size="10">${monthLabel.year}</text>`
-      );
+      if (typeof monthLabel === "string") {
+        lines.push(
+          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 20}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11">${escapeHtml(
+            monthLabel
+          )}</text>`
+        );
+      } else {
+        lines.push(
+          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 28}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11">${escapeHtml(
+            monthLabel.month
+          )}</text>`
+        );
+        lines.push(
+          `<text class="chartAxisLabel" data-axis-month="${bucketKey}" data-default-fill="currentColor" data-default-opacity="0.62" x="${labelX}" y="${H - 12}" text-anchor="middle" fill="currentColor" opacity="0.62" font-size="10">${escapeHtml(
+            monthLabel.year
+          )}</text>`
+        );
+      }
     }
   });
 
   chartContent.innerHTML = lines.join("");
+  if (returnsChartSvg) returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  ensureReturnsChartResizeObserver();
 }
 
 function renderSummary(chartData, buys, holdings) {
@@ -2721,8 +2936,12 @@ function renderSummary(chartData, buys, holdings) {
 }
 
 function renderPortfolioChart(chartData) {
-  if (!portfolioChartContent || !portfolioStartTotalEl || !portfolioCouponTotalEl || !portfolioTopupTotalEl || !portfolioEndTotalEl)
+  if (!portfolioChartContent || !portfolioStartTotalEl || !portfolioCouponTotalEl || !portfolioTopupTotalEl || !portfolioEndTotalEl) {
+    lastPortfolioChartRenderedEmpty = false;
     return;
+  }
+
+  lastPortfolioChartRenderedEmpty = false;
 
   const startDate = normalizeYMD(portfolioStartDateInput?.value || "") || getTodayYMD();
   const startMonthKey = toMonthKeyFromYMD(startDate);
@@ -2766,6 +2985,7 @@ function renderPortfolioChart(chartData) {
         ? "Проверьте дату старта и облигации с выплатами."
         : "Смените год или добавьте облигации с купонными выплатами в этот период."
     );
+    lastPortfolioChartRenderedEmpty = true;
     return;
   }
 
@@ -2956,16 +3176,28 @@ function renderStrategyTab() {
     })
     .join("");
 
-  const buyRowsComplete = getActiveStrategyBuysRows().filter(isBuyRowComplete);
+  const planRowsAll = getActiveStrategyBuysRows();
+  const buyRowsComplete = planRowsAll.filter(isBuyRowComplete);
   const { rows: sortedBuys } = sortBuyRowsByDate(buyRowsComplete);
-  if (!sortedBuys.length) {
-    strategyTabBuysTbody.innerHTML = `<tr><td class="strategyTabShell__empty" colspan="3">Нет запланированных покупок. Нажмите «Добавить покупку» или заполните план во вкладке «Планирование».</td></tr>`;
+  const hasPlanTableData = planRowsAll.length > 0;
+  const plansEmptyEl = document.getElementById("strategy-plans-empty");
+  const plansTableWrap = strategyPaneBuys
+    ? strategyPaneBuys.querySelector("[data-strategy-plans-table]")
+    : document.querySelector("[data-strategy-plans-table]");
+  if (!hasPlanTableData) {
+    strategyTabBuysTbody.innerHTML = "";
+    if (plansEmptyEl) plansEmptyEl.removeAttribute("hidden");
+    if (plansTableWrap) plansTableWrap.setAttribute("hidden", "");
   } else {
+    if (plansEmptyEl) plansEmptyEl.setAttribute("hidden", "");
+    if (plansTableWrap) plansTableWrap.removeAttribute("hidden");
     strategyTabBuysTbody.innerHTML = sortedBuys
       .map((row) => {
         const d = normalizeYMD(row.date);
         const items = parseBuyItems(row.items);
-        const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const base = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+        const comm = getTradeCommissionFraction();
+        const total = base * (1 + comm);
         const itemsHtml = !items.length ? "—" : `<div class="buySummary">${buildBuyChipsHtmlFromItems(items)}</div>`;
         const dateCell = `<div class="buyTableDate">${escapeHtml(d ? formatDateRuMonthWords(d) : "—")}</div>`;
         const keyAttr = encodeURIComponent(stableBuyRowKeyFromRowData(row));
@@ -2978,10 +3210,17 @@ function renderStrategyTab() {
       .join("");
   }
 
-  const bonds = sanitizeBondRows(readRows(bondsTbody));
-  if (!bonds.length) {
-    strategyTabBondsList.innerHTML = `<li class="strategyTabShell__bondEmpty strategyTabShell__empty">Нет облигаций. Нажмите «+» выше или добавьте строку во вкладке «Планирование».</li>`;
+  const rawBondRows = readRowsSkippingPlaceholder(bondsTbody);
+  const bonds = sanitizeBondRows(rawBondRows);
+  const hasBondTableData = bondTableHasRealRows();
+  const bondsEmptyEl = document.getElementById("strategy-bonds-empty");
+  if (!hasBondTableData) {
+    strategyTabBondsList.innerHTML = "";
+    if (bondsEmptyEl) bondsEmptyEl.removeAttribute("hidden");
+    if (strategyTabBondsList) strategyTabBondsList.setAttribute("hidden", "");
   } else {
+    if (bondsEmptyEl) bondsEmptyEl.setAttribute("hidden", "");
+    if (strategyTabBondsList) strategyTabBondsList.removeAttribute("hidden");
     strategyTabBondsList.innerHTML = bonds
       .map((row) => {
         const nameRaw = String(row.bond || "").trim();
@@ -3049,6 +3288,9 @@ function initStrategyTabPanel() {
   if (strategyTabAddBuyBtn) {
     strategyTabAddBuyBtn.addEventListener("click", () => openBuyModal());
   }
+  if (strategyTabAutoPlanBtn) {
+    strategyTabAutoPlanBtn.addEventListener("click", () => openAutoPlanModal());
+  }
   const strategyDisplayList = document.getElementById("strategy-tab-display-list");
   if (strategyDisplayList && !strategyDisplayList.dataset.strategyDisplayInit) {
     strategyDisplayList.dataset.strategyDisplayInit = "1";
@@ -3107,6 +3349,7 @@ function initStrategyTabPanel() {
       if (mainTr) openBondModalForEdit(mainTr);
     });
   }
+  initStrategySidebarParams();
 }
 
 function renderAll() {
@@ -3124,12 +3367,40 @@ function renderAll() {
   renderCalculators();
   refreshAutoPlanBondPicker();
   renderStrategyTab();
+  syncStrategyDynamicsEmptyState();
+  syncStrategyPortfolioEmptyState();
+  enforceStrategyEmptyBlocksMatchData();
   animateVisibleWidgetLayout(layoutSnap);
+}
+
+/** Гарантирует скрытие пустых блоков при наличии данных (на случай рассинхрона с DOM). */
+function enforceStrategyEmptyBlocksMatchData() {
+  const nPlan = getActiveStrategyBuysRows().length;
+  const planEmpty = document.getElementById("strategy-plans-empty");
+  const planTable = strategyPaneBuys?.querySelector("[data-strategy-plans-table]");
+  if (nPlan > 0) {
+    if (planEmpty) planEmpty.setAttribute("hidden", "");
+    if (planTable) planTable.removeAttribute("hidden");
+  }
+
+  const bondEmpty = document.getElementById("strategy-bonds-empty");
+  const bondList = document.getElementById("strategy-tab-bonds-list");
+  if (bondTableHasRealRows()) {
+    if (bondEmpty) bondEmpty.setAttribute("hidden", "");
+    if (bondList) bondList.removeAttribute("hidden");
+  }
+
+  const chartsEmpty = document.getElementById("strategy-charts-empty");
+  if (chartsEmpty && !lastCouponReturnsChartRenderedEmpty) chartsEmpty.setAttribute("hidden", "");
+
+  const portfolioEmpty = document.getElementById("strategy-portfolio-empty");
+  if (portfolioEmpty && !lastPortfolioChartRenderedEmpty) portfolioEmpty.setAttribute("hidden", "");
 }
 
 function persistAndRender() {
   // Важно: отменяем отложенный save, чтобы старое состояние не перезаписало новое.
   clearTimeout(saveTimer);
+  syncStrategySidebarTaxFromMain();
   syncDateSummaries();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const sortResult = sortBuyRowsByDate(readRows(buysTbody).filter(isBuyRowComplete));
@@ -3149,6 +3420,7 @@ function persistAndRender() {
   syncBuySummaries();
   syncStaticTableEmptyStates();
   if (taxRateInput) localStorage.setItem(TAX_RATE_KEY, String(parseNumber(taxRateInput.value) || 0));
+  persistStrategySidebarParamsToStorage();
   renderAll();
 }
 
@@ -3848,6 +4120,7 @@ function loadAll() {
     writeRows(holdingsTbody, holdingTpl, Array.isArray(holdings) && holdings.length ? holdings : defaultHoldingRows());
     renderBuyStrategySelect();
     if (taxRateInput && taxRaw !== null) taxRateInput.value = String(parseNumber(taxRaw) || 13);
+    loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD();
     setPortfolioMoneyInputValue(portfolioStartValueInput, String(parseNumber(portfolioStartValueRaw) || 0));
     setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, String(parseNumber(portfolioMonthlyTopupRaw) || 0));
@@ -3872,6 +4145,7 @@ function loadAll() {
     activeBuyStrategyId = DEFAULT_BUY_STRATEGY_ID;
     renderBuyStrategySelect();
     if (taxRateInput) taxRateInput.value = "13";
+    loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
     if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
@@ -4154,6 +4428,8 @@ resetAllBtn.addEventListener("click", () => {
   localStorage.removeItem(YIELD_CALC_KEY);
   localStorage.removeItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
   localStorage.removeItem(STRATEGY_CENTER_VIEW_KEY);
+  localStorage.removeItem(COUPON_DISPLAY_MODE_KEY);
+  localStorage.removeItem(TRADE_COMMISSION_PCT_KEY);
   if (taxRateInput) taxRateInput.value = "13";
   if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
   setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
@@ -4166,6 +4442,33 @@ if (taxRateInput) {
   taxRateInput.addEventListener("input", () => {
     persistAndRender();
   });
+}
+
+function initStrategySidebarParams() {
+  const host = document.querySelector(".strategyTabShell__paramsPane");
+  if (!host || host.dataset.paramsInit) return;
+  host.dataset.paramsInit = "1";
+  if (strategySidebarTaxInput) {
+    strategySidebarTaxInput.addEventListener("input", () => {
+      if (taxRateInput) taxRateInput.value = strategySidebarTaxInput.value;
+      if (taxRateInput) localStorage.setItem(TAX_RATE_KEY, String(parseNumber(taxRateInput.value) || 0));
+      persistStrategySidebarParamsToStorage();
+      renderAll();
+    });
+  }
+  [strategyCouponDisplayNetRadio, strategyCouponDisplayGrossRadio].forEach((el) => {
+    if (!el) return;
+    el.addEventListener("change", () => {
+      persistStrategySidebarParamsToStorage();
+      renderAll();
+    });
+  });
+  if (strategySidebarCommissionInput) {
+    strategySidebarCommissionInput.addEventListener("input", () => {
+      persistStrategySidebarParamsToStorage();
+      renderAll();
+    });
+  }
 }
 
 if (chartYearSelect) {
@@ -4208,22 +4511,6 @@ if (portfolioMonthlyTopupEndDateInput) {
 
 bindPortfolioMoneyInput(portfolioStartValueInput, PORTFOLIO_START_VALUE_KEY);
 bindPortfolioMoneyInput(portfolioMonthlyTopupInput, PORTFOLIO_MONTHLY_TOPUP_KEY);
-
-if (tabPortfolioBtn) {
-  tabPortfolioBtn.addEventListener("click", () => setActiveTab("portfolio"));
-}
-if (tabPlanningBtn) {
-  tabPlanningBtn.addEventListener("click", () => setActiveTab("planning"));
-}
-if (tabChartsBtn) {
-  tabChartsBtn.addEventListener("click", () => setActiveTab("charts"));
-}
-if (tabCalculatorsBtn) {
-  tabCalculatorsBtn.addEventListener("click", () => setActiveTab("calculators"));
-}
-if (tabStrategyBtn) {
-  tabStrategyBtn.addEventListener("click", () => setActiveTab("strategy"));
-}
 
 [
   accruedNominalInput,
@@ -4307,10 +4594,7 @@ document.addEventListener("click", (e) => {
   btn.setAttribute("aria-expanded", "true");
 });
 
-{
-  const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
-  setActiveTab(savedTab === "profile" ? "strategy" : savedTab || "planning");
-}
+setActiveTab("strategy");
 
 initThemeUi();
 bindChartTooltips();
@@ -5102,6 +5386,31 @@ function getBondReferencePrice(bondRaw) {
   return NaN;
 }
 
+function openAutoPlanModal() {
+  const widget = document.querySelector('[data-widget="planning-scaffold"]');
+  if (!widget || !autoPlanModalBody || !autoPlanModalOverlay) return;
+  if (widget.parentElement !== autoPlanModalBody) {
+    autoPlanScaffoldRestore = { parent: widget.parentElement, next: widget.nextElementSibling };
+    autoPlanModalBody.appendChild(widget);
+  }
+  openModalOverlay(autoPlanModalOverlay);
+  refreshAutoPlanBondPicker();
+}
+
+function closeAutoPlanModal() {
+  const widget = document.querySelector('[data-widget="planning-scaffold"]');
+  if (widget && autoPlanScaffoldRestore?.parent) {
+    const { parent, next } = autoPlanScaffoldRestore;
+    if (next && next.parentNode === parent) {
+      parent.insertBefore(widget, next);
+    } else {
+      parent.appendChild(widget);
+    }
+  }
+  autoPlanScaffoldRestore = null;
+  if (autoPlanModalOverlay) closeModalOverlay(autoPlanModalOverlay);
+}
+
 function setBuyModalOpen(open) {
   if (!buyModalOverlay) return;
   if (open) openModalOverlay(buyModalOverlay);
@@ -5577,6 +5886,16 @@ if (buyModalOverlay) {
   });
 }
 
+if (autoPlanModalClose) {
+  autoPlanModalClose.addEventListener("click", () => closeAutoPlanModal());
+}
+
+if (autoPlanModalOverlay) {
+  autoPlanModalOverlay.addEventListener("click", (e) => {
+    if (e.target === autoPlanModalOverlay) closeAutoPlanModal();
+  });
+}
+
 if (yieldSaveBtn) {
   yieldSaveBtn.addEventListener("click", () => {
     const row = getYieldModalRowData();
@@ -5656,6 +5975,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (buyModalOverlay && !buyModalOverlay.hidden) {
     closeBuyModal();
+    e.preventDefault();
+    return;
+  }
+  if (autoPlanModalOverlay && !autoPlanModalOverlay.hidden) {
+    closeAutoPlanModal();
     e.preventDefault();
     return;
   }

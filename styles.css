@@ -24,6 +24,9 @@
 
   --ring: rgba(0, 113, 227, 0.45);
 
+  /* Высота области под вкладку «Стратегия»: вьюпорт минус примерная высота шапки (без position:fixed у header). */
+  --app-shell-header-offset: 92px;
+
   --font-heading: 1.3125rem;
   --font-large: 1.0625rem;
   --font-medium: 0.875rem;
@@ -66,9 +69,12 @@ html[data-theme="dark"]{
 html{
   -webkit-text-size-adjust: 100%;
 }
-html, body { height: 100%; }
+html, body {
+  min-height: 100%;
+}
 body{
   margin: 0;
+  min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: var(--text);
   background-color: var(--bg0);
@@ -97,33 +103,38 @@ html[data-theme="dark"] .topbar{
   }
 
 .topbar__inner{
-  max-width: min(96vw, 1440px);
-  margin: 0 auto;
-  padding: 3px 1px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  /* Как у .widget: один вертикальный край с заголовками карточек */
+  padding: 18px 22px;
   display: flex;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
   justify-content: space-between;
 }
 .title{
-  font-size: var(--fs-title);
+  font-size: calc(var(--fs-title) * 0.9);
   font-weight: 600;
   letter-spacing: -0.035em;
-  line-height: 1.07;
+  line-height: 1.08;
   color: var(--text);
+  text-align: left;
 }
 .subtitle{
-  margin-top: 8px;
+  margin-top: 10px;
   margin-bottom: 0;
-  font-size: var(--fs-subtitle);
+  font-size: calc(var(--fs-subtitle) * 0.94);
   font-weight: 400;
-  line-height: 1.35;
+  line-height: 1.38;
   color: var(--text-subhead);
   max-width: 34rem;
   letter-spacing: -0.015em;
+  text-align: left;
 }
 .topbar__brand{
   min-width: 0;
+  text-align: left;
 }
 
 .topbar__actions{
@@ -154,9 +165,14 @@ html[data-theme="dark"] .topbar{
 }
 
 .page{
-  max-width: min(96vw, 1440px);
-  margin: 2px auto 3px;
-  padding: 0 1px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+.page--appShell{
+  display: block;
 }
 
 .tabs{
@@ -545,31 +561,44 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   grid-template-columns: 1fr;
 }
 [data-tab-panel="strategy"]{
-  grid-template-columns: 1fr;
+  grid-template-columns: none;
 }
 .tabPanel--strategy{
-  min-height: 0;
+  display: block;
+  width: 100%;
+  min-height: calc(100svh - var(--app-shell-header-offset));
+  box-sizing: border-box;
 }
 .strategyTabShell{
-  display: flex;
-  align-items: flex-start;
+  --strategy-shell-pad: 14px;
+  display: grid;
+  grid-template-columns: min(380px, 34vw) minmax(0, 1fr) minmax(13rem, min(20rem, 32vw));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  justify-items: stretch;
   width: 100%;
-  min-height: 0;
-  border-radius: var(--radius2);
-  border: 1px solid var(--cardBorder);
-  background: var(--card);
-  box-shadow: var(--shadow);
-  overflow: hidden;
+  max-width: 100%;
+  min-height: calc(100svh - var(--app-shell-header-offset));
+  column-gap: 0;
+  row-gap: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 .strategyTabShell__aside{
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 100%;
+  align-self: stretch;
   border-right: 1px solid var(--cardBorder);
   background: var(--bg2);
+  text-align: left;
 }
 .strategyTabShell__aside--left{
-  width: min(380px, 34vw);
+  grid-column: 1;
 }
 .strategyTabShell__strategiesPane{
   flex: 0 0 auto;
@@ -589,14 +618,14 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px 0;
+  padding: 10px var(--strategy-shell-pad) 0;
   flex-shrink: 0;
 }
 .strategyTabShell__title--bonds{
   font-size: 1.02rem;
 }
 .strategyTabShell__hint--bonds{
-  padding: 2px 14px 8px !important;
+  padding: 2px var(--strategy-shell-pad) 8px !important;
   margin: 0;
   font-size: calc(var(--fs-small) * 0.98);
   line-height: 1.35;
@@ -604,11 +633,11 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
 .strategyTabShell__bondsList{
   list-style: none;
   margin: 0;
-  padding: 2px 8px 12px;
+  padding: 2px 0 12px;
 }
 .strategyTabShell__bondRow{
   display: block;
-  margin: 0 0 4px;
+  margin: 0;
 }
 .strategyTabShell__bondOpenBtn{
   width: 100%;
@@ -617,9 +646,9 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 8px 10px 10px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  padding: 10px var(--strategy-shell-pad);
+  border-radius: 0;
+  border: none;
   background: transparent;
   color: inherit;
   font: inherit;
@@ -628,9 +657,13 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
 }
 .strategyTabShell__bondOpenBtn:hover,
 .strategyTabShell__bondOpenBtn:focus-visible{
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  background: rgba(0, 0, 0, 0.05);
   outline: none;
 }
+html[data-theme="dark"] .strategyTabShell__bondOpenBtn:hover,
+html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
+    background: rgba(255, 255, 255, 0.06);
+  }
 .strategyTabShell__bondMain{
   min-width: 0;
   flex: 1;
@@ -670,8 +703,8 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
 }
 .strategyTabShell__bondEmpty{
   cursor: default;
-  text-align: center;
-  padding: 18px 12px !important;
+  text-align: left;
+  padding: 18px var(--strategy-shell-pad) !important;
 }
 .strategyTabShell__bondEmpty:hover{
   background: transparent !important;
@@ -681,12 +714,20 @@ html[data-theme="dark"] .strategyTabShell__aside{
     background: rgba(28, 28, 30, 0.5);
   }
 .strategyTabShell__center{
-  flex: 1;
+  grid-column: 2;
   min-width: 0;
+  min-height: 100%;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
-  min-height: min(72vh, 820px);
+  background: var(--bg0);
+  text-align: left;
 }
+html[data-theme="dark"] .strategyTabShell__center{
+    background: var(--bg0);
+  }
 .strategyTabShell__pane[hidden]{
   display: none !important;
 }
@@ -734,22 +775,29 @@ html[data-theme="dark"] .strategyTabShell__aside{
   margin-top: 0;
 }
 .strategyTabShell__aside--right{
-  width: min(12.5rem, 28vw);
-  max-width: 15rem;
-  align-self: stretch;
+  grid-column: 3;
+  min-width: 0;
+  width: 100%;
   border-right: none;
   border-left: 1px solid var(--cardBorder);
+  justify-self: stretch;
+  display: flex;
+  flex-direction: column;
 }
-.strategyTabShell__displaySection{
+/* Как слева: «Стратегии» + «Облигации» — без растягивания верхнего блока на всю высоту колонки */
+.strategyTabShell__displayPane{
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
 }
-.strategyTabShell__displayHintSection{
+.strategyTabShell__paramsPane{
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
   border-top: 1px solid var(--cardBorder);
   margin-top: 2px;
   padding-top: 2px;
+  padding-bottom: 10px;
 }
 .strategyTabShell__head--compact{
   padding-bottom: 4px;
@@ -762,19 +810,26 @@ html[data-theme="dark"] .strategyTabShell__aside{
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 14px 8px;
+  padding: 14px var(--strategy-shell-pad) 8px;
   flex-shrink: 0;
 }
 .strategyTabShell__title{
   margin: 0;
   line-height: 1.15;
+  text-align: left;
 }
 .strategyTabShell__hint{
-  padding: 0 14px 10px;
+  padding: 0 var(--strategy-shell-pad) 10px;
   margin: 0;
+  text-align: left;
 }
 .strategyTabShell__aside .strategyTabShell__hint{
   padding-top: 0;
+}
+/* Подзаголовок «Планы»: без второго горизонтального отступа — в одну линию с заголовком */
+.strategyTabShell__mainHead .strategyTabShell__hint{
+  padding-left: 0;
+  padding-right: 0;
 }
 .strategyTabShell__addBtn{
   appearance: none;
@@ -799,15 +854,83 @@ html[data-theme="dark"] .strategyTabShell__aside{
 .strategyTabShell__list{
   list-style: none;
   margin: 0;
-  padding: 4px 8px 6px;
+  padding: 4px 0 6px;
+}
+.strategyTabShell__aside--right .strategyTabShell__list{
+  width: 100%;
+  padding-inline: 0;
+}
+
+.strategyTabShell__paramsBody{
+  padding: 0 var(--strategy-shell-pad) 4px;
+}
+.strategyTabShell__paramField{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 10px;
+}
+.strategyTabShell__paramField:first-child{
+  margin-top: 4px;
+}
+.strategyTabShell__paramLabel{
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+.strategyTabShell__paramControl{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.strategyTabShell__paramHint{
+  margin: 6px 0 0;
+  font-size: calc(var(--fs-small) * 0.96);
+  line-height: 1.35;
+  color: var(--muted);
+}
+.strategyTabShell__fieldset{
+  margin: 14px 0 0;
+  padding: 10px var(--strategy-shell-pad) 12px;
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--radius2);
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+}
+html[data-theme="dark"] .strategyTabShell__fieldset{
+    background: rgba(44, 44, 46, 0.35);
+  }
+.strategyTabShell__fieldsetLegend{
+  padding: 0 6px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text);
+}
+.strategyTabShell__checkRow{
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: var(--fs-small);
+  line-height: 1.35;
+  color: var(--text);
+  cursor: pointer;
+}
+.strategyTabShell__checkRow:first-of-type{
+  margin-top: 4px;
+}
+.strategyTabShell__checkRow input{
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 .strategyTabShell__displayNavRow{
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0 0 4px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  margin: 0;
+  border-radius: 0;
+  border: none;
   font-size: var(--fs-small);
   line-height: 1.35;
 }
@@ -815,33 +938,44 @@ html[data-theme="dark"] .strategyTabShell__aside{
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0 0 4px;
-  border-radius: 8px;
-  border: 1px solid transparent;
+  margin: 0;
+  border-radius: 0;
+  border: none;
   font-size: var(--fs-small);
   line-height: 1.35;
 }
+.strategyTabShell__strategyRow:hover,
+.strategyTabShell__displayNavRow:hover{
+  background: rgba(0, 0, 0, 0.05);
+}
+html[data-theme="dark"] .strategyTabShell__strategyRow:hover,
+html[data-theme="dark"] .strategyTabShell__displayNavRow:hover{
+    background: rgba(255, 255, 255, 0.06);
+  }
 .strategyTabShell__strategySelect{
   flex: 1;
   min-width: 0;
   margin: 0;
-  padding: 10px 6px 10px 10px;
+  padding: 10px var(--strategy-shell-pad);
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
+.strategyTabShell__strategySelect:focus-visible{
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 .strategyTabShell__strategySelect:hover,
 .strategyTabShell__strategySelect:focus-visible{
-  background: rgba(0, 0, 0, 0.05);
-  outline: none;
+  background: transparent;
 }
 html[data-theme="dark"] .strategyTabShell__strategySelect:hover,
 html[data-theme="dark"] .strategyTabShell__strategySelect:focus-visible{
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
 .strategyTabShell__strategyRow.is-active .strategyTabShell__strategySelect:hover,
 .strategyTabShell__strategyRow.is-active .strategyTabShell__strategySelect:focus-visible,
@@ -888,14 +1022,20 @@ html[data-theme="dark"] .strategyTabShell__strategyRow.is-active .strategyTabShe
 }
 .strategyTabShell__strategyRow.is-active,
 .strategyTabShell__displayNavRow.is-active{
-  background: rgba(0, 0, 0, 0.06);
-  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.07);
 }
 html[data-theme="dark"] .strategyTabShell__strategyRow.is-active,
 html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active{
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.09);
 }
+.strategyTabShell__strategyRow.is-active:hover,
+.strategyTabShell__displayNavRow.is-active:hover{
+  background: rgba(0, 0, 0, 0.08);
+}
+html[data-theme="dark"] .strategyTabShell__strategyRow.is-active:hover,
+html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active:hover{
+    background: rgba(255, 255, 255, 0.1);
+  }
 .strategyTabShell__strategyRow.is-active .strategyTabShell__strategyName{
   font-weight: 650;
 }
@@ -908,22 +1048,92 @@ html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active{
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 14px 14px 0;
+  padding: 14px var(--strategy-shell-pad) 0;
   flex-shrink: 0;
+}
+.strategyTabShell__pane--buys .strategyTabShell__mainHead{
+  padding-bottom: 18px;
 }
 .strategyTabShell__mainHeadText{
   min-width: 0;
   flex: 1;
+  text-align: left;
 }
-.strategyTabShell__addBuyBtn{
+.strategyTabShell__mainHeadText .strategyTabShell__title,
+.strategyTabShell__mainHeadText .widget__title{
+  text-align: left;
+}
+.strategyTabShell__mainHeadActions{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   flex-shrink: 0;
   align-self: flex-start;
   margin-top: 2px;
+  min-width: min(100%, 220px);
+}
+@keyframes btnAiGradientShift{
+  0%, 100%{ background-position: 0% 40%; }
+  50%{ background-position: 100% 60%; }
+}
+.btnAiGradientWrap{
+  padding: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    125deg,
+    #007aff 0%,
+    #ff375f 22%,
+    #bf5af2 48%,
+    #ff9f0a 74%,
+    #5ac8fa 100%
+  );
+  background-size: 220% 220%;
+  box-shadow: 0 1px 10px rgba(0, 113, 227, 0.2);
+  animation: btnAiGradientShift 12s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce){
+  .btnAiGradientWrap{
+    animation: none;
+  }
+}
+.btn.btn--autoPlanAi{
+  display: block;
+  width: 100%;
+  margin: 0;
+  border-radius: 999px;
+  border: none;
+  background: #ffffff;
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  box-shadow: none;
+}
+.btn.btn--autoPlanAi:hover{
+  background: #fafafa;
+}
+.btn.btn--autoPlanAi:active{
+  transform: scale(0.99);
+}
+html[data-theme="dark"] .btnAiGradientWrap{
+  box-shadow: 0 1px 14px rgba(94, 92, 230, 0.28);
+}
+html[data-theme="dark"] .btn.btn--autoPlanAi{
+  background: #ffffff;
+  color: #1d1d1f;
+}
+html[data-theme="dark"] .btn.btn--autoPlanAi:hover{
+  background: #f2f2f7;
+}
+.strategyTabShell__addBuyBtn{
+  flex-shrink: 0;
+  align-self: stretch;
+  margin-top: 0;
 }
 .strategyTabShell__tableWrap{
   flex: 1;
   min-height: 0;
-  margin: 0 14px 14px;
+  margin: 0 var(--strategy-shell-pad) 14px;
   border-radius: var(--radius2);
 }
 .strategyTabShell__table{
@@ -952,24 +1162,26 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
 }
 @media (max-width: 1100px){
   .strategyTabShell{
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
   }
-  .strategyTabShell__aside{
+  .strategyTabShell__aside--left,
+  .strategyTabShell__center,
+  .strategyTabShell__aside--right{
+    grid-column: auto;
     width: 100%;
-    max-height: none;
+    max-width: none;
+  }
+  .strategyTabShell__aside{
     border-right: none;
     border-bottom: 1px solid var(--cardBorder);
   }
   .strategyTabShell__aside--right{
-    width: 100%;
-    max-width: none;
     border-left: none;
     border-top: 1px solid var(--cardBorder);
   }
   .strategyTabShell__center{
-    min-height: min(56vh, 640px);
+    min-height: 0;
   }
 }
 @media (max-width: 980px){
@@ -1004,12 +1216,17 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
   justify-content: space-between;
   margin-bottom: 16px;
 }
+.widget__header > div:first-child{
+  min-width: 0;
+  text-align: left;
+}
 .widget__title{
   font-size: var(--fs-widget-title);
   font-weight: 600;
   letter-spacing: -0.028em;
   line-height: 1.15;
   color: var(--text);
+  text-align: left;
 }
 .widget__hint{
   margin-top: 8px;
@@ -1019,6 +1236,7 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
   color: var(--text-subhead);
   letter-spacing: -0.012em;
   max-width: 40rem;
+  text-align: left;
 }
 .widget__headerRight{
   display: flex;
@@ -1267,6 +1485,78 @@ html[data-theme="dark"] .emptyState--card{
     border-color: rgba(255,255,255,0.14);
     background: rgba(255,255,255,0.04);
   }
+
+.featureEmptyState{
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 36px 22px;
+  border-radius: 16px;
+  background: #e4e4ea;
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.featureEmptyState[hidden]{
+  display: none !important;
+}
+.featureEmptyState__title{
+  margin: 0;
+  font-size: var(--font-large);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--text);
+}
+.featureEmptyState__subtitle{
+  margin: 10px 0 0;
+  max-width: 22rem;
+  font-size: var(--font-small);
+  line-height: 1.45;
+  color: var(--text-subhead);
+}
+html[data-theme="dark"] .featureEmptyState{
+  background: rgba(58, 58, 62, 0.92);
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .featureEmptyState__subtitle{
+  color: rgba(235, 235, 245, 0.78);
+}
+.strategyTabShell__tableWrap[data-strategy-plans-table][hidden]{
+  display: none !important;
+}
+#strategy-tab-bonds-list[hidden]{
+  display: none !important;
+}
+.strategyTabShell__mainHead--strategyCenter{
+  padding: 14px var(--strategy-shell-pad) 10px;
+}
+.strategyTabShell__mainHead--strategyCenter .strategyTabShell__hint{
+  padding-left: 0;
+  padding-right: 0;
+}
+.strategyTabShell__featureEmpty--portfolio{
+  flex: 1;
+  min-height: 200px;
+  margin: 0 var(--strategy-shell-pad) 14px;
+}
+.strategyTabShell__featureEmpty--plans{
+  flex: 1;
+  min-height: 220px;
+  margin: 0 var(--strategy-shell-pad) 14px;
+}
+.strategyTabShell__featureEmpty--bonds{
+  margin: 6px var(--strategy-shell-pad) 12px;
+  min-height: 148px;
+}
+.strategyTabShell__featureEmpty--charts{
+  flex: 1;
+  min-height: clamp(240px, 48vh, 560px);
+  margin: 0 var(--strategy-shell-pad) 14px;
+}
 
 
 .input{
@@ -1782,6 +2072,18 @@ html[data-theme="dark"] .chartWrap{
   padding: 2px 4px;
   color: var(--text);
 }
+
+/* График выплат: ширина виджета и высота по окну — больше площади для столбцов и сетки. */
+.widget[data-widget="returns"] .chartWrap{
+  width: 100%;
+  height: clamp(280px, 58vh, 780px);
+  box-sizing: border-box;
+}
+.widget[data-widget="returns"] .chartWrap .chart--returns{
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
 .chartBar,
 .yearPieSlice{
   cursor: pointer;
@@ -1904,25 +2206,13 @@ html[data-theme="dark"] .chartTooltip{
 .chartLegend{
   margin: 0 0 8px;
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  justify-content: flex-start;
+  gap: 8px 10px;
+  overflow: visible;
+  padding-bottom: 2px;
 }
-.chartLegend::-webkit-scrollbar{
-  height: 3px;
-}
-.chartLegend::-webkit-scrollbar-thumb{
-  background: rgba(60, 60, 67, 0.25);
-  border-radius: 999px;
-}
-html[data-theme="dark"] .chartLegend::-webkit-scrollbar-thumb{
-    background: rgba(255, 255, 255, 0.2);
-  }
 
 .chartLegend__item{
   display: inline-flex;
@@ -2246,7 +2536,7 @@ html[data-theme="dark"] .yearPiePanel{
   white-space: nowrap;
 }
 .yearPiePanel__empty{
-  text-align: center;
+  text-align: left;
   padding: 20px 8px;
   font-size: var(--fs-small);
   color: var(--muted);
@@ -2254,7 +2544,7 @@ html[data-theme="dark"] .yearPiePanel{
 .yearPie{
   width: 100%;
   max-width: 160px;
-  margin: 8px auto 0;
+  margin: 8px 0 0;
   display: block;
 }
 .yearPieLegend{
@@ -2354,6 +2644,9 @@ html[data-theme="dark"] .yearPieYearSeg__btn.is-active{
 .summaryLayout__left,
 .summaryLayout__right{
   min-width: 0;
+}
+.summaryLayout__right{
+  text-align: left;
 }
 [data-tab-panel="charts"] [data-widget="summary"] .tableWrap{
   margin-bottom: 12px;
@@ -2590,26 +2883,599 @@ html[data-theme="dark"] .chip__x:hover{
   gap: 12px;
   margin-top: 16px;
 }
-.modal__footer--bond{
-  justify-content: flex-start;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.modal__footer--bond #bond-modal-save{
-  margin-left: auto;
-}
 .modal--actions{
   width: min(100vw - 32px, 380px);
 }
+.modal--autoPlan .modal__header{
+  flex-shrink: 0;
+}
+.autoPlanModal__body{
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.modal--sheet .autoPlanModal__body.sheetModal__body--autoPlan{
+  margin: 0;
+}
+.autoPlanModal__body .widget{
+  margin-bottom: 0;
+}
+
+/* Автопланирование в модалке: без внешней карточки с тенью; группы как на apple.com/shop */
+.modal--autoPlan .autoPlanModal__body > [data-widget="planning-scaffold"].card{
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  border-radius: 0;
+  overflow: visible;
+}
+.modal--autoPlan .autoPlanModal__body > [data-widget="planning-scaffold"].widget{
+  padding: 0;
+}
+.modal--autoPlan .autoPlanModal__body .widget__title{
+  display: none;
+}
+.modal--autoPlan .autoPlanModal__body .widget__header{
+  margin-bottom: 18px;
+}
+.modal--autoPlan .autoPlanModal__body .widget__hint{
+  margin-top: 0;
+  max-width: none;
+  font-size: var(--fs-ui);
+  line-height: 1.45;
+  color: var(--text-subhead);
+}
+
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__section{
+  margin-top: 0;
+}
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__reinvest{
+  margin-top: 0;
+}
+
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__fields,
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__section,
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__reinvest{
+  background: var(--sheetCard);
+  border-radius: 16px;
+  padding: 18px 18px 16px;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__fields,
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__section,
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__reinvest{
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Компактный блок «Сохранить в стратегию»: строка select + кнопка, без лишней высоты */
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategy{
+  margin-top: 0;
+  background: var(--sheetCard);
+  border-radius: 16px;
+  padding: 11px 14px 12px;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px 12px;
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategy{
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategySelect{
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: min(100%, 420px);
+  width: auto;
+  margin-bottom: 0;
+}
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategySelect span{
+  font-size: var(--fs-small);
+  line-height: 1.25;
+}
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__saveBtn{
+  flex: 0 0 auto;
+  width: auto;
+  min-width: min(220px, 100%);
+  min-height: 40px;
+  margin-top: 0;
+  margin-bottom: 0;
+  align-self: center;
+  padding-left: 18px;
+  padding-right: 18px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+@media (max-width: 560px){
+  .modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategy{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategySelect{
+    max-width: none;
+  }
+  .modal--autoPlan .autoPlanModal__body .autoPlanWidget__saveBtn{
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+  }
+}
+
+.modal--autoPlan .autoPlanModal__body .autoPlanWidget__sectionLabel{
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.modal--autoPlan .autoPlanModal__body .planScheduleDayChip{
+  border: none;
+  background: #f5f5f7;
+  border-radius: 11px;
+  font-weight: 600;
+}
+.modal--autoPlan .autoPlanModal__body .planScheduleDayChip:not(.planScheduleDayChip--selected):hover{
+  background: #ebebed;
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayChip:not(.planScheduleDayChip--selected){
+  background: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayChip:not(.planScheduleDayChip--selected):hover{
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- Общий «sheet» для модалок (холст + белые группы + воздух) ---------- */
+.modal--sheet{
+  --sheetCanvas: #f5f5f7;
+  --sheetCard: #ffffff;
+  --sheetFillFocus: rgba(0, 113, 227, 0.075);
+  --sheetSep: rgba(0, 0, 0, 0.09);
+  --sheetHeaderBg: #ffffff;
+  --sheetFooterBg: #ffffff;
+  width: min(520px, calc(100vw - 28px));
+  max-height: min(90vh, 860px);
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 20px;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.06),
+    0 24px 72px rgba(0, 0, 0, 0.12),
+    0 10px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  background: var(--sheetCanvas) !important;
+}
+html[data-theme="dark"] .modal--sheet{
+  --sheetCanvas: #000000;
+  --sheetCard: #1c1c1e;
+  --sheetFillFocus: rgba(41, 151, 255, 0.14);
+  --sheetSep: rgba(255, 255, 255, 0.12);
+  --sheetHeaderBg: #1c1c1e;
+  --sheetFooterBg: #1c1c1e;
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 28px 80px rgba(0, 0, 0, 0.55);
+}
+
+.modal--sheet .modal__header{
+  flex-shrink: 0;
+  align-items: flex-start;
+  margin-bottom: 0;
+  padding: 26px 26px 20px;
+  gap: 16px;
+  background: var(--sheetHeaderBg);
+  border-bottom: 0.5px solid var(--sheetSep);
+}
+.modal--sheet .modal__title{
+  font-size: clamp(1.28rem, 2.8vw, 1.55rem);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+}
+.modal--sheet .modal__closeBtn{
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.11);
+  color: var(--muted);
+}
+html[data-theme="dark"] .modal--sheet .modal__closeBtn{
+  background: rgba(120, 120, 128, 0.26);
+}
+.modal--sheet .modal__closeBtn:hover{
+  background: rgba(120, 120, 128, 0.18);
+  color: var(--text);
+}
+html[data-theme="dark"] .modal--sheet .modal__closeBtn:hover{
+  background: rgba(120, 120, 128, 0.38);
+}
+
+.sheetModal__body,
+.modal--sheet .bondModal__body{
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 30px 26px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.sheetModal__body--actions{
+  padding: 24px 26px 28px;
+}
+.sheetModal__body--autoPlan{
+  padding: 20px 22px 28px;
+}
+.sheetModal__body.sheetModal__body--autoPlan{
+  padding: 20px 22px 28px;
+}
+
+.sheetModal__section{
+  margin-bottom: 32px;
+}
+.sheetModal__section:last-child{
+  margin-bottom: 10px;
+}
+
+.sheetModal__sectionLabel,
+.bondModal__sectionLabel{
+  margin: 0 2px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-subhead);
+  line-height: 1.25;
+}
+
+.sheetModal__group,
+.bondModal__group{
+  border-radius: 16px;
+  background: var(--sheetCard);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+}
+html[data-theme="dark"] .sheetModal__group,
+html[data-theme="dark"] .bondModal__group{
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.sheetModal__fieldList{
+  display: flex;
+  flex-direction: column;
+}
+.sheetModal__fieldList--yield.calculatorForm{
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.modal--sheet .sheetModal__field,
+.modal--sheet .bondModal__field{
+  margin: 0;
+}
+.modal--sheet .sheetModal__field:not(:last-child),
+.modal--sheet .bondModal__field:not(:last-child){
+  border-bottom: 0.5px solid var(--sheetSep);
+}
+
+.modal--sheet .sheetModal__field .floatingField__input,
+.modal--sheet .bondModal__field .floatingField__input{
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-top: 24px;
+  padding-bottom: 10px;
+  min-height: 54px;
+}
+.modal--sheet .sheetModal__field .floatingField__input:focus + .floatingField__label,
+.modal--sheet .sheetModal__field .floatingField__input:not(:placeholder-shown) + .floatingField__label,
+.modal--sheet .bondModal__field .floatingField__input:focus + .floatingField__label,
+.modal--sheet .bondModal__field .floatingField__input:not(:placeholder-shown) + .floatingField__label{
+  top: 8px;
+}
+.modal--sheet .sheetModal__field .floatingField__input:focus,
+.modal--sheet .bondModal__field .floatingField__input:focus{
+  border: none;
+  box-shadow: none;
+  background: var(--sheetFillFocus);
+}
+.modal--sheet .sheetModal__field .floatingField__input:focus-visible,
+.modal--sheet .bondModal__field .floatingField__input:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.35);
+}
+html[data-theme="dark"] .modal--sheet .sheetModal__field .floatingField__input:focus,
+html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:focus{
+  background: rgba(99, 99, 102, 0.32);
+}
+html[data-theme="dark"] .modal--sheet .sheetModal__field .floatingField__input:focus-visible,
+html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(41, 151, 255, 0.42);
+}
+.modal--sheet .sheetModal__field .floatingField__label,
+.modal--sheet .bondModal__field .floatingField__label{
+  left: 14px;
+}
+
+.sheetModal__inputRow{
+  padding: 4px 4px 6px;
+}
+.modal--sheet .sheetModal__dateInput{
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 48px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.modal--sheet .sheetModal__dateInput:focus{
+  background: var(--sheetFillFocus);
+  box-shadow: none;
+}
+.modal--sheet .sheetModal__dateInput:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.35);
+}
+
+.sheetModal__group--buyItems{
+  padding: 0;
+}
+.sheetModal__group--buyItems .buyItems{
+  margin-bottom: 0;
+  padding: 12px 14px 8px;
+  gap: 10px;
+}
+.sheetModal__groupFooter{
+  padding: 8px 12px 14px;
+  border-top: 0.5px solid var(--sheetSep);
+}
+.sheetModal__ghostBtn{
+  width: 100%;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.modal--sheet .sheetModal__footer,
+.modal--sheet .bondModal__footer{
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 18px 26px calc(22px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  border-top: 0.5px solid var(--sheetSep);
+  background: var(--sheetFooterBg);
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+}
+.modal--sheet .sheetModal__footer .sheetModal__save,
+.modal--sheet .bondModal__footer .bondModal__save,
+.modal--sheet .sheetModal__footer > .btn.sheetModal__save{
+  margin-left: 0;
+  order: 2;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 20px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.modal--sheet .sheetModal__footer .sheetModal__delete,
+.modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete,
+.modal--bond .bondModal__footer #bond-modal-delete,
+.modal--bond .bondModal__footer .bondModal__delete{
+  order: 1;
+  width: 100%;
+  align-self: center;
+  border-radius: 12px;
+  background: transparent !important;
+  color: #ff3b30;
+  font-weight: 500;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+.modal--sheet .sheetModal__footer .sheetModal__delete:hover,
+.modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete:hover,
+.modal--bond .bondModal__footer #bond-modal-delete:hover,
+.modal--bond .bondModal__footer .bondModal__delete:hover{
+  background: rgba(255, 59, 48, 0.1) !important;
+}
+html[data-theme="dark"] .modal--sheet .sheetModal__footer .sheetModal__delete,
+html[data-theme="dark"] .modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete,
+html[data-theme="dark"] .modal--bond .bondModal__footer #bond-modal-delete,
+html[data-theme="dark"] .modal--bond .bondModal__footer .bondModal__delete{
+  color: #ff6961;
+}
+html[data-theme="dark"] .modal--sheet .sheetModal__footer .sheetModal__delete:hover,
+html[data-theme="dark"] .modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete:hover,
+html[data-theme="dark"] .modal--bond .bondModal__footer #bond-modal-delete:hover,
+html[data-theme="dark"] .modal--bond .bondModal__footer .bondModal__delete:hover{
+  background: rgba(255, 69, 58, 0.15) !important;
+}
+
+.modal--sheet.modal--bond{
+  width: min(480px, calc(100vw - 28px));
+}
+.modal--sheet.modal--strategy{
+  width: min(480px, calc(100vw - 28px));
+}
+.modal--sheet.modal--buy{
+  width: min(540px, calc(100vw - 28px));
+}
+.modal--sheet.modal--yield{
+  width: min(680px, calc(100vw - 28px));
+}
+.modal--sheet.modal--actions{
+  width: min(100vw - 32px, 400px);
+}
+.modal--sheet.modal--autoPlan{
+  width: min(960px, calc(100vw - 24px));
+  max-height: min(92vh, 960px);
+}
+
+/* ---------- Модалка облигации (месяцы, даты — поверх общего sheet) ---------- */
+.bondModal__section{
+  margin-bottom: 32px;
+}
+.bondModal__section:last-child{
+  margin-bottom: 10px;
+}
+.bondModal__group--period{
+  padding: 0;
+}
+
+.bondModal__fieldList{
+  display: flex;
+  flex-direction: column;
+}
+
+.bondModal__periodBlock{
+  gap: 0;
+}
+.bondModal__dateRow.bondPeriodDatesRow{
+  gap: 0;
+  margin: 0;
+  flex-wrap: nowrap;
+  min-width: 0;
+  width: 100%;
+}
+/* Перебиваем .bondPeriodDatesRow .floatingField--portfolio { flex: 0 0 220px } — иначе две даты не помещаются в узкую модалку */
+.modal--bond .bondModal__dateRow.bondPeriodDatesRow .floatingField.floatingField--portfolio.bondModal__field--date,
+.modal--bond .bondModal__dateRow .bondModal__field.floatingField--portfolio{
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.bondModal__dateRow .bondModal__field--date:not(:last-child){
+  border-right: 0.5px solid var(--sheetSep);
+}
+.modal--bond .bondModal__dateRow .floatingField__input[type="date"]{
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-top: 24px;
+  padding-bottom: 10px;
+  min-height: 54px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus + .floatingField__label,
+.modal--bond .bondModal__dateRow .floatingField__input[type="date"]:not(:placeholder-shown) + .floatingField__label{
+  top: 8px;
+}
+.modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus{
+  background: var(--sheetFillFocus);
+  border: none;
+  box-shadow: none;
+}
+.modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.38);
+}
+html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus{
+  background: rgba(99, 99, 102, 0.38);
+}
+html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus-visible{
+  box-shadow: inset 0 0 0 2px rgba(41, 151, 255, 0.45);
+}
+
+.bondModal__monthPanel{
+  margin-top: 0;
+  padding: 14px 14px 8px;
+  border-top: 0.5px solid var(--sheetSep);
+}
+.bondModal__inlineLabel,
+.bondModal__monthPanel .bondMonthChips__label{
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-subhead);
+  margin-bottom: 10px;
+}
+.bondModal__monthGrid{
+  gap: 6px;
+  margin-top: 0;
+}
+
+.modal--bond .bondModal__monthGrid .monthBtn{
+  border-radius: 12px;
+  padding: 10px 7px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: -0.02em;
+  /* Неактивные как вторичные «опции» на странице конфигуратора */
+  background: #f5f5f7 !important;
+  color: var(--text) !important;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.modal--bond .bondModal__monthGrid .monthBtn:hover:not(.is-active){
+  background: #ebebed !important;
+}
+.modal--bond .bondModal__monthGrid .monthBtn.is-active{
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn{
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text) !important;
+}
+html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn:hover:not(.is-active){
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn.is-active{
+  background: #0a84ff !important;
+}
+
+@media (max-width: 420px){
+  .bondModal__dateRow.bondPeriodDatesRow{
+    flex-direction: column;
+  }
+  .bondModal__dateRow .bondModal__field--date:not(:last-child){
+    border-right: none;
+    border-bottom: 0.5px solid var(--sheetSep);
+  }
+}
+
 .strategyActionsModal__actions{
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 12px;
+  margin-top: 0;
+}
+.modal--sheet .strategyActionsModal__actions{
+  gap: 12px;
 }
 .strategyActionsModal__btn{
   width: 100%;
   justify-content: center;
+  min-height: 48px;
+  border-radius: 12px;
 }
 
 @media (max-width: 1024px){
@@ -2625,6 +3491,7 @@ html[data-theme="dark"] .chip__x:hover{
     --font-large: 0.9375rem;
     --font-medium: 0.8125rem;
     --font-small: 0.75rem;
+    --app-shell-header-offset: 118px;
   }
 
   .topbar__inner{
@@ -2691,6 +3558,10 @@ html[data-theme="dark"] .chip__x:hover{
     min-width: 680px;
   }
 
+  .widget[data-widget="returns"] .chartWrap .chart--returns{
+    min-width: 0;
+  }
+
   .summaryLayout{
     gap: 10px;
   }
@@ -2706,11 +3577,29 @@ html[data-theme="dark"] .chip__x:hover{
     border-radius: 16px;
   }
 
+  .modal--sheet{
+    width: min(100vw - 16px, 520px);
+    padding: 0 !important;
+    border-radius: 18px;
+  }
+  .modal--sheet.modal--bond,
+  .modal--sheet.modal--strategy{
+    width: min(100vw - 16px, 480px);
+  }
+  .modal--sheet.modal--yield{
+    width: min(100vw - 16px, 100%);
+  }
+  .modal--sheet.modal--autoPlan{
+    width: min(100vw - 16px, 960px);
+  }
+
   .modal__footer{
     flex-direction: column;
   }
 
-  .modal__footer--bond #bond-modal-save{
+  .modal--sheet .bondModal__footer #bond-modal-save,
+  .modal--sheet .bondModal__footer .bondModal__save,
+  .modal--sheet .sheetModal__footer .sheetModal__save{
     margin-left: 0;
   }
 
@@ -2721,8 +3610,12 @@ html[data-theme="dark"] .chip__x:hover{
 }
 
 @media (min-width: 1280px){
-  .topbar__inner,
-  .page{
+  .topbar__inner{
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .page:not(.page--appShell){
     max-width: 1440px;
   }
 
