@@ -2572,6 +2572,8 @@ function syncStrategyPortfolioEmptyState() {
 /** Данные последнего графика выплат — для перерисовки при изменении размера контейнера. */
 let lastCouponPayoutChartData = null;
 let returnsChartResizeObserverBound = false;
+let lastPortfolioChartData = null;
+let portfolioChartResizeObserverBound = false;
 
 /**
  * Размер области графика в координатах viewBox: ширина — по контейнеру, высота — по отведённой области (CSS).
@@ -2603,6 +2605,35 @@ function ensureReturnsChartResizeObserver() {
   });
   ro.observe(wrap);
   returnsChartResizeObserverBound = true;
+}
+
+function measurePortfolioChartViewport() {
+  const wrap = portfolioChartSvg?.closest(".portfolioChartWrap");
+  let wPx = wrap?.clientWidth ?? 0;
+  let hPx = wrap?.clientHeight ?? 0;
+  if (wPx <= 0 && portfolioChartSvg) {
+    const r = portfolioChartSvg.getBoundingClientRect();
+    wPx = r.width;
+    hPx = r.height;
+  }
+  const w = Math.max(520, Math.min(2400, Math.floor(wPx > 0 ? wPx : 900)));
+  const h = Math.max(280, Math.min(900, Math.floor(hPx > 40 ? hPx : 360)));
+  return { w, h };
+}
+
+function ensurePortfolioChartResizeObserver() {
+  if (portfolioChartResizeObserverBound || typeof ResizeObserver === "undefined" || !portfolioChartSvg) return;
+  const wrap = portfolioChartSvg.closest(".portfolioChartWrap");
+  if (!wrap) return;
+  let t = 0;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      if (lastPortfolioChartData) renderPortfolioChart(lastPortfolioChartData);
+    }, 100);
+  });
+  ro.observe(wrap);
+  portfolioChartResizeObserverBound = true;
 }
 
 /** Минимальная высота каждого ненулевого сегмента составного столбца (px). */
@@ -2996,6 +3027,8 @@ function renderPortfolioChart(chartData) {
     return;
   }
 
+  lastPortfolioChartData = chartData;
+  ensurePortfolioChartResizeObserver();
   lastPortfolioChartRenderedEmpty = false;
 
   const startDate = normalizeYMD(portfolioStartDateInput?.value || "") || getTodayYMD();
@@ -3062,10 +3095,10 @@ function renderPortfolioChart(chartData) {
   portfolioTopupTotalEl.textContent = formatMoney(topupOnlyAdded);
   portfolioEndTotalEl.textContent = formatMoney(endValue);
 
-  const W = 900;
-  const H = 360;
+  const { w: W, h: H } = measurePortfolioChartViewport();
+  if (portfolioChartSvg) portfolioChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   /** Поля viewBox: минимально достаточно под formatPortfolioAxisValue; шире область линии/заливки к краям SVG. */
-  const left = 44;
+  const left = 64;
   const right = 8;
   const top = 24;
   const bottom = 50;
