@@ -31,6 +31,7 @@ const AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY = "invest_planner_auto_plan_price_dr
 const bondsTbody = document.getElementById("assets-tbody");
 const buysTbody = document.getElementById("txns-tbody");
 const holdingsTbody = document.getElementById("holdings-tbody");
+const portfolioHoldingsTbody = document.getElementById("portfolio-holdings-tbody");
 const yieldTbody = document.getElementById("yield-tbody");
 
 const bondTpl = document.getElementById("asset-row-template");
@@ -41,6 +42,7 @@ const yieldTpl = document.getElementById("yield-row-template");
 const addBondBtn = document.getElementById("add-asset-row");
 const addBuyBtn = document.getElementById("add-txn-row");
 const addHoldingBtn = document.getElementById("add-holding-row");
+const addPortfolioHoldingBtn = document.getElementById("add-portfolio-holding-row");
 const addYieldRowBtn = document.getElementById("add-yield-row");
 const buyStrategySelect = document.getElementById("buy-strategy-select");
 const buyTableYearFilterSelect = document.getElementById("buy-table-year-filter");
@@ -156,6 +158,7 @@ const strategySidebarTaxInput = document.getElementById("strategy-sidebar-tax-ra
 const strategyCouponDisplayNetRadio = document.getElementById("strategy-coupon-display-net");
 const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon-display-gross");
 const strategySidebarCommissionInput = document.getElementById("strategy-sidebar-commission-pct");
+const strategyPlansYearSelect = document.getElementById("strategy-plans-year");
 const accruedNominalInput = document.getElementById("accrued-nominal");
 const accruedCouponRateInput = document.getElementById("accrued-coupon-rate");
 const accruedLastCouponDateInput = document.getElementById("accrued-last-coupon-date");
@@ -351,6 +354,26 @@ function applyBuyYearFilter() {
   });
 }
 
+/** Фильтр строк «Планы» по году из сайдбара (согласован с графиком «Динамика»). */
+function applyStrategyPlansYearFilter() {
+  if (!strategyTabBuysTbody || !strategyPlansYearSelect) return;
+  const raw = String(strategyPlansYearSelect.value || "").trim();
+  const showAll = !raw || raw === PORTFOLIO_CHART_YEAR_ALL;
+  strategyTabBuysTbody.querySelectorAll("tr[data-plan-year]").forEach((tr) => {
+    if (showAll) {
+      tr.hidden = false;
+      return;
+    }
+    tr.hidden = tr.getAttribute("data-plan-year") !== raw;
+  });
+}
+
+function syncStrategyPlansYearSelectFromChart() {
+  if (!strategyPlansYearSelect || !chartYearSelect) return;
+  strategyPlansYearSelect.innerHTML = chartYearSelect.innerHTML;
+  strategyPlansYearSelect.value = chartYearSelect.value;
+}
+
 function ensureChartsWidgetsInChartsTab() {
   if (!strategyPaneCharts || !chartsPanel) return;
   const returnsWidget = strategyPaneCharts.querySelector('[data-widget="returns"]');
@@ -537,6 +560,7 @@ function syncStaticTableEmptyStates() {
       "Добавьте облигацию: цена покупки, НКД, купон в ₽ за выплату, выплаты в год и даты."
     );
   }
+  mirrorHoldingsMainToPortfolio();
 }
 
 function buildSvgEmptyState(title, hint, w = 900, h = 360) {
@@ -623,6 +647,7 @@ function sortPlanningTable(tableName) {
   if (tableName === "holdings") {
     const rows = sortRowsForTable(readRows(holdingsTbody), state.field, state.dir);
     writeRows(holdingsTbody, holdingTpl, rows);
+    mirrorHoldingsMainToPortfolio();
     persistAndRender();
     return;
   }
@@ -862,6 +887,20 @@ function isStrategyTabPortfolioView() {
   );
 }
 
+/** Пока открыт экран с таблицей «Текущий портфель» в виджете (#portfolio-holdings-tbody), правки идут туда; каноническая таблица планирования (#holdings-tbody) может отставать до сохранения. */
+function shouldFlushHoldingsFromPortfolioWidget() {
+  if (!portfolioHoldingsTbody || !holdingsTbody) return false;
+  if (isStrategyTabPortfolioView()) return true;
+  if (portfolioPanel && !portfolioPanel.hidden) return true;
+  return false;
+}
+
+function flushHoldingsFromPortfolioWidgetIfNeeded() {
+  if (!shouldFlushHoldingsFromPortfolioWidget()) return;
+  cloneHoldingsTbodyRows(portfolioHoldingsTbody, holdingsTbody);
+  syncHoldingsBondSelects();
+}
+
 /** Покупки выбранной в виджете «Стоимость портфеля» стратегии (для графика и итогов виджета). */
 function getBuysForPortfolioChart() {
   let id = "";
@@ -891,6 +930,7 @@ function switchActiveBuyStrategy(nextIdRaw) {
   syncStaticTableEmptyStates();
   renderBuyStrategySelect();
   persistBuyStrategiesState();
+  invalidateBuyPlanLedgerCache();
   renderAll();
 }
 
@@ -991,6 +1031,12 @@ function formatMonthKey(monthKey) {
   };
 }
 
+function formatMonthKeyRuLong(monthKey) {
+  const ml = formatMonthKey(monthKey);
+  if (typeof ml === "string") return ml;
+  return `${ml.month} ${ml.year}`;
+}
+
 function getSeriesPalette() {
   return [
     "#007AFF",
@@ -1022,6 +1068,7 @@ function ensureChartYearOptions(chartData) {
     chartYearSelect.innerHTML = allOptionHtml;
     chartYearSelect.value = PORTFOLIO_CHART_YEAR_ALL;
     localStorage.setItem(CHART_YEAR_KEY, PORTFOLIO_CHART_YEAR_ALL);
+    syncStrategyPlansYearSelectFromChart();
     return PORTFOLIO_CHART_YEAR_ALL;
   }
 
@@ -1043,7 +1090,21 @@ function ensureChartYearOptions(chartData) {
   }
   const persisted = chartYearSelect.value;
   localStorage.setItem(CHART_YEAR_KEY, persisted);
+  syncStrategyPlansYearSelectFromChart();
   return persisted;
+}
+
+function syncPortfolioYearSelectFromSidebar() {
+  if (!portfolioChartYearSelect) return;
+  const want = String(
+    strategyPlansYearSelect?.value || chartYearSelect?.value || localStorage.getItem(CHART_YEAR_KEY) || ""
+  ).trim();
+  if (!want) return;
+  const ok = Array.from(portfolioChartYearSelect.options).some((o) => o.value === want);
+  if (ok) {
+    portfolioChartYearSelect.value = want;
+    localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, want);
+  }
 }
 
 function ensurePortfolioChartYearOptions(points) {
@@ -1055,6 +1116,7 @@ function ensurePortfolioChartYearOptions(points) {
     portfolioChartYearSelect.innerHTML = allOptionHtml;
     portfolioChartYearSelect.value = PORTFOLIO_CHART_YEAR_ALL;
     localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, PORTFOLIO_CHART_YEAR_ALL);
+    syncPortfolioYearSelectFromSidebar();
     return PORTFOLIO_CHART_YEAR_ALL;
   }
 
@@ -1074,6 +1136,7 @@ function ensurePortfolioChartYearOptions(points) {
   if (!portfolioChartYearSelect.value) {
     portfolioChartYearSelect.value = selected === PORTFOLIO_CHART_YEAR_ALL ? PORTFOLIO_CHART_YEAR_ALL : years[0];
   }
+  syncPortfolioYearSelectFromSidebar();
   const persisted = portfolioChartYearSelect.value;
   localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, persisted);
   return persisted;
@@ -1161,7 +1224,7 @@ function renderYearPies(chartData) {
             )
             .join("");
 
-    chartBlock = `<svg class="yearPie" viewBox="0 0 100 100" aria-label="Выплаты net за ${escapeHtml(selectedYear)}">${slices}</svg>`;
+    chartBlock = `<svg class="yearPie" viewBox="0 0 100 100" aria-label="Выплаты за ${escapeHtml(selectedYear)}">${slices}</svg>`;
   }
 
   const legend =
@@ -1247,6 +1310,20 @@ function formatAmount(amount) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount);
+}
+
+/** Короткие подписи оси Y на графике портфеля — меньше отступ слева, подписи помещаются. */
+function formatPortfolioAxisValue(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) {
+    return `${(n / 1_000_000).toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} млн`;
+  }
+  if (abs >= 10_000) {
+    return `${(n / 1_000).toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} тыс`;
+  }
+  return formatAmount(n);
 }
 
 function formatMoney(amount) {
@@ -1650,6 +1727,12 @@ function computeInvestedFromBuysInCalendarYear(buys, yearStr) {
 /** @type {HTMLDivElement | null} */
 let chartTooltipHost = null;
 
+/** @type {HTMLDivElement | null} */
+let buyPlanTooltipHost = null;
+/** @type {HTMLTableRowElement | null} */
+let buyPlanTooltipHoverRow = null;
+let buyPlanLedgerCache = { key: "", ledger: /** @type {Map<string, object> | null} */ (null) };
+
 /** @type {SVGElement | null} */
 let lastHoveredBar = null;
 /** @type {SVGElement | null} */
@@ -1888,6 +1971,214 @@ function showChartTooltip(titleHtml, metaHtml, clientX, clientY) {
   });
 }
 
+function invalidateBuyPlanLedgerCache() {
+  buyPlanLedgerCache.key = "";
+  buyPlanLedgerCache.ledger = null;
+}
+
+function ensureBuyPlanTooltip() {
+  if (buyPlanTooltipHost) return buyPlanTooltipHost;
+  const el = document.createElement("div");
+  el.className = "chartTooltip buyPlanTooltip";
+  el.setAttribute("role", "tooltip");
+  el.hidden = true;
+  document.body.appendChild(el);
+  buyPlanTooltipHost = el;
+  return el;
+}
+
+function hideBuyPlanTooltip() {
+  buyPlanTooltipHoverRow = null;
+  if (buyPlanTooltipHost) {
+    buyPlanTooltipHost.hidden = true;
+    buyPlanTooltipHost.classList.remove("chartTooltip--visible");
+    buyPlanTooltipHost.innerHTML = "";
+  }
+}
+
+function positionBuyPlanTooltip(clientX, clientY) {
+  const el = buyPlanTooltipHost;
+  if (!el) return;
+  const margin = 14;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  requestAnimationFrame(() => {
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    let left = clientX + margin;
+    let top = clientY + margin;
+    if (left + tw > vw - 8) left = clientX - tw - margin;
+    if (top + th > vh - 8) top = clientY - th - margin;
+    left = Math.max(8, Math.min(left, vw - tw - 8));
+    top = Math.max(8, Math.min(top, vh - th - 8));
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  });
+}
+
+function showBuyPlanTooltip(titleHtml, metaHtml, clientX, clientY) {
+  const el = ensureBuyPlanTooltip();
+  el.innerHTML = `<div class="chartTooltip__title">${titleHtml}</div><div class="chartTooltip__meta">${metaHtml}</div>`;
+  el.hidden = false;
+  el.classList.add("chartTooltip--visible");
+  positionBuyPlanTooltip(clientX, clientY);
+}
+
+function buildBuyPlanBudgetTooltipMeta(entry, options = {}) {
+  const pctRaw = strategySidebarCommissionInput ? parseNumber(strategySidebarCommissionInput.value) : 0;
+  const pct = Number.isFinite(pctRaw) && pctRaw > 0 ? pctRaw : 0;
+  const modelSpent = entry.spentWithCommissionRub;
+  const useRow =
+    options.actualSpentRub != null && Number.isFinite(options.actualSpentRub) && options.actualSpentRub >= 0;
+  const spentShown = useRow ? roundRub2(options.actualSpentRub) : modelSpent;
+  const cashAfterShown = useRow
+    ? roundRub2(entry.cashBeforePurchaseRub - spentShown)
+    : entry.cashAfterPurchaseRub;
+
+  const lines = [];
+  lines.push(`Пополнение в эту дату: ${escapeHtml(formatMoney(entry.userTopupRub))}`);
+  if (entry.reinvest) {
+    if (entry.couponSourceMonthKey) {
+      lines.push(
+        `Купоны (${escapeHtml(formatMonthKeyRuLong(entry.couponSourceMonthKey))}): ${escapeHtml(formatMoney(entry.couponsFromPrevMonthRub))}`
+      );
+    } else {
+      lines.push("Купоны за предыдущий месяц в эту дату: не начислялись");
+    }
+  } else {
+    lines.push("Реинвестирование выключено — купоны в бюджет не добавлялись.");
+  }
+  lines.push(`Бюджет до покупки: ${escapeHtml(formatMoney(entry.cashBeforePurchaseRub))}`);
+  lines.push(`Потрачено (с комиссией): ${escapeHtml(formatMoney(spentShown))}`);
+  lines.push(`Остаток после покупки: ${escapeHtml(formatMoney(cashAfterShown))}`);
+  if (useRow && Math.abs(spentShown - modelSpent) > 0.02) {
+    lines.push(
+      `Сумма по расчёту автоплана на эту дату: ${escapeHtml(formatMoney(modelSpent))} (строка таблицы отличается).`
+    );
+  }
+  if (pct > 0) {
+    lines.push(`Комиссия в параметрах: ${escapeHtml(String(pct))}%.`);
+  }
+  return lines.join("<br/>");
+}
+
+function autoPlanLedgerCacheKeyFromCtx(ctx) {
+  return JSON.stringify({
+    periodStart: ctx.periodStart,
+    periodEnd: ctx.periodEnd,
+    topup: ctx.topup,
+    dayNums: ctx.dayNums,
+    reinvest: ctx.reinvest,
+    diversification: ctx.diversification,
+    driftPct: ctx.driftPct,
+    commissionFraction: ctx.commissionFraction,
+    strategyIdForSim: ctx.strategyIdForSim,
+    bondConfigs: ctx.bondConfigs,
+    bondConfigsForCoupons: ctx.bondConfigsForCoupons,
+    plannedRowsForSim: ctx.plannedRowsForSim,
+    schedule: ctx.schedule,
+    holdingsFingerprint: holdingsTbody ? holdingsTbody.innerText : "",
+    bondsFingerprint: bondsTbody ? bondsTbody.innerText : "",
+  });
+}
+
+function getBuyPlanLedgerMapCached(ctx) {
+  const key = autoPlanLedgerCacheKeyFromCtx(ctx);
+  if (buyPlanLedgerCache.key === key && buyPlanLedgerCache.ledger) return buyPlanLedgerCache.ledger;
+  const { ledgerByDate } = simulateAutoPlanBuys(ctx);
+  buyPlanLedgerCache.key = key;
+  buyPlanLedgerCache.ledger = ledgerByDate;
+  return ledgerByDate;
+}
+
+function showBuyPlanBudgetTooltipForPurchaseDate(dateYmdRaw, clientX, clientY, tooltipOptions = {}) {
+  const dateYmd = normalizeYMD(dateYmdRaw || "");
+  if (!dateYmd) {
+    showBuyPlanTooltip("Бюджет покупки", "Укажите дату в строке.", clientX, clientY);
+    return;
+  }
+
+  try {
+    const collected = collectAutoPlanGenerationContext();
+    if (!collected.ok) {
+      showBuyPlanTooltip(
+        "Бюджет покупки",
+        `${escapeHtml(collected.message)} Подсказка строится по текущим параметрам автопланирования.`,
+        clientX,
+        clientY
+      );
+      return;
+    }
+
+    const ledgerByDate = getBuyPlanLedgerMapCached(collected.ctx);
+    const entry = ledgerByDate.get(dateYmd);
+    if (!entry) {
+      const dFmt = formatDateRuMonthWords(dateYmd);
+      showBuyPlanTooltip(
+        "Бюджет покупки",
+        `Дата ${escapeHtml(dFmt)} не входит в график автоплана (выбранные дни и период).`,
+        clientX,
+        clientY
+      );
+      return;
+    }
+
+    const title = `Бюджет · ${escapeHtml(formatDateRuMonthWords(dateYmd))}`;
+    showBuyPlanTooltip(title, buildBuyPlanBudgetTooltipMeta(entry, tooltipOptions), clientX, clientY);
+  } catch (err) {
+    showBuyPlanTooltip(
+      "Бюджет покупки",
+      "Не удалось построить подсказку. Проверьте таблицу облигаций и параметры автоплана.",
+      clientX,
+      clientY
+    );
+  }
+}
+
+/**
+ * Всплывающая подсказка по бюджету автоплана для строк таблицы покупок (центральный «План» или «Планы» на вкладке «Стратегия»).
+ */
+function bindBuyPlanBudgetTooltipOnTbody(tbody, { rowSelector, getPurchaseYmd, getActualSpentRub }) {
+  if (!tbody || tbody.dataset.buyPlanTipBound === "1") return;
+  tbody.dataset.buyPlanTipBound = "1";
+
+  tbody.addEventListener("mouseover", (e) => {
+    const el = e.target;
+    if (!(el instanceof Element)) return;
+    if (el.closest("[data-action]")) {
+      hideBuyPlanTooltip();
+      return;
+    }
+    const tr = el.closest(rowSelector);
+    if (!tr || tr.parentElement !== tbody) return;
+    if (tr.hasAttribute("data-empty-state") || tr.hidden) return;
+    const ymd = getPurchaseYmd(tr);
+    if (buyPlanTooltipHoverRow === tr) {
+      positionBuyPlanTooltip(e.clientX, e.clientY);
+      return;
+    }
+    buyPlanTooltipHoverRow = tr;
+    const spent = typeof getActualSpentRub === "function" ? getActualSpentRub(tr) : null;
+    showBuyPlanBudgetTooltipForPurchaseDate(ymd, e.clientX, e.clientY, {
+      actualSpentRub: spent,
+    });
+  });
+
+  tbody.addEventListener("mousemove", (e) => {
+    if (!buyPlanTooltipHoverRow) return;
+    const el = e.target;
+    if (!(el instanceof Element) || !buyPlanTooltipHoverRow.contains(el)) return;
+    if (el.closest("[data-action]")) return;
+    positionBuyPlanTooltip(e.clientX, e.clientY);
+  });
+
+  tbody.addEventListener("mouseleave", (e) => {
+    const rel = e.relatedTarget;
+    if (rel instanceof Node && tbody.contains(rel)) return;
+    hideBuyPlanTooltip();
+  });
+}
+
 /** @param {PointerEvent} e */
 function onBarChartPointerMove(e) {
   const t = /** @type {EventTarget | null} */ (e.target);
@@ -1988,7 +2279,7 @@ function onPieChartPointerMove(e) {
   const shareStr = Number.isFinite(share) ? `${formatAmount(share)}%` : "—";
   showChartTooltip(
     escapeHtml(bond),
-    `${escapeHtml(year)} · net · ${escapeHtml(shareStr)} · ${escapeHtml(formatMoney(amount))}`,
+    `${escapeHtml(year)} · ${escapeHtml(shareStr)} · ${escapeHtml(formatMoney(amount))}`,
     e.clientX,
     e.clientY
   );
@@ -2131,7 +2422,7 @@ function getTaxRateDecimal() {
   return clamped / 100;
 }
 
-/** true — на графике купонов показывать суммы после налога (net). По умолчанию gross (как раньше). */
+/** true — на графике купонов показывать суммы после удержания налога. По умолчанию — до налога (как раньше). */
 function getCouponDisplayUsesNet() {
   if (strategyCouponDisplayGrossRadio?.checked) return false;
   if (strategyCouponDisplayNetRadio?.checked) return true;
@@ -2148,6 +2439,38 @@ function getTradeCommissionFraction() {
   return Math.max(0, Math.min(100, raw)) / 100;
 }
 
+/** Сумма списания с учётом комиссии: Σ (цена × количество × (1 + доля комиссии)). Совпадает с автопланом и подсказкой бюджета. */
+function computeBuyItemsOutlayWithCommissionRub(items) {
+  const list = Array.isArray(items) ? items : [];
+  const comm = getTradeCommissionFraction();
+  return roundRub2(list.reduce((sum, i) => sum + i.price * i.quantity * (1 + comm), 0));
+}
+
+function computeBuyRowOutlayWithCommissionFromTr(tr) {
+  if (!tr) return 0;
+  const raw = tr.querySelector('[data-field="items"]')?.value || "[]";
+  return computeBuyItemsOutlayWithCommissionRub(parseBuyItems(raw));
+}
+
+function computeBuyRowOutlayFromStrategyMirrorTr(tr) {
+  if (!tr) return 0;
+  const enc = tr.getAttribute("data-strategy-buy-key") || "";
+  let key = "";
+  try {
+    key = decodeURIComponent(enc);
+  } catch {
+    return 0;
+  }
+  if (!key) return 0;
+  for (const row of getActiveStrategyBuysRows()) {
+    if (!isBuyRowComplete(row)) continue;
+    if (stableBuyRowKeyFromRowData(row) === key) {
+      return computeBuyItemsOutlayWithCommissionRub(parseBuyItems(row.items));
+    }
+  }
+  return 0;
+}
+
 function updateReturnsChartWidgetCopy() {
   const w = document.querySelector('[data-widget="returns"]');
   if (!w) return;
@@ -2155,7 +2478,7 @@ function updateReturnsChartWidgetCopy() {
   const hintEl = w.querySelector(".widget__hint");
   const net = getCouponDisplayUsesNet();
   if (titleEl) {
-    titleEl.textContent = net ? "График выплат купонов (net)" : "График выплат купонов (gross)";
+    titleEl.textContent = "График выплат купонов";
   }
   if (hintEl) {
     hintEl.textContent = net
@@ -2463,7 +2786,7 @@ function buildPayoutSeries(bonds, buys, holdings) {
   return { allDates, seriesByBond };
 }
 
-/** Совпадает с веткой «пустой SVG» в renderChart (net или gross, год или всё время). */
+/** Совпадает с веткой «пустой SVG» в renderChart (режим до/после налога, год или всё время). */
 let lastCouponReturnsChartRenderedEmpty = false;
 
 /** Совпадает с веткой «пустой SVG» в renderPortfolioChart. */
@@ -2496,22 +2819,25 @@ function syncStrategyPortfolioEmptyState() {
   const controls = document.querySelector('[data-widget="portfolio-controls"]');
   const value = document.querySelector('[data-widget="portfolio-value"]');
   if (!pane || !emptyEl || !controls || !value) return;
+  const chartWrap = value.querySelector(".portfolioChartWrap");
   const inStrategy = pane.contains(controls) && pane.contains(value);
   if (!inStrategy) {
     emptyEl.setAttribute("hidden", "");
     controls.removeAttribute("hidden");
     value.removeAttribute("hidden");
+    chartWrap?.removeAttribute("hidden");
     return;
   }
   const showEmpty = lastPortfolioChartRenderedEmpty;
   if (showEmpty) {
     emptyEl.removeAttribute("hidden");
-    value.setAttribute("hidden", "");
+    chartWrap?.setAttribute("hidden", "");
   } else {
     emptyEl.setAttribute("hidden", "");
-    value.removeAttribute("hidden");
+    chartWrap?.removeAttribute("hidden");
   }
   controls.removeAttribute("hidden");
+  value.removeAttribute("hidden");
 }
 
 /** Данные последнего графика выплат — для перерисовки при изменении размера контейнера. */
@@ -2531,7 +2857,7 @@ function measureReturnsChartViewport() {
     hPx = r.height;
   }
   const w = Math.max(380, Math.min(2000, Math.floor(wPx > 0 ? wPx : 520)));
-  const h = Math.max(280, Math.min(920, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.23))));
+  const h = Math.max(320, Math.min(920, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.32))));
   return { w, h };
 }
 
@@ -2554,8 +2880,8 @@ function ensureReturnsChartResizeObserver() {
 const CHART_STACK_MIN_SEG_PX = 10;
 
 /**
- * Высоты сегментов: у каждого ≥ minPx (если высоты столбца хватает: barTotalH ≥ n·minPx),
- * остаток barTotalH распределяется пропорционально суммам — без масштабирования «вниз», которое ломало минимум.
+ * Высоты сегментов: при достаточной высоте столбца — у каждого ≥ minPx, остаток по суммам;
+ * иначе строго пропорционально суммам (сумма сегментов = barTotalH), чтобы меньшие выплаты не рисовались выше больших.
  * @param {number[]} amounts
  * @param {number} barTotalH
  * @param {number} minPx
@@ -2572,7 +2898,7 @@ function stackSegmentHeightsPx(amounts, barTotalH, minPx) {
     return amounts.map((a) => minPx + ((Number(a) || 0) / sumAmt) * remaining);
   }
 
-  return amounts.map(() => minPx);
+  return amounts.map((a) => ((Number(a) || 0) / sumAmt) * barTotalH);
 }
 
 const CHART_STACK_TOP_CORNER_R = 2;
@@ -2851,7 +3177,7 @@ function renderSummary(chartData, buys, holdings) {
   if (totalIncomeHelpBtn) {
     totalIncomeHelpBtn.setAttribute(
       "data-summary-help",
-      "К выплате: итоговая сумма купонов после налога. Формула: сумма всех net-выплат."
+      "К выплате: итоговая сумма купонов после налога. Формула: сумма всех выплат по покупкам после удержания налога."
     );
   }
 
@@ -2906,7 +3232,7 @@ function renderSummary(chartData, buys, holdings) {
   if (yieldMonthlyHelpBtn) {
     yieldMonthlyHelpBtn.setAttribute(
       "data-summary-help",
-      "За год из переключателя под круговой диаграммой: сколько процентов от вложений за этот же год в среднем приходится на один календарный месяц. Формула: (выплаты net за год ÷ вложения за год) ÷ 12 × 100%. Если годов нет — по всему горизонту: (все net-выплаты ÷ все вложения) ÷ число месяцев горизонта × 100%."
+      "За год из переключателя под круговой диаграммой: сколько процентов от вложений за этот же год в среднем приходится на один календарный месяц. Формула: (выплаты за год после налога ÷ вложения за год) ÷ 12 × 100%. Если годов нет — по всему горизонту: (все выплаты после налога ÷ все вложения) ÷ число месяцев горизонта × 100%."
     );
   }
   if (yieldAnnualEl) yieldAnnualEl.textContent = formatPercentValue(annualYieldPct);
@@ -2959,11 +3285,15 @@ function renderPortfolioChart(chartData) {
     ? lastCouponMonthKey
     : defaultEndMonthKey;
 
-  portfolioStartTotalEl.textContent = formatMoney(startValue);
+  const bondRowsForValue = readRows(bondsTbody);
+  const holdingRowsForValue = sanitizeHoldingRows(readRows(holdingsTbody));
+  const holdingsMarketValue = computeCurrentHoldingsMarketValue(bondRowsForValue, holdingRowsForValue);
+
+  portfolioStartTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
 
   const monthRange = buildMonthRange(startMonthKey, lastMonthKey);
 
-  let cumulative = startValue;
+  let cumulative = startValue + holdingsMarketValue;
   const allPoints = monthRange.map((monthKey) => {
     const topupForMonth = !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? monthlyTopup : 0;
     const couponForMonth = getGrossCouponTotalForMonth(seriesByBond, monthKey);
@@ -2975,10 +3305,10 @@ function renderPortfolioChart(chartData) {
   const points = isAllTime ? allPoints : allPoints.filter((p) => getYearFromMonthKey(p.monthKey) === selectedYear);
 
   if (!points.length) {
-    portfolioStartTotalEl.textContent = formatMoney(startValue);
+    portfolioStartTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
     portfolioCouponTotalEl.textContent = formatMoney(0);
     portfolioTopupTotalEl.textContent = formatMoney(0);
-    portfolioEndTotalEl.textContent = formatMoney(startValue);
+    portfolioEndTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
     portfolioChartContent.innerHTML = buildSvgEmptyState(
       isAllTime ? "Нет данных для графика" : "За выбранный год нет движений",
       isAllTime
@@ -3005,8 +3335,9 @@ function renderPortfolioChart(chartData) {
 
   const W = 900;
   const H = 360;
-  const left = 78;
-  const right = 18;
+  /** Поля viewBox: минимально достаточно под formatPortfolioAxisValue; шире область линии/заливки к краям SVG. */
+  const left = 44;
+  const right = 8;
   const top = 24;
   const bottom = 50;
   const innerW = W - left - right;
@@ -3024,7 +3355,9 @@ function renderPortfolioChart(chartData) {
     const y = top + (innerH / 4) * i;
     const value = safeMaxY - ((safeMaxY - safeMinY) / 4) * i;
     lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
-    lines.push(`<text x="${left - 12}" y="${y + 5}" text-anchor="end" fill="currentColor" opacity="0.58" font-size="11">${formatAmount(value)}</text>`);
+    lines.push(
+      `<text x="${left - 4}" y="${y + 4}" text-anchor="end" fill="currentColor" opacity="0.58" font-size="10.5">${formatPortfolioAxisValue(value)}</text>`
+    );
   }
   lines.push(`<line class="portfolioHoverLine" x1="${left}" y1="${top + innerH}" x2="${left}" y2="${top + innerH}" stroke="#007AFF" stroke-width="1" opacity="0"></line>`);
 
@@ -3195,19 +3528,33 @@ function renderStrategyTab() {
       .map((row) => {
         const d = normalizeYMD(row.date);
         const items = parseBuyItems(row.items);
-        const base = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-        const comm = getTradeCommissionFraction();
-        const total = base * (1 + comm);
+        const total = computeBuyItemsOutlayWithCommissionRub(items);
         const itemsHtml = !items.length ? "—" : `<div class="buySummary">${buildBuyChipsHtmlFromItems(items)}</div>`;
         const dateCell = `<div class="buyTableDate">${escapeHtml(d ? formatDateRuMonthWords(d) : "—")}</div>`;
         const keyAttr = encodeURIComponent(stableBuyRowKeyFromRowData(row));
-        return `<tr class="strategyTabShell__buyRowClick" data-strategy-buy-key="${keyAttr}" tabindex="0" role="button">
+        const planYearAttr =
+          d && d.length >= 4 ? ` data-plan-year="${escapeHtml(d.slice(0, 4))}"` : "";
+        const planDateAttr = d ? ` data-plan-purchase-ymd="${escapeHtml(d)}"` : "";
+        const actionsCell = `<td class="strategyPlansPane__cellActions">
+          <div class="buyRowActions">
+            <button type="button" class="iconBtn" data-action="copy" title="Скопировать покупку" aria-label="Скопировать покупку">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="12" height="12" rx="2"></rect>
+                <rect x="9.5" y="9.5" width="12" height="12" rx="2"></rect>
+              </svg>
+            </button>
+            <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">✕</button>
+          </div>
+        </td>`;
+        return `<tr class="strategyTabShell__buyRowClick"${planYearAttr}${planDateAttr} data-strategy-buy-key="${keyAttr}" tabindex="0" role="button">
         <td>${dateCell}</td>
         <td>${itemsHtml}</td>
         <td><div class="buySummary">${escapeHtml(formatMoney(total))}</div></td>
+        ${actionsCell}
       </tr>`;
       })
       .join("");
+    applyStrategyPlansYearFilter();
   }
 
   const rawBondRows = readRowsSkippingPlaceholder(bondsTbody);
@@ -3315,6 +3662,19 @@ function initStrategyTabPanel() {
         return;
       }
       const mainTr = findBuyTableRowByStableKey(key);
+      if (e.target.closest('[data-action="remove"]')) {
+        e.stopPropagation();
+        if (mainTr) {
+          mainTr.remove();
+          scheduleSave();
+        }
+        return;
+      }
+      if (e.target.closest('[data-action="copy"]')) {
+        e.stopPropagation();
+        if (mainTr) copyBuyRow(mainTr);
+        return;
+      }
       if (mainTr) openBuyModalForEdit(mainTr);
     });
     strategyTabBuysTbody.addEventListener("keydown", (e) => {
@@ -3331,6 +3691,12 @@ function initStrategyTabPanel() {
       }
       const mainTr = findBuyTableRowByStableKey(key);
       if (mainTr) openBuyModalForEdit(mainTr);
+    });
+
+    bindBuyPlanBudgetTooltipOnTbody(strategyTabBuysTbody, {
+      rowSelector: "tr[data-strategy-buy-key]",
+      getPurchaseYmd: (tr) => normalizeYMD(tr.getAttribute("data-plan-purchase-ymd") || ""),
+      getActualSpentRub: (tr) => computeBuyRowOutlayFromStrategyMirrorTr(tr),
     });
   }
   if (strategyTabBondsList) {
@@ -3353,6 +3719,7 @@ function initStrategyTabPanel() {
 }
 
 function renderAll() {
+  flushHoldingsFromPortfolioWidgetIfNeeded();
   syncHoldingsBondSelects();
   const layoutSnap = captureVisibleWidgetLayout();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
@@ -3402,6 +3769,7 @@ function persistAndRender() {
   clearTimeout(saveTimer);
   syncStrategySidebarTaxFromMain();
   syncDateSummaries();
+  flushHoldingsFromPortfolioWidgetIfNeeded();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const sortResult = sortBuyRowsByDate(readRows(buysTbody).filter(isBuyRowComplete));
   const buysSorted = sortResult.rows;
@@ -3421,6 +3789,7 @@ function persistAndRender() {
   syncStaticTableEmptyStates();
   if (taxRateInput) localStorage.setItem(TAX_RATE_KEY, String(parseNumber(taxRateInput.value) || 0));
   persistStrategySidebarParamsToStorage();
+  invalidateBuyPlanLedgerCache();
   renderAll();
 }
 
@@ -3440,6 +3809,59 @@ function daysInCalendarMonthUTC(year, month1to12) {
 function roundRub2(n) {
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100) / 100;
+}
+
+/** Оценка стоимости позиций «текущего портфеля»: количество × цена из карточки облигации (поле «Цена»). */
+function computeCurrentHoldingsMarketValue(bondRows, holdingRows) {
+  const byKey = new Map();
+  for (const r of bondRows) {
+    const k = normalizeBondKey(r.bond);
+    if (k) byKey.set(k, r);
+  }
+  let sum = 0;
+  for (const h of holdingRows) {
+    const k = normalizeBondKey(h.bond);
+    const qty = Math.round(parseNumber(h.quantity));
+    if (!k || !Number.isFinite(qty) || qty <= 0) continue;
+    const br = byKey.get(k);
+    const price = br ? parseNumber(br.bondPrice) : NaN;
+    if (!Number.isFinite(price) || price <= 0) continue;
+    sum += qty * price;
+  }
+  return roundRub2(sum);
+}
+
+/** Копирует строки между tbody без innerHTML: при присвоении innerHTML у select теряется выбранная опция. */
+function cloneHoldingsTbodyRows(sourceTbody, targetTbody) {
+  if (!sourceTbody || !targetTbody) return;
+  const srcRows = Array.from(sourceTbody.children);
+  targetTbody.replaceChildren(...srcRows.map((row) => row.cloneNode(true)));
+  srcRows.forEach((src, i) => {
+    const dst = targetTbody.children[i];
+    if (!dst) return;
+    const sBond = src.querySelector('select[data-field="bond"]');
+    const dBond = dst.querySelector('select[data-field="bond"]');
+    if (sBond instanceof HTMLSelectElement && dBond instanceof HTMLSelectElement) {
+      dBond.value = sBond.value;
+    }
+    const sQty = src.querySelector('input[data-field="quantity"]');
+    const dQty = dst.querySelector('input[data-field="quantity"]');
+    if (sQty instanceof HTMLInputElement && dQty instanceof HTMLInputElement) {
+      dQty.value = sQty.value;
+    }
+  });
+}
+
+function mirrorHoldingsMainToPortfolio() {
+  if (!portfolioHoldingsTbody || !holdingsTbody) return;
+  cloneHoldingsTbodyRows(holdingsTbody, portfolioHoldingsTbody);
+  syncHoldingsBondSelects();
+}
+
+function mirrorHoldingsPortfolioToMain() {
+  if (!portfolioHoldingsTbody || !holdingsTbody) return;
+  cloneHoldingsTbodyRows(portfolioHoldingsTbody, holdingsTbody);
+  syncHoldingsBondSelects();
 }
 
 /**
@@ -3752,8 +4174,11 @@ function grossCouponsForCalendarMonth(monthKey, bondConfigs, buyEvents) {
  * Учитывается горизонт: бумаги с большим числом будущих купонов получают до AUTO_PLAN_HORIZON_WEIGHT доп. к скору
  * (равная номинальная доходность, но дольше получать купоны — выгоднее удерживать в портфеле).
  * НКД в жадном шаге не вычитается из бюджета (цена сделки в таблице — чистая); оценка эффективности по купонному потоку.
+ * Комиссия: стоимость одного лота = чистая цена × (1 + доля комиссии).
  */
-function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd, diversification = false) {
+function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd, diversification = false, commissionFraction = 0) {
+  const comm = Number.isFinite(commissionFraction) && commissionFraction >= 0 ? commissionFraction : 0;
+  const dealCost = (clean) => clean * (1 + comm);
   const prelim = bondConfigs
     .map((b) => {
       const row = autoPlanBondScheduleShape(b);
@@ -3784,17 +4209,17 @@ function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd, diversifica
 
   const qtyByBond = Object.fromEntries(entries.map((e) => [e.bond, 0]));
   let B = budgetRub;
-  const minClean = Math.min(...entries.map((e) => e.clean));
+  const minDeal = Math.min(...entries.map((e) => dealCost(e.clean)));
   let guard = 0;
   const scoreEps = 1e-12;
-  while (B + 1e-9 >= minClean && guard < 200000) {
+  while (B + 1e-9 >= minDeal && guard < 200000) {
     guard += 1;
     let best = null;
     let bestEff = -1;
     let bestClean = Infinity;
     let bestBondKey = "";
     for (const e of entries) {
-      if (e.clean > B + 1e-9) continue;
+      if (dealCost(e.clean) > B + 1e-9) continue;
       const pickedQty = qtyByBond[e.bond] || 0;
       const effectiveScore = diversification ? e.yieldScore / (pickedQty + 1) : e.yieldScore;
       if (effectiveScore > bestEff + scoreEps) {
@@ -3812,7 +4237,7 @@ function allocateAutoPlanBudget(budgetRub, bondConfigs, purchaseYmd, diversifica
     }
     if (!best) break;
     qtyByBond[best.bond] += 1;
-    B -= best.clean;
+    B -= dealCost(best.clean);
   }
 
   return entries
@@ -3910,7 +4335,11 @@ function mergeBuyRowsByDateForAutoPlan(existingRows, newRows) {
   return sortBuyRowsByDate(Array.from(byDate.values())).rows;
 }
 
-function generateAutoPlanBuyRows() {
+/**
+ * Собирает и проверяет входные данные автоплана. Без побочных эффектов.
+ * @returns {{ ok: true, ctx: object } | { ok: false, message: string }}
+ */
+function collectAutoPlanGenerationContext() {
   const periodStart = autoPlanStartInput?.value || "";
   const periodEnd = autoPlanEndInput?.value || "";
   const topup = parseNumber(autoPlanTopupAmountInput?.value ?? "");
@@ -3919,6 +4348,8 @@ function generateAutoPlanBuyRows() {
   const diversification = Boolean(autoPlanDiversifyCheckbox?.checked);
   const selectedKeys = getSelectedAutoPlanBondKeys();
   const bondConfigs = readAutoPlanBondConfigs(selectedKeys);
+  const driftPct = parseAutoPlanMonthlyPriceDriftPct();
+  const commissionFraction = getTradeCommissionFraction();
 
   if (!normalizeYMD(periodStart) || !normalizeYMD(periodEnd)) {
     return { ok: false, message: "Укажите даты начала и окончания инвестиций." };
@@ -3960,46 +4391,118 @@ function generateAutoPlanBuyRows() {
   const plannedRowsForSim = strategyIdForSim ? getPlannedBuyRowsForAutoPlan(strategyIdForSim) : [];
   const bondConfigsForCoupons = readBondConfigsForCouponSimulationFromTable();
 
+  const ctx = {
+    periodStart,
+    periodEnd,
+    topup,
+    dayNums,
+    reinvest,
+    diversification,
+    selectedKeys,
+    bondConfigs,
+    bondConfigsForCoupons,
+    plannedRowsForSim,
+    schedule,
+    driftPct,
+    commissionFraction,
+    strategyIdForSim,
+  };
+  return { ok: true, ctx };
+}
+
+/**
+ * Симуляция автоплана: накопительный бюджет (остаток переносится), купоны прошлого месяца
+ * поступают в начале нового календарного месяца (первая дата покупок месяца), пополнение — в каждую дату графика.
+ */
+function simulateAutoPlanBuys(ctx) {
+  const {
+    periodStart,
+    topup,
+    reinvest,
+    diversification,
+    bondConfigs,
+    bondConfigsForCoupons,
+    plannedRowsForSim,
+    schedule,
+    driftPct,
+    commissionFraction,
+  } = ctx;
+
+  const scheduleAsc = [...schedule].sort((a, b) => (ymdToUTCms(a) || 0) - (ymdToUTCms(b) || 0));
   const simulatedEvents = [
     ...buildInitialBuyEventsFromHoldings(),
     ...buildBuyEventsFromPlannedRows(plannedRowsForSim),
   ];
+  let cash = 0;
+  let lastMk = null;
+  const ledgerByDate = new Map();
   const generatedRows = [];
-  /** Купоны за прошлый месяц — один раз на календарный месяц покупок, не на каждую дату пополнения. */
-  const reinvestFromPrevMonthUsedForPurchaseMonth = new Set();
+  const comm = Number.isFinite(commissionFraction) && commissionFraction >= 0 ? commissionFraction : 0;
 
-  for (const dateYmd of schedule) {
-    const purchaseMonthKey = toMonthKeyFromYMD(dateYmd);
-    const prevMonthKey = addMonthsToMonthKey(purchaseMonthKey, -1);
-    let budget = topup;
-    const applyReinvest =
-      reinvest &&
-      prevMonthKey &&
-      !reinvestFromPrevMonthUsedForPurchaseMonth.has(purchaseMonthKey);
-    if (applyReinvest) {
-      budget += grossCouponsForCalendarMonth(prevMonthKey, bondConfigsForCoupons, simulatedEvents);
+  for (const dateYmd of scheduleAsc) {
+    const mk = toMonthKeyFromYMD(dateYmd);
+    let couponsAdded = 0;
+    let couponSourceMonthKey = "";
+    if (reinvest) {
+      if (lastMk === null) {
+        couponSourceMonthKey = addMonthsToMonthKey(mk, -1);
+        couponsAdded = grossCouponsForCalendarMonth(couponSourceMonthKey, bondConfigsForCoupons, simulatedEvents);
+        cash = roundRub2(cash + couponsAdded);
+      } else if (mk !== lastMk) {
+        couponSourceMonthKey = lastMk;
+        couponsAdded = grossCouponsForCalendarMonth(lastMk, bondConfigsForCoupons, simulatedEvents);
+        cash = roundRub2(cash + couponsAdded);
+      }
     }
-    budget = roundRub2(budget);
 
-    const driftPct = parseAutoPlanMonthlyPriceDriftPct();
+    cash = roundRub2(cash + topup);
+    const cashBeforePurchase = cash;
+
     const bondConfigsForDate = applyAutoPlanMonthlyPriceDriftToConfigs(bondConfigs, periodStart, dateYmd, driftPct);
-    const items = allocateAutoPlanBudget(budget, bondConfigsForDate, dateYmd, diversification);
-    if (!items.length) continue;
+    const items = allocateAutoPlanBudget(cashBeforePurchase, bondConfigsForDate, dateYmd, diversification, comm);
 
-    if (applyReinvest) reinvestFromPrevMonthUsedForPurchaseMonth.add(purchaseMonthKey);
-
-    generatedRows.push({ date: dateYmd, items: JSON.stringify(items) });
-
-    const ts = ymdToUTCms(dateYmd) || 0;
+    let spentWithCommission = 0;
     for (const it of items) {
-      simulatedEvents.push({
-        dateYMD: dateYmd,
-        dateUTCms: ts,
-        bond: it.bond,
-        quantity: it.quantity,
-      });
+      spentWithCommission += it.price * it.quantity * (1 + comm);
     }
+    spentWithCommission = roundRub2(spentWithCommission);
+    cash = roundRub2(cash - spentWithCommission);
+
+    ledgerByDate.set(dateYmd, {
+      dateYmd,
+      reinvest,
+      couponsFromPrevMonthRub: roundRub2(couponsAdded),
+      couponSourceMonthKey,
+      userTopupRub: topup,
+      cashBeforePurchaseRub: roundRub2(cashBeforePurchase),
+      spentWithCommissionRub: spentWithCommission,
+      cashAfterPurchaseRub: cash,
+    });
+
+    if (items.length) {
+      generatedRows.push({ date: dateYmd, items: JSON.stringify(items) });
+      const ts = ymdToUTCms(dateYmd) || 0;
+      for (const it of items) {
+        simulatedEvents.push({
+          dateYMD: dateYmd,
+          dateUTCms: ts,
+          bond: it.bond,
+          quantity: it.quantity,
+        });
+      }
+    }
+
+    lastMk = mk;
   }
+
+  return { generatedRows, ledgerByDate };
+}
+
+function generateAutoPlanBuyRows() {
+  const collected = collectAutoPlanGenerationContext();
+  if (!collected.ok) return { ok: false, message: collected.message };
+
+  const { generatedRows } = simulateAutoPlanBuys(collected.ctx);
 
   if (!generatedRows.length) {
     return { ok: false, message: "На выбранных датах не удалось купить ни одного лота (сумма или цены слишком малы)." };
@@ -4048,6 +4551,7 @@ function initAutoPlanWidgetUi() {
       btn.addEventListener("click", () => {
         const on = btn.classList.toggle("planScheduleDayChip--selected");
         btn.setAttribute("aria-pressed", on ? "true" : "false");
+        invalidateBuyPlanLedgerCache();
       });
     });
   }
@@ -4058,8 +4562,50 @@ function initAutoPlanWidgetUi() {
   }
   if (autoPlanPriceDriftPctInput && autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound !== "1") {
     autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound = "1";
-    autoPlanPriceDriftPctInput.addEventListener("input", persistAutoPlanMonthlyPriceDriftPct);
-    autoPlanPriceDriftPctInput.addEventListener("change", persistAutoPlanMonthlyPriceDriftPct);
+    const persistDrift = () => {
+      persistAutoPlanMonthlyPriceDriftPct();
+      invalidateBuyPlanLedgerCache();
+    };
+    autoPlanPriceDriftPctInput.addEventListener("input", persistDrift);
+    autoPlanPriceDriftPctInput.addEventListener("change", persistDrift);
+  }
+
+  const autoPlanInv = () => invalidateBuyPlanLedgerCache();
+  if (autoPlanStartInput && autoPlanStartInput.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanStartInput.dataset.autoPlanLedgerInv = "1";
+    autoPlanStartInput.addEventListener("input", autoPlanInv);
+    autoPlanStartInput.addEventListener("change", autoPlanInv);
+  }
+  if (autoPlanEndInput && autoPlanEndInput.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanEndInput.dataset.autoPlanLedgerInv = "1";
+    autoPlanEndInput.addEventListener("input", autoPlanInv);
+    autoPlanEndInput.addEventListener("change", autoPlanInv);
+  }
+  if (autoPlanTopupAmountInput && autoPlanTopupAmountInput.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanTopupAmountInput.dataset.autoPlanLedgerInv = "1";
+    autoPlanTopupAmountInput.addEventListener("input", autoPlanInv);
+    autoPlanTopupAmountInput.addEventListener("change", autoPlanInv);
+  }
+  if (autoPlanReinvestCheckbox && autoPlanReinvestCheckbox.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanReinvestCheckbox.dataset.autoPlanLedgerInv = "1";
+    autoPlanReinvestCheckbox.addEventListener("change", autoPlanInv);
+  }
+  if (autoPlanDiversifyCheckbox && autoPlanDiversifyCheckbox.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanDiversifyCheckbox.dataset.autoPlanLedgerInv = "1";
+    autoPlanDiversifyCheckbox.addEventListener("change", autoPlanInv);
+  }
+  if (autoPlanStrategySelect && autoPlanStrategySelect.dataset.autoPlanLedgerInv !== "1") {
+    autoPlanStrategySelect.dataset.autoPlanLedgerInv = "1";
+    autoPlanStrategySelect.addEventListener("change", autoPlanInv);
+  }
+
+  const planScaffold = document.getElementById("planning-scaffold-body");
+  if (planScaffold && planScaffold.dataset.autoPlanBondsLedgerInv !== "1") {
+    planScaffold.dataset.autoPlanBondsLedgerInv = "1";
+    planScaffold.addEventListener("change", (e) => {
+      const t = e.target;
+      if (t instanceof HTMLInputElement && t.matches('input[type="checkbox"][data-bond]')) invalidateBuyPlanLedgerCache();
+    });
   }
 }
 
@@ -4188,6 +4734,23 @@ bindRowDelete(bondsTbody);
 bindRowDelete(buysTbody);
 bindRowDelete(holdingsTbody);
 
+if (portfolioHoldingsTbody) {
+  portfolioHoldingsTbody.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action='remove']");
+    if (!btn) return;
+    const tr = btn.closest("tr");
+    if (tr) tr.remove();
+    mirrorHoldingsPortfolioToMain();
+    scheduleSave();
+  });
+  const onPortfolioHoldingsField = () => {
+    mirrorHoldingsPortfolioToMain();
+    scheduleSave();
+  };
+  portfolioHoldingsTbody.addEventListener("input", onPortfolioHoldingsField);
+  portfolioHoldingsTbody.addEventListener("change", onPortfolioHoldingsField);
+}
+
 function normalizeBondKey(bond) {
   return String(bond || "").trim().toUpperCase();
 }
@@ -4240,6 +4803,8 @@ function propagateBondRename(oldBondKey, newBondKey) {
     // Обновляем отображение chips/totals в таблице покупок
     syncBuySummaries();
   }
+
+  mirrorHoldingsMainToPortfolio();
 }
 
 // Чтобы переименование облигации в виджете "Облигации" отображалось везде,
@@ -4367,6 +4932,18 @@ if (addHoldingBtn) {
     clearTableEmptyState(holdingsTbody);
     holdingsTbody.appendChild(holdingTpl.content.cloneNode(true));
     syncHoldingsBondSelects();
+    mirrorHoldingsMainToPortfolio();
+    scheduleSave();
+  });
+}
+if (addPortfolioHoldingBtn && portfolioHoldingsTbody) {
+  addPortfolioHoldingBtn.addEventListener("click", () => {
+    const availableBonds = getAvailableBondNames();
+    if (!availableBonds.length) return;
+    clearTableEmptyState(portfolioHoldingsTbody);
+    portfolioHoldingsTbody.appendChild(holdingTpl.content.cloneNode(true));
+    syncHoldingsBondSelects();
+    mirrorHoldingsPortfolioToMain();
     scheduleSave();
   });
 }
@@ -4390,6 +4967,12 @@ document.querySelectorAll("th[data-sort-table][data-sort-field]").forEach((th) =
     updateSortableHeaders();
     sortPlanningTable(tableName);
   });
+});
+
+bindBuyPlanBudgetTooltipOnTbody(buysTbody, {
+  rowSelector: "tr.buyTable__dataRow",
+  getPurchaseYmd: (tr) => normalizeYMD(tr.querySelector('[data-field="date"]')?.value || ""),
+  getActualSpentRub: (tr) => computeBuyRowOutlayWithCommissionFromTr(tr),
 });
 
 buysTbody.addEventListener("click", (e) => {
@@ -4466,6 +5049,22 @@ function initStrategySidebarParams() {
   if (strategySidebarCommissionInput) {
     strategySidebarCommissionInput.addEventListener("input", () => {
       persistStrategySidebarParamsToStorage();
+      invalidateBuyPlanLedgerCache();
+      renderAll();
+    });
+  }
+  if (strategyPlansYearSelect) {
+    strategyPlansYearSelect.addEventListener("change", () => {
+      const v = strategyPlansYearSelect.value || "";
+      localStorage.setItem(CHART_YEAR_KEY, v);
+      if (chartYearSelect) chartYearSelect.value = v;
+      if (portfolioChartYearSelect) {
+        const ok = Array.from(portfolioChartYearSelect.options).some((o) => o.value === v);
+        if (ok) {
+          portfolioChartYearSelect.value = v;
+          localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, v);
+        }
+      }
       renderAll();
     });
   }
@@ -4473,7 +5072,16 @@ function initStrategySidebarParams() {
 
 if (chartYearSelect) {
   chartYearSelect.addEventListener("change", () => {
-    localStorage.setItem(CHART_YEAR_KEY, chartYearSelect.value || "");
+    const v = chartYearSelect.value || "";
+    localStorage.setItem(CHART_YEAR_KEY, v);
+    if (strategyPlansYearSelect) strategyPlansYearSelect.value = v;
+    if (portfolioChartYearSelect) {
+      const ok = Array.from(portfolioChartYearSelect.options).some((o) => o.value === v);
+      if (ok) {
+        portfolioChartYearSelect.value = v;
+        localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, v);
+      }
+    }
     renderAll();
   });
 }
@@ -4669,36 +5277,39 @@ function syncDateSummaries() {
 }
 
 function syncHoldingsBondSelects() {
-  if (!holdingsTbody) return;
+  const tbodies = [holdingsTbody, portfolioHoldingsTbody].filter(Boolean);
+  if (!tbodies.length) return;
   const availableBonds = getAvailableBondNames();
   const availableSet = new Set(availableBonds);
 
-  Array.from(holdingsTbody.querySelectorAll('select[data-field="bond"]')).forEach((select) => {
-    const current = normalizeBondKey(select.value);
+  tbodies.forEach((tbody) => {
+    Array.from(tbody.querySelectorAll('select[data-field="bond"]')).forEach((select) => {
+      const current = normalizeBondKey(select.value);
 
-    select.innerHTML = "";
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "—";
-    select.appendChild(placeholder);
+      select.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "—";
+      select.appendChild(placeholder);
 
-    for (const bond of availableBonds) {
-      const opt = document.createElement("option");
-      opt.value = bond;
-      opt.textContent = bond;
-      select.appendChild(opt);
-    }
+      for (const bond of availableBonds) {
+        const opt = document.createElement("option");
+        opt.value = bond;
+        opt.textContent = bond;
+        select.appendChild(opt);
+      }
 
-    // Если у пользователя уже сохранена облигация, которой сейчас нет в таблице,
-    // добавляем её как fallback, чтобы не потерять сохранённое значение.
-    if (current && !availableSet.has(current)) {
-      const opt = document.createElement("option");
-      opt.value = current;
-      opt.textContent = current;
-      select.appendChild(opt);
-    }
+      // Если у пользователя уже сохранена облигация, которой сейчас нет в таблице,
+      // добавляем её как fallback, чтобы не потерять сохранённое значение.
+      if (current && !availableSet.has(current)) {
+        const opt = document.createElement("option");
+        opt.value = current;
+        opt.textContent = current;
+        select.appendChild(opt);
+      }
 
-    select.value = current && (availableSet.has(current) || Array.from(select.options).some((o) => o.value === current)) ? current : "";
+      select.value = current && (availableSet.has(current) || Array.from(select.options).some((o) => o.value === current)) ? current : "";
+    });
   });
 }
 
@@ -4722,7 +5333,7 @@ function syncBuySummaries() {
     }
 
     itemsDisplay.innerHTML = buildBuyChipsHtmlFromItems(items);
-    const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const total = computeBuyItemsOutlayWithCommissionRub(items);
     totalDisplay.textContent = formatMoney(total);
   });
 }
@@ -5975,6 +6586,11 @@ document.addEventListener("keydown", (e) => {
   }
   if (buyModalOverlay && !buyModalOverlay.hidden) {
     closeBuyModal();
+    e.preventDefault();
+    return;
+  }
+  if (buyPlanTooltipHost && !buyPlanTooltipHost.hidden) {
+    hideBuyPlanTooltip();
     e.preventDefault();
     return;
   }

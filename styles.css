@@ -6,6 +6,8 @@
 
   --card: #ffffff;
   --cardBorder: rgba(0, 0, 0, 0.06);
+  /** Тонкая серая линия как у топбара и полей — колонки, внутренние разделители */
+  --hairline: rgba(0, 0, 0, 0.08);
 
   --text: #1d1d1f;
   --muted: #86868b;
@@ -52,6 +54,7 @@ html[data-theme="dark"]{
 
     --card: #1c1c1e;
     --cardBorder: rgba(255, 255, 255, 0.12);
+    --hairline: rgba(255, 255, 255, 0.08);
 
     --text: #f5f5f7;
     --muted: #a1a1a6;
@@ -95,11 +98,11 @@ html[data-theme="dark"] body{
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   background: rgba(251, 251, 253, 0.72);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--hairline);
 }
 html[data-theme="dark"] .topbar{
     background: rgba(22, 22, 23, 0.76);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: var(--hairline);
   }
 
 .topbar__inner{
@@ -242,18 +245,111 @@ html[data-theme="dark"] .tabBtn.is-active{
 .widget--wide{
   grid-column: 1 / -1;
 }
-/* Слева «Облигации» на высоту портфеля + стратегии; справа портфель и под ним настройка стратегии */
-[data-tab-panel="planning"] [data-widget="assets"]{
-  grid-row: 1 / span 2;
+/* Планирование: трёхколоночное окно редактирования (как strategy sheet) */
+.planningEditor{
+  display: grid;
+  grid-template-columns: min(340px, 32vw) minmax(0, 1fr) minmax(14rem, min(22rem, 28vw));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  width: 100%;
+  max-width: 100%;
+  height: calc(100svh - var(--app-shell-header-offset));
+  max-height: calc(100svh - var(--app-shell-header-offset));
+  min-height: 0;
+  column-gap: 0;
+  row-gap: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+.planningEditor__rail{
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+  padding: 14px 12px 18px;
+  background: var(--bg2);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.planningEditor__rail::-webkit-scrollbar{
+  display: none;
+  width: 0;
+  height: 0;
+}
+.planningEditor__rail--left{
   grid-column: 1;
+  border-right: 1px solid var(--hairline);
 }
-[data-tab-panel="planning"] [data-widget="holdings"]{
-  grid-row: 1;
-  grid-column: 2;
+.planningEditor__rail--right{
+  grid-column: 3;
+  border-left: 1px solid var(--hairline);
 }
-[data-tab-panel="planning"] [data-widget="buy-strategy"]{
-  grid-row: 2;
+.planningEditor__main{
   grid-column: 2;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 14px 18px 22px;
+  background: var(--bg2);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+html[data-theme="dark"] .planningEditor__main{
+    background: var(--card);
+  }
+html[data-theme="dark"] .planningEditor__rail{
+    background: rgba(28, 28, 30, 0.5);
+    border-color: var(--hairline);
+  }
+.planningParams__body{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.planningParams__field{
+  width: 100%;
+}
+.planningParams__field .buyTableYearFilter,
+.planningParams__field select{
+  width: 100%;
+  max-width: none;
+}
+@media (max-width: 1180px){
+  .planningEditor{
+    grid-template-columns: 1fr;
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .planningEditor__rail,
+  .planningEditor__main{
+    overflow: visible;
+  }
+  .planningEditor__rail--left,
+  .planningEditor__rail--right,
+  .planningEditor__main{
+    grid-column: 1;
+  }
+  .planningEditor__rail--left{
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .planningEditor__rail--right{
+    border-left: none;
+    border-top: 1px solid var(--hairline);
+  }
 }
 [data-widget="planning-scaffold"] .autoPlanWidget{
   margin-top: 4px;
@@ -566,8 +662,11 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
 .tabPanel--strategy{
   display: block;
   width: 100%;
-  min-height: calc(100svh - var(--app-shell-header-offset));
+  height: calc(100svh - var(--app-shell-header-offset));
+  max-height: calc(100svh - var(--app-shell-header-offset));
+  min-height: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .strategyTabShell{
   --strategy-shell-pad: 14px;
@@ -578,24 +677,37 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   justify-items: stretch;
   width: 100%;
   max-width: 100%;
-  min-height: calc(100svh - var(--app-shell-header-offset));
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   column-gap: 0;
   row-gap: 0;
   border-radius: 0;
   border: none;
   background: transparent;
   box-shadow: none;
-  overflow: visible;
+  overflow: hidden;
 }
 .strategyTabShell__aside{
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   align-self: stretch;
-  border-right: 1px solid var(--cardBorder);
+  border-right: 1px solid var(--hairline);
   background: var(--bg2);
   text-align: left;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.strategyTabShell__aside::-webkit-scrollbar{
+  display: none;
+  width: 0;
+  height: 0;
 }
 .strategyTabShell__aside--left{
   grid-column: 1;
@@ -609,7 +721,7 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--cardBorder);
+  border-top: 1px solid var(--hairline);
   margin-top: 2px;
   padding-top: 2px;
 }
@@ -710,79 +822,444 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
   background: transparent !important;
 }
 html[data-theme="dark"] .strategyTabShell__aside{
-    border-color: var(--cardBorder);
+    border-color: var(--hairline);
     background: rgba(28, 28, 30, 0.5);
   }
 .strategyTabShell__center{
   grid-column: 2;
   min-width: 0;
-  min-height: 100%;
+  min-height: 0;
   align-self: stretch;
   width: 100%;
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg0);
+  background: var(--bg2);
   text-align: left;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 html[data-theme="dark"] .strategyTabShell__center{
-    background: var(--bg0);
+    background: var(--card);
   }
 .strategyTabShell__pane[hidden]{
   display: none !important;
 }
 .strategyTabShell__pane--buys{
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
+}
+/* «Планы»: как в sheet-модалках — тонкие разделители, без «карточки» под таблицей */
+.strategyPlansPane{
+  --plansSep: rgba(0, 0, 0, 0.09);
+  --plansHover: rgba(0, 113, 227, 0.06);
+  --plansHeadSep: rgba(0, 0, 0, 0.08);
+}
+html[data-theme="dark"] .strategyPlansPane{
+  --plansSep: rgba(255, 255, 255, 0.12);
+  --plansHover: rgba(41, 151, 255, 0.1);
+  --plansHeadSep: rgba(255, 255, 255, 0.1);
+}
+.strategyPlansPane__head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px var(--strategy-shell-pad) 18px;
+  flex-shrink: 0;
+  border-bottom: 0.5px solid var(--plansHeadSep);
+}
+.strategyPlansPane__intro{
+  min-width: 0;
+  flex: 1 1 200px;
+  text-align: left;
+}
+.strategyPlansPane__title{
+  margin: 0 0 6px;
+  font-size: 1.375rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--text);
+}
+.strategyPlansPane__subtitle{
+  margin: 0;
+  max-width: 42rem;
+  font-size: calc(var(--fs-small) * 1.02);
+  line-height: 1.4;
+  color: var(--muted);
+}
+.strategyPlansPane__toolbar{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: min(100%, 220px);
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.strategyPlansPane__addBuy{
+  flex-shrink: 0;
+  align-self: stretch;
+  margin-top: 0;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  border: 1px solid color-mix(in srgb, var(--cardBorder) 90%, var(--primary) 8%);
+  background: color-mix(in srgb, var(--bg2) 92%, var(--primary) 4%);
+}
+.strategyPlansPane__addBuy:hover{
+  background: color-mix(in srgb, var(--bg2) 88%, var(--primary) 10%);
+}
+html[data-theme="dark"] .strategyPlansPane__addBuy{
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(58, 58, 60, 0.45);
+  }
+html[data-theme="dark"] .strategyPlansPane__addBuy:hover{
+    background: rgba(72, 72, 74, 0.55);
+  }
+.strategyPlansPane__tableWrap.tableWrap{
+  flex: 0 1 auto;
+  min-height: 0;
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-theme="dark"] .strategyPlansPane__tableWrap.tableWrap{
+    background: transparent;
+    border: none;
+  }
+.strategyPlansPane__table.table{
+  width: 100%;
+  table-layout: fixed;
+}
+.strategyPlansPane__table thead th{
+  background: transparent !important;
+  border-bottom: 0.5px solid var(--plansSep);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-subhead);
+  padding: 12px 18px 10px;
+  vertical-align: bottom;
+}
+.strategyPlansPane__table .strategyPlansPane__colDate{
+  width: 24%;
+}
+.strategyPlansPane__table .strategyPlansPane__colSum{
+  width: 18%;
+}
+.strategyPlansPane__table .strategyPlansPane__colItems{
+  width: auto;
+}
+.strategyPlansPane__table .strategyPlansPane__colActions{
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+.strategyPlansPane__table tbody td.strategyPlansPane__cellActions{
+  vertical-align: middle;
+  padding-left: 8px;
+  padding-right: 34px;
+}
+.strategyPlansPane__table tbody td:nth-child(3){
+  padding-right: 42px;
+}
+.strategyPlansPane__table tbody td.strategyPlansPane__cellActions .buyRowActions{
+  gap: 8px;
+}
+.strategyPlansPane__table tbody td.strategyPlansPane__cellActions .iconBtn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+}
+.strategyPlansPane__table tbody td.strategyPlansPane__cellActions [data-action="remove"].iconBtn{
+  font-size: 16px;
+  line-height: 1;
+}
+.strategyPlansPane__table tbody td{
+  padding: 13px 18px;
+  border-bottom: 0.5px solid var(--plansSep);
+  background: transparent;
+}
+.strategyPlansPane__table tbody tr:last-child td{
+  border-bottom: none;
+}
+html[data-theme="dark"] .strategyPlansPane__table thead th{
+    border-bottom-color: var(--plansSep);
+  }
+.strategyPlansPane__empty.featureEmptyState{
+  margin: 0 0 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg2) 65%, transparent);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+html[data-theme="dark"] .strategyPlansPane__empty.featureEmptyState{
+    background: rgba(44, 44, 46, 0.35);
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  }
+.strategyTabShell__paramHint--afterYear{
+  margin: -2px 0 10px;
+}
+/* Динамика: прокрутка колонки — у .strategyTabShell__center; здесь без вложенного скролла */
+.strategyDynamics{
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+.strategyDynamics__titleRow{
+  flex-shrink: 0;
+  padding: 18px var(--strategy-shell-pad) 14px;
+  border-bottom: 0.5px solid var(--hairline);
+}
+.strategyDynamics__title{
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--text);
 }
 .strategyTabShell__pane--charts{
-  flex: 1;
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  overflow-y: auto;
-  padding: 0 0 14px;
+  gap: 0;
+  overflow: visible;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
 }
-.strategyTabShell__pane--charts > .widget:first-child{
-  margin-top: 0;
+.strategyTabShell__pane--charts .card.widget[data-widget="returns"]{
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 var(--strategy-shell-pad) !important;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
-.strategyTabShell__pane--charts .card.widget,
+.strategyTabShell__pane--charts .card.widget[data-widget="returns"] .chartLegend{
+  flex-shrink: 0;
+  margin: 0 0 6px;
+  padding: 10px 0 0;
+}
+.strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
+  flex: 0 1 auto;
+  align-self: stretch;
+  --_returns-chart-bleed: var(--strategy-shell-pad);
+  margin-left: calc(-1 * var(--_returns-chart-bleed));
+  margin-right: calc(-1 * var(--_returns-chart-bleed));
+  width: calc(100% + 2 * var(--_returns-chart-bleed));
+  max-width: none;
+  height: clamp(300px, 52vh, 640px);
+  max-height: min(640px, 62vh);
+  min-height: 260px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-theme="dark"] .strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
+    background: transparent;
+    border: none;
+  }
+.strategyTabShell__pane--charts .widget[data-widget="returns"] .chart--returns{
+  padding: 0;
+}
+/* Портфель (вкладка стратегии): параметры, статистика и график — без лишних карточек; год в сайдбаре */
+.strategyPortfolio{
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: 100%;
+}
+.strategyPortfolio__titleRow{
+  flex-shrink: 0;
+  padding: 18px var(--strategy-shell-pad) 14px;
+  border-bottom: 0.5px solid var(--hairline);
+}
+.strategyPortfolio__title{
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--text);
+}
+.strategyTabShell__pane--portfolio{
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
+}
 .strategyTabShell__pane--portfolio .card.widget{
   box-shadow: none;
   border-color: transparent;
   background: transparent;
-  padding: 14px 14px 18px;
+  border-radius: 0;
+  margin: 0;
+  padding: 0 !important;
 }
-.strategyTabShell__pane--portfolio{
-  flex: 1;
+.strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-controls"]{
+  flex-shrink: 0;
+  padding: 16px calc(var(--strategy-shell-pad) + 4px) 10px !important;
+}
+.strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-value"]{
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
-  overflow-y: auto;
-  padding: 0 0 14px;
+  gap: 14px;
+  padding: 10px calc(var(--strategy-shell-pad) + 4px) 20px !important;
 }
-.strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-controls"]{
-  padding-bottom: 14px;
+.strategyTabShell__pane--portfolio .portfolioPf.portfolioControls--sheet .portfolioControls__group{
+  border: none;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  padding: 14px 16px;
 }
-.strategyTabShell__pane--portfolio label[for="portfolio-chart-strategy-select"]{
-  display: none;
+html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioPf.portfolioControls--sheet .portfolioControls__group{
+    box-shadow:
+      0 0 0 0.5px rgba(255, 255, 255, 0.08),
+      0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+.strategyTabShell__pane--portfolio .portfolioCurrentHoldings{
+  flex-shrink: 0;
+  margin: 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  padding: 14px 16px;
 }
-.strategyTabShell__pane--portfolio > .widget:first-child{
-  margin-top: 0;
+html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioCurrentHoldings{
+    box-shadow:
+      0 0 0 0.5px rgba(255, 255, 255, 0.08),
+      0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+#tab-panel-portfolio .card.widget[data-widget="portfolio-value"]{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+#tab-panel-portfolio .card.widget[data-widget="portfolio-value"] .portfolioChartWrap.chartWrap{
+  align-self: stretch;
+  margin-left: calc(-1 * var(--widget-pad-x));
+  margin-right: calc(-1 * var(--widget-pad-x));
+  width: calc(100% + 2 * var(--widget-pad-x));
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.strategyTabShell__pane--portfolio .portfolioTotals--sheet{
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+.strategyTabShell__pane--portfolio .portfolioTotals--sheet .summaryStat{
+  margin: 0;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg0) 55%, transparent);
+  padding: 11px 12px 13px;
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--hairline) 80%, transparent);
+}
+html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioTotals--sheet .summaryStat{
+    background: rgba(44, 44, 46, 0.4);
+    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  }
+.strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-value"] .portfolioChartWrap.chartWrap{
+  flex: 0 1 auto;
+  align-self: stretch;
+  min-height: 220px;
+  height: clamp(220px, 34vh, 420px);
+  max-height: min(420px, 50vh);
+  --_pf-chart-pad: calc(var(--strategy-shell-pad) + 4px);
+  margin-left: calc(-1 * var(--_pf-chart-pad));
+  margin-right: calc(-1 * var(--_pf-chart-pad));
+  width: calc(100% + 2 * var(--_pf-chart-pad));
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html[data-theme="dark"] .strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-value"] .portfolioChartWrap.chartWrap{
+    background: transparent;
+    border: none;
+  }
+/* График стоимости портфеля: без внутренних отступов SVG (базовый .chart даёт 2px 4px) */
+.card.widget[data-widget="portfolio-value"] .portfolioChartWrap .chart{
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  box-sizing: border-box;
+}
+.strategyTabShell__pane--portfolio .portfolioChartWrap.chartWrap{
+  box-sizing: border-box;
+}
+.strategyTabShell__pane--portfolio .strategyTabShell__featureEmpty--portfolio{
+  flex: 0 1 auto;
+  min-height: 200px;
+  margin: 0 var(--strategy-shell-pad) 12px;
+  border-radius: 16px;
 }
 .strategyTabShell__aside--right{
   grid-column: 3;
   min-width: 0;
   width: 100%;
   border-right: none;
-  border-left: 1px solid var(--cardBorder);
+  border-left: 1px solid var(--hairline);
   justify-self: stretch;
-  display: flex;
-  flex-direction: column;
 }
 /* Как слева: «Стратегии» + «Облигации» — без растягивания верхнего блока на всю высоту колонки */
 .strategyTabShell__displayPane{
@@ -794,7 +1271,7 @@ html[data-theme="dark"] .strategyTabShell__center{
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--cardBorder);
+  border-top: 1px solid var(--hairline);
   margin-top: 2px;
   padding-top: 2px;
   padding-bottom: 10px;
@@ -1051,9 +1528,6 @@ html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active:hover{
   padding: 14px var(--strategy-shell-pad) 0;
   flex-shrink: 0;
 }
-.strategyTabShell__pane--buys .strategyTabShell__mainHead{
-  padding-bottom: 18px;
-}
 .strategyTabShell__mainHeadText{
   min-width: 0;
   flex: 1;
@@ -1125,16 +1599,11 @@ html[data-theme="dark"] .btn.btn--autoPlanAi{
 html[data-theme="dark"] .btn.btn--autoPlanAi:hover{
   background: #f2f2f7;
 }
-.strategyTabShell__addBuyBtn{
-  flex-shrink: 0;
-  align-self: stretch;
-  margin-top: 0;
-}
 .strategyTabShell__tableWrap{
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  margin: 0 var(--strategy-shell-pad) 14px;
-  border-radius: var(--radius2);
+  margin: 0;
+  border-radius: 0;
 }
 .strategyTabShell__table{
   font-size: var(--fs-small);
@@ -1147,6 +1616,9 @@ html[data-theme="dark"] .btn.btn--autoPlanAi:hover{
 }
 html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyRowClick:hover td{
   background: rgba(255, 255, 255, 0.04);
+}
+.strategyPlansPane__table.strategyTabShell__table tbody tr.strategyTabShell__buyRowClick:hover td{
+  background: var(--plansHover);
 }
 .strategyTabShell__table tbody tr.strategyTabShell__buyRowClick:focus-visible{
   outline: 2px solid var(--ring);
@@ -1161,9 +1633,22 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
   color: var(--muted);
 }
 @media (max-width: 1100px){
+  .tabPanel--strategy{
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
   .strategyTabShell{
     grid-template-columns: minmax(0, 1fr);
     min-height: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .strategyTabShell__aside,
+  .strategyTabShell__center{
+    overflow: visible;
+    overscroll-behavior: auto;
   }
   .strategyTabShell__aside--left,
   .strategyTabShell__center,
@@ -1174,11 +1659,11 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
   }
   .strategyTabShell__aside{
     border-right: none;
-    border-bottom: 1px solid var(--cardBorder);
+    border-bottom: 1px solid var(--hairline);
   }
   .strategyTabShell__aside--right{
     border-left: none;
-    border-top: 1px solid var(--cardBorder);
+    border-top: 1px solid var(--hairline);
   }
   .strategyTabShell__center{
     min-height: 0;
@@ -1187,12 +1672,6 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
 @media (max-width: 980px){
   .grid{ grid-template-columns: 1fr; }
   .widget--wide{ grid-column: auto; }
-  [data-tab-panel="planning"] [data-widget="assets"],
-  [data-tab-panel="planning"] [data-widget="holdings"],
-  [data-tab-panel="planning"] [data-widget="buy-strategy"]{
-    grid-row: auto;
-    grid-column: auto;
-  }
   [data-tab-panel="calculators"]{ grid-template-columns: 1fr; }
   [data-tab-panel="strategy"]{ grid-template-columns: 1fr; }
 }
@@ -1207,6 +1686,7 @@ html[data-theme="dark"] .strategyTabShell__table tbody tr.strategyTabShell__buyR
 
 .widget{
   padding: 22px 22px 20px;
+  --widget-pad-x: 22px;
 }
 
 .widget__header{
@@ -1538,24 +2018,20 @@ html[data-theme="dark"] .featureEmptyState__subtitle{
   padding-left: 0;
   padding-right: 0;
 }
-.strategyTabShell__featureEmpty--portfolio{
-  flex: 1;
-  min-height: 200px;
-  margin: 0 var(--strategy-shell-pad) 14px;
-}
 .strategyTabShell__featureEmpty--plans{
   flex: 1;
   min-height: 220px;
-  margin: 0 var(--strategy-shell-pad) 14px;
+  margin: 0 0 16px;
 }
 .strategyTabShell__featureEmpty--bonds{
   margin: 6px var(--strategy-shell-pad) 12px;
   min-height: 148px;
 }
-.strategyTabShell__featureEmpty--charts{
-  flex: 1;
-  min-height: clamp(240px, 48vh, 560px);
-  margin: 0 var(--strategy-shell-pad) 14px;
+.strategyTabShell__pane--charts .strategyTabShell__featureEmpty--charts{
+  flex: 1 1 0;
+  min-height: 200px;
+  margin: 0 var(--strategy-shell-pad) 12px;
+  border-radius: 16px;
 }
 
 
@@ -2179,6 +2655,9 @@ html[data-theme="dark"] .yearPieSlice.chartHover--active{
   opacity: 1;
   transform: translateY(0);
 }
+.chartTooltip.buyPlanTooltip{
+  max-width: min(340px, calc(100vw - 24px));
+}
 .chartTooltip__title{
   font-weight: 600;
   font-size: var(--font-medium);
@@ -2304,10 +2783,66 @@ input.taxControl__input{
   min-width: 180px;
   max-width: 100%;
 }
+.portfolioPf{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.portfolioControls__hint--holdings{
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.portfolioHoldingsFooterActions{
+  display: flex;
+  justify-content: flex-start;
+}
+.portfolioHoldingsTableWrap{
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--hairline) 85%, transparent);
+}
+.portfolioHoldingsTable th,
+.portfolioHoldingsTable td{
+  vertical-align: middle;
+}
+@media (max-width: 639px){
+  .portfolioPf{
+    grid-template-columns: 1fr;
+  }
+}
+/* Как в sheet-модалках: больше воздуха между подписью и значением */
+.portfolioPf .floatingField--portfolio .floatingField__input{
+  padding-top: 24px;
+  padding-bottom: 10px;
+  min-height: 54px;
+}
+.portfolioPf .floatingField--portfolio .floatingField__input:focus + .floatingField__label,
+.portfolioPf .floatingField--portfolio .floatingField__input:not(:placeholder-shown) + .floatingField__label{
+  top: 8px;
+}
+.portfolioPf .floatingField--portfolio .floatingField__label{
+  left: 14px;
+}
 .portfolioControls{
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+.portfolioControls__group--pair{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.portfolioControls__group--pair > .portfolioControls__groupTitle{
+  grid-column: 1 / -1;
+}
+@media (max-width: 560px){
+  .portfolioControls__group--pair{
+    grid-template-columns: 1fr;
+  }
 }
 .portfolioTaxControl{
   align-items: stretch;
@@ -2321,6 +2856,9 @@ input.taxControl__input{
   flex-direction: column;
   gap: 12px;
   align-items: stretch;
+}
+.portfolioControls__group.portfolioControls__group--pair{
+  gap: 12px;
 }
 .portfolioControls__groupTitle{
   font-size: var(--font-small);
@@ -2410,6 +2948,9 @@ html[data-theme="dark"] .portfolioControls__groupTitle{
   .summaryTotals,
   .portfolioTotals{
     grid-template-columns: 1fr;
+  }
+  .strategyTabShell__pane--portfolio .portfolioTotals--sheet{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .portfolioControls{
     grid-template-columns: 1fr;
@@ -2694,30 +3235,12 @@ html[data-theme="dark"] .dateBtn:hover{
   }
 
 
-[data-tab-panel="planning"]{
-  grid-template-columns: 3fr 2fr;
-}
-[data-tab-panel="planning"] [data-widget="assets"]{
-  grid-column: 1 / 2;
-}
-[data-tab-panel="planning"] [data-widget="holdings"]{
-  grid-column: 2 / 3;
-}
 [data-widget="holdings"] .table tbody td:last-child{
   text-align: right;
 }
 [data-widget="holdings"] .table thead th:first-child,
 [data-widget="holdings"] .table tbody td:first-child{
   padding-inline-end: 18px;
-}
-@media (max-width: 1180px){
-  [data-tab-panel="planning"]{
-    grid-template-columns: 1fr;
-  }
-  [data-tab-panel="planning"] [data-widget="assets"],
-  [data-tab-panel="planning"] [data-widget="holdings"]{
-    grid-column: auto;
-  }
 }
 .dateSummary{
   font-size: var(--font-small);
@@ -3037,6 +3560,27 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayCh
 }
 html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayChip:not(.planScheduleDayChip--selected):hover{
   background: rgba(255, 255, 255, 0.12);
+}
+
+.modal--autoPlan .autoPlanModal__body .planScheduleDayChip--selected{
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.modal--autoPlan .autoPlanModal__body .planScheduleDayChip--selected:hover{
+  background: #0077ed;
+  border-color: #0077ed;
+  color: #fff;
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayChip--selected{
+  background: #0a84ff;
+  border-color: rgba(10, 132, 255, 0.9);
+  color: #fff;
+}
+html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayChip--selected:hover{
+  background: #64b5ff;
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 /* ---------- Общий «sheet» для модалок (холст + белые группы + воздух) ---------- */
@@ -3523,6 +4067,7 @@ html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn.is-active{
 
   .widget{
     padding: 16px;
+    --widget-pad-x: 16px;
   }
 
   .widget__header{

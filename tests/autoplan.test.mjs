@@ -295,6 +295,45 @@ test("monthly price drift reduces lot count on later purchase dates", async () =
   }
 });
 
+test("trade commission reduces affordable lots", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        { bond: "AAA", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
+      ],
+      holdings: [],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["AAA"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2026-05-01";
+    document.getElementById("auto-plan-end").value = "2026-05-31";
+    document.getElementById("auto-plan-topup-amount").value = "205";
+    document.getElementById("auto-plan-reinvest").checked = false;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    const commInput = document.getElementById("strategy-sidebar-commission-pct");
+    if (commInput) commInput.value = "0";
+    const noComm = window.generateAutoPlanBuyRows();
+    assert.equal(noComm.ok, true, noComm.message || "expected successful generation");
+    const q0 = qtyByBond(JSON.parse(noComm.rows[0].items)).get("AAA");
+    assert.equal(q0, 2, "205 without commission -> 2 lots at 100");
+
+    if (commInput) commInput.value = "5";
+    const withComm = window.generateAutoPlanBuyRows();
+    assert.equal(withComm.ok, true, withComm.message || "expected successful generation");
+    const q1 = qtyByBond(JSON.parse(withComm.rows[0].items)).get("AAA");
+    assert.equal(q1, 1, "205 with 5% commission -> deal cost 105 per lot -> 1 lot");
+  } finally {
+    dom.window.close();
+  }
+});
+
 test("diversification spreads budget across selected bonds", async () => {
   const { dom, window, document } = await setupApp();
   try {

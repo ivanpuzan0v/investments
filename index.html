@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=45" />
+    <link rel="stylesheet" href="./styles.css?v=63" />
     <script>
       (function () {
         try {
@@ -47,68 +47,49 @@
 
     <main class="page page--appShell">
       <section id="tab-panel-portfolio" class="grid tabPanel" data-tab-panel="portfolio" hidden>
-        <div class="card widget widget--wide" data-widget="portfolio-controls">
-          <div class="widget__header">
-            <div>
-              <div class="widget__title">Параметры портфеля</div>
-              <div class="widget__hint">Укажите старт и пополнения чтобы смоделировать рост портфеля.</div>
-            </div>
+        <div class="card widget widget--wide portfolioPf portfolioControls--sheet" data-widget="portfolio-controls">
+          <div class="portfolioControls__group portfolioControls__group--pair">
+            <div class="portfolioControls__groupTitle">Старт</div>
+            <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
+              <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+              <span class="floatingField__label">Стартовая стоимость</span>
+            </label>
+            <label class="floatingField floatingField--portfolio" for="portfolio-start-date">
+              <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
+              <span class="floatingField__label">Дата старта</span>
+            </label>
           </div>
 
-          <div class="portfolioControls">
-            <div class="portfolioControls__group">
-              <div class="portfolioControls__groupTitle">Старт</div>
-              <div class="portfolioControls__groupFields">
-                <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
-                  <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                  <span class="floatingField__label">Стартовая стоимость</span>
-                </label>
-                <label class="floatingField floatingField--portfolio" for="portfolio-start-date">
-                  <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
-                  <span class="floatingField__label">Дата старта</span>
-                </label>
-              </div>
-            </div>
-
-            <div class="portfolioControls__group">
-              <div class="portfolioControls__groupTitle">Пополнения</div>
-              <div class="portfolioControls__groupFields">
-                <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
-                  <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                  <span class="floatingField__label">Ежемесячное пополнение</span>
-                </label>
-                <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup-end-date">
-                  <input id="portfolio-monthly-topup-end-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
-                  <span class="floatingField__label">До (включительно)</span>
-                </label>
-              </div>
-            </div>
+          <div class="portfolioControls__group portfolioControls__group--pair">
+            <div class="portfolioControls__groupTitle">Пополнения</div>
+            <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
+              <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
+              <span class="floatingField__label">Ежемесячное пополнение</span>
+            </label>
+            <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup-end-date">
+              <input id="portfolio-monthly-topup-end-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
+              <span class="floatingField__label">До (включительно)</span>
+            </label>
           </div>
         </div>
 
         <div class="card widget widget--wide" data-widget="portfolio-value">
-          <div class="widget__header">
-            <div>
-              <div class="widget__title">Стоимость портфеля</div>
-              <div class="widget__hint">Укажите стратегию чтобы увидеть стоимость по месяцам.</div>
-            </div>
-            <div class="widget__headerRight widget__headerRight--stackedSelects">
-              <label class="taxControl" for="portfolio-chart-strategy-select">
-                <span>Стратегия</span>
-                <select
-                  id="portfolio-chart-strategy-select"
-                  class="input taxControl__input portfolioChartStrategySelect"
-                  aria-label="Стратегия для графика стоимости портфеля"
-                ></select>
-              </label>
-              <label class="taxControl" for="portfolio-chart-year">
-                <span>Год</span>
-                <select id="portfolio-chart-year" class="input taxControl__input portfolioChartYearSelect" aria-label="Год для графика портфеля"></select>
-              </label>
-            </div>
-          </div>
+          <select
+            id="portfolio-chart-strategy-select"
+            class="input taxControl__input portfolioChartStrategySelect portfolioChartSelect--detached"
+            aria-label="Стратегия для графика стоимости портфеля"
+            hidden
+            tabindex="-1"
+          ></select>
+          <select
+            id="portfolio-chart-year"
+            class="input taxControl__input portfolioChartYearSelect portfolioChartSelect--detached"
+            aria-label="Год для графика портфеля"
+            hidden
+            tabindex="-1"
+          ></select>
 
-          <div class="portfolioTotals">
+          <div class="portfolioTotals portfolioTotals--sheet">
             <div class="summaryStat">
               <div class="summaryStat__label">Старт</div>
               <div id="portfolio-start-total" class="summaryStat__value">0.00</div>
@@ -127,15 +108,38 @@
             </div>
           </div>
 
-          <div class="chartWrap" role="region" aria-label="Диаграмма стоимости портфеля">
+          <div class="chartWrap portfolioChartWrap" role="region" aria-label="Диаграмма стоимости портфеля">
             <svg id="portfolio-chart" viewBox="0 0 900 360" class="chart" aria-hidden="true">
               <g id="portfolio-chart-content"></g>
             </svg>
           </div>
+
+          <div class="portfolioControls__group portfolioControls__group--currentPf portfolioCurrentHoldings">
+            <div class="portfolioControls__groupTitle">Текущий портфель</div>
+            <p class="portfolioControls__hint portfolioControls__hint--holdings">
+              Те же позиции, что в планировании справа: купоны на всех графиках; к стартовой сумме добавляется оценка по «Цена» у облигации.
+            </p>
+            <div class="tableWrap portfolioHoldingsTableWrap" role="region" aria-label="Текущий портфель">
+              <table class="table portfolioHoldingsTable">
+                <thead>
+                  <tr>
+                    <th scope="col">Облигация</th>
+                    <th scope="col" style="width: 120px;">Количество</th>
+                    <th scope="col" style="width: 44px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="portfolio-holdings-tbody"></tbody>
+              </table>
+            </div>
+            <div class="portfolioHoldingsFooterActions">
+              <button type="button" id="add-portfolio-holding-row" class="btn">Добавить</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section id="tab-panel-planning" class="grid tabPanel" data-tab-panel="planning">
+      <section id="tab-panel-planning" class="tabPanel planningEditor" data-tab-panel="planning">
+        <aside class="planningEditor__rail planningEditor__rail--left" aria-label="Облигации">
         <div class="card widget" data-widget="assets">
           <div class="widget__header">
             <div>
@@ -163,6 +167,206 @@
           </div>
           <div class="widget__footerActions">
           <button id="add-asset-row" class="btn" type="button">Добавить</button>
+          </div>
+        </div>
+        </aside>
+
+        <div class="planningEditor__main" role="main" aria-label="План покупок и автопланирование">
+        <div class="card widget" data-widget="plan">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Покупки облигаций</div>
+              <div class="widget__hint">Откройте строку чтобы править. Год для фильтра — в параметрах справа.</div>
+            </div>
+            <div class="widget__headerRight widget__headerRight--stackedSelects">
+              <label class="taxControl" for="buy-strategy-header-select">
+                <span>Стратегия</span>
+                <select
+                  id="buy-strategy-header-select"
+                  class="input taxControl__input"
+                  aria-label="Стратегия покупок облигаций"
+                ></select>
+              </label>
+            </div>
+          </div>
+
+          <div class="tableWrap" role="region" aria-label="Таблица покупок облигаций">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th style="width: 220px;">Дата</th>
+                  <th>Покупаемые облигации</th>
+                  <th style="width: 160px;">Сумма покупки</th>
+                  <th style="width: 56px;"></th>
+                </tr>
+              </thead>
+
+              <tbody id="txns-tbody">
+                <!-- JS inject -->
+              </tbody>
+            </table>
+          </div>
+          <div class="widget__footerActions">
+            <button id="add-txn-row" class="btn" type="button">Добавить строку</button>
+          </div>
+        </div>
+
+        <!-- Автопланирование -->
+        <div class="card widget" data-widget="planning-scaffold">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Автопланирование</div>
+              <div class="widget__hint">
+                Ведётся общий бюджет: пополнения в выбранные дни, остаток переносится. Купоны за календарный месяц (модель — выплата 1-го) поступают в бюджет в начале следующего месяца при включённом реинвестировании. Комиссия берётся из параметров справа.
+              </div>
+            </div>
+          </div>
+          <div class="autoPlanWidget" id="planning-scaffold-body" aria-label="Параметры автопланирования">
+            <div class="autoPlanWidget__fields">
+              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-start">
+                <input
+                  id="auto-plan-start"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                  aria-label="Дата начала инвестиций"
+                />
+                <span class="floatingField__label">Начало инвестиций</span>
+              </label>
+              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-end">
+                <input
+                  id="auto-plan-end"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                  aria-label="Дата окончания инвестиций"
+                />
+                <span class="floatingField__label">Окончание инвестиций</span>
+              </label>
+            </div>
+
+            <div class="autoPlanWidget__section">
+              <div class="autoPlanWidget__sectionLabel">Облигации</div>
+              <div id="auto-plan-bonds" class="autoPlanBonds" role="group" aria-label="Облигации из таблицы для автопланирования"></div>
+            </div>
+
+            <div class="autoPlanWidget__section">
+              <div class="autoPlanWidget__sectionLabel">Дни пополнения</div>
+              <div id="auto-plan-topup-days" class="planScheduleDays" role="group" aria-label="Дни месяца пополнения">
+                <button type="button" class="planScheduleDayChip" data-day="1" aria-pressed="false">1</button>
+                <button type="button" class="planScheduleDayChip" data-day="2" aria-pressed="false">2</button>
+                <button type="button" class="planScheduleDayChip" data-day="3" aria-pressed="false">3</button>
+                <button type="button" class="planScheduleDayChip" data-day="4" aria-pressed="false">4</button>
+                <button type="button" class="planScheduleDayChip" data-day="5" aria-pressed="false">5</button>
+                <button type="button" class="planScheduleDayChip" data-day="6" aria-pressed="false">6</button>
+                <button type="button" class="planScheduleDayChip" data-day="7" aria-pressed="false">7</button>
+                <button type="button" class="planScheduleDayChip" data-day="8" aria-pressed="false">8</button>
+                <button type="button" class="planScheduleDayChip" data-day="9" aria-pressed="false">9</button>
+                <button type="button" class="planScheduleDayChip" data-day="10" aria-pressed="false">10</button>
+                <button type="button" class="planScheduleDayChip" data-day="11" aria-pressed="false">11</button>
+                <button type="button" class="planScheduleDayChip" data-day="12" aria-pressed="false">12</button>
+                <button type="button" class="planScheduleDayChip" data-day="13" aria-pressed="false">13</button>
+                <button type="button" class="planScheduleDayChip" data-day="14" aria-pressed="false">14</button>
+                <button type="button" class="planScheduleDayChip" data-day="15" aria-pressed="false">15</button>
+                <button type="button" class="planScheduleDayChip" data-day="16" aria-pressed="false">16</button>
+                <button type="button" class="planScheduleDayChip" data-day="17" aria-pressed="false">17</button>
+                <button type="button" class="planScheduleDayChip" data-day="18" aria-pressed="false">18</button>
+                <button type="button" class="planScheduleDayChip" data-day="19" aria-pressed="false">19</button>
+                <button type="button" class="planScheduleDayChip" data-day="20" aria-pressed="false">20</button>
+                <button type="button" class="planScheduleDayChip" data-day="21" aria-pressed="false">21</button>
+                <button type="button" class="planScheduleDayChip" data-day="22" aria-pressed="false">22</button>
+                <button type="button" class="planScheduleDayChip" data-day="23" aria-pressed="false">23</button>
+                <button type="button" class="planScheduleDayChip" data-day="24" aria-pressed="false">24</button>
+                <button type="button" class="planScheduleDayChip" data-day="25" aria-pressed="false">25</button>
+                <button type="button" class="planScheduleDayChip" data-day="26" aria-pressed="false">26</button>
+                <button type="button" class="planScheduleDayChip" data-day="27" aria-pressed="false">27</button>
+                <button type="button" class="planScheduleDayChip" data-day="28" aria-pressed="false">28</button>
+                <button type="button" class="planScheduleDayChip" data-day="29" aria-pressed="false">29</button>
+                <button type="button" class="planScheduleDayChip" data-day="30" aria-pressed="false">30</button>
+                <button type="button" class="planScheduleDayChip" data-day="31" aria-pressed="false">31</button>
+              </div>
+              <div class="autoPlanWidget__topupAmount">
+                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--topupAmount" for="auto-plan-topup-amount">
+                  <input
+                    id="auto-plan-topup-amount"
+                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder=" "
+                    inputmode="decimal"
+                    aria-label="Сумма пополнения на каждую выбранную дату месяца"
+                  />
+                  <span class="floatingField__label">Сумма пополнения на дату</span>
+                </label>
+              </div>
+              <p class="autoPlanWidget__topupHint">
+                На каждую дату из графика добавляется эта сумма; неизрасходованные средства остаются на счёте до следующих покупок.
+              </p>
+              <div class="autoPlanWidget__priceDrift">
+                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--priceDrift" for="auto-plan-price-drift-pct">
+                  <input
+                    id="auto-plan-price-drift-pct"
+                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                    type="number"
+                    min="0"
+                    max="99"
+                    step="0.01"
+                    placeholder=" "
+                    inputmode="decimal"
+                    aria-label="Ожидаемое удорожание чистой цены облигаций в месяц, процентов"
+                  />
+                  <span class="floatingField__label">Удорожание цены в месяц, %</span>
+                </label>
+                <p class="autoPlanWidget__priceDriftHint">
+                  Укажите процент чтобы учесть рост чистой цены по месяцам от даты начала до покупки. Пусто или 0 без сдвига.
+                </p>
+              </div>
+            </div>
+
+            <div class="autoPlanWidget__reinvest">
+              <label class="planScheduleReinvest">
+                <input id="auto-plan-reinvest" type="checkbox" />
+                <span>Реинвестирование</span>
+              </label>
+              <label class="planScheduleReinvest">
+                <input id="auto-plan-diversify" type="checkbox" />
+                <span>Диверсификация</span>
+              </label>
+            </div>
+
+            <div class="autoPlanWidget__strategy">
+              <label class="taxControl autoPlanWidget__strategySelect" for="auto-plan-strategy">
+                <span>Сохранить в стратегию</span>
+                <select
+                  id="auto-plan-strategy"
+                  class="input taxControl__input autoPlanWidget__strategyInput"
+                  aria-label="Стратегия для сохранения результата автопланирования"
+                ></select>
+              </label>
+              <button id="auto-plan-save-strategy-btn" class="btn autoPlanWidget__saveBtn" type="button">Сохранить в стратегию</button>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <aside class="planningEditor__rail planningEditor__rail--right" aria-label="Параметры и стратегия">
+        <div class="card widget planningParams" data-widget="planning-params">
+          <div class="widget__header">
+            <div>
+              <div class="widget__title">Параметры</div>
+              <div class="widget__hint">Год задаёт фильтр таблицы покупок по центру.</div>
+            </div>
+          </div>
+          <div class="planningParams__body">
+            <label class="taxControl planningParams__field" for="buy-table-year-filter">
+              <span>Год</span>
+              <select
+                id="buy-table-year-filter"
+                class="input taxControl__input buyTableYearFilter"
+                aria-label="Показать покупки за год"
+              ></select>
+            </label>
           </div>
         </div>
 
@@ -283,188 +487,8 @@
             <button id="buy-strategy-new-btn" class="btn" type="button">Создать</button>
           </div>
         </div>
+        </aside>
 
-        <!-- Автопланирование -->
-        <div class="card widget widget--wide" data-widget="planning-scaffold">
-          <div class="widget__header">
-            <div>
-              <div class="widget__title">Автопланирование</div>
-              <div class="widget__hint">Укажите даты и суммы чтобы сгенерировать строки покупок в стратегию.</div>
-            </div>
-          </div>
-          <div class="autoPlanWidget" id="planning-scaffold-body" aria-label="Параметры автопланирования">
-            <div class="autoPlanWidget__fields">
-              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-start">
-                <input
-                  id="auto-plan-start"
-                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
-                  type="date"
-                  placeholder=" "
-                  aria-label="Дата начала инвестиций"
-                />
-                <span class="floatingField__label">Начало инвестиций</span>
-              </label>
-              <label class="floatingField floatingField--portfolio autoPlanWidget__field" for="auto-plan-end">
-                <input
-                  id="auto-plan-end"
-                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
-                  type="date"
-                  placeholder=" "
-                  aria-label="Дата окончания инвестиций"
-                />
-                <span class="floatingField__label">Окончание инвестиций</span>
-              </label>
-            </div>
-
-            <div class="autoPlanWidget__section">
-              <div class="autoPlanWidget__sectionLabel">Облигации</div>
-              <div id="auto-plan-bonds" class="autoPlanBonds" role="group" aria-label="Облигации из таблицы для автопланирования"></div>
-            </div>
-
-            <div class="autoPlanWidget__section">
-              <div class="autoPlanWidget__sectionLabel">Дни пополнения</div>
-              <div id="auto-plan-topup-days" class="planScheduleDays" role="group" aria-label="Дни месяца пополнения">
-                <button type="button" class="planScheduleDayChip" data-day="1" aria-pressed="false">1</button>
-                <button type="button" class="planScheduleDayChip" data-day="2" aria-pressed="false">2</button>
-                <button type="button" class="planScheduleDayChip" data-day="3" aria-pressed="false">3</button>
-                <button type="button" class="planScheduleDayChip" data-day="4" aria-pressed="false">4</button>
-                <button type="button" class="planScheduleDayChip" data-day="5" aria-pressed="false">5</button>
-                <button type="button" class="planScheduleDayChip" data-day="6" aria-pressed="false">6</button>
-                <button type="button" class="planScheduleDayChip" data-day="7" aria-pressed="false">7</button>
-                <button type="button" class="planScheduleDayChip" data-day="8" aria-pressed="false">8</button>
-                <button type="button" class="planScheduleDayChip" data-day="9" aria-pressed="false">9</button>
-                <button type="button" class="planScheduleDayChip" data-day="10" aria-pressed="false">10</button>
-                <button type="button" class="planScheduleDayChip" data-day="11" aria-pressed="false">11</button>
-                <button type="button" class="planScheduleDayChip" data-day="12" aria-pressed="false">12</button>
-                <button type="button" class="planScheduleDayChip" data-day="13" aria-pressed="false">13</button>
-                <button type="button" class="planScheduleDayChip" data-day="14" aria-pressed="false">14</button>
-                <button type="button" class="planScheduleDayChip" data-day="15" aria-pressed="false">15</button>
-                <button type="button" class="planScheduleDayChip" data-day="16" aria-pressed="false">16</button>
-                <button type="button" class="planScheduleDayChip" data-day="17" aria-pressed="false">17</button>
-                <button type="button" class="planScheduleDayChip" data-day="18" aria-pressed="false">18</button>
-                <button type="button" class="planScheduleDayChip" data-day="19" aria-pressed="false">19</button>
-                <button type="button" class="planScheduleDayChip" data-day="20" aria-pressed="false">20</button>
-                <button type="button" class="planScheduleDayChip" data-day="21" aria-pressed="false">21</button>
-                <button type="button" class="planScheduleDayChip" data-day="22" aria-pressed="false">22</button>
-                <button type="button" class="planScheduleDayChip" data-day="23" aria-pressed="false">23</button>
-                <button type="button" class="planScheduleDayChip" data-day="24" aria-pressed="false">24</button>
-                <button type="button" class="planScheduleDayChip" data-day="25" aria-pressed="false">25</button>
-                <button type="button" class="planScheduleDayChip" data-day="26" aria-pressed="false">26</button>
-                <button type="button" class="planScheduleDayChip" data-day="27" aria-pressed="false">27</button>
-                <button type="button" class="planScheduleDayChip" data-day="28" aria-pressed="false">28</button>
-                <button type="button" class="planScheduleDayChip" data-day="29" aria-pressed="false">29</button>
-                <button type="button" class="planScheduleDayChip" data-day="30" aria-pressed="false">30</button>
-                <button type="button" class="planScheduleDayChip" data-day="31" aria-pressed="false">31</button>
-              </div>
-              <div class="autoPlanWidget__topupAmount">
-                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--topupAmount" for="auto-plan-topup-amount">
-                  <input
-                    id="auto-plan-topup-amount"
-                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder=" "
-                    inputmode="decimal"
-                    aria-label="Сумма пополнения на каждую выбранную дату месяца"
-                  />
-                  <span class="floatingField__label">Сумма пополнения на дату</span>
-                </label>
-              </div>
-              <p class="autoPlanWidget__topupHint">Укажите сумму на один выбранный день месяца.</p>
-              <div class="autoPlanWidget__priceDrift">
-                <label class="floatingField floatingField--portfolio autoPlanWidget__field autoPlanWidget__field--priceDrift" for="auto-plan-price-drift-pct">
-                  <input
-                    id="auto-plan-price-drift-pct"
-                    class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
-                    type="number"
-                    min="0"
-                    max="99"
-                    step="0.01"
-                    placeholder=" "
-                    inputmode="decimal"
-                    aria-label="Ожидаемое удорожание чистой цены облигаций в месяц, процентов"
-                  />
-                  <span class="floatingField__label">Удорожание цены в месяц, %</span>
-                </label>
-                <p class="autoPlanWidget__priceDriftHint">
-                  Укажите процент чтобы учесть рост чистой цены по месяцам от даты начала до покупки. Пусто или 0 без сдвига.
-                </p>
-              </div>
-            </div>
-
-            <div class="autoPlanWidget__reinvest">
-              <label class="planScheduleReinvest">
-                <input id="auto-plan-reinvest" type="checkbox" />
-                <span>Реинвестирование</span>
-              </label>
-              <label class="planScheduleReinvest">
-                <input id="auto-plan-diversify" type="checkbox" />
-                <span>Диверсификация</span>
-              </label>
-            </div>
-
-            <div class="autoPlanWidget__strategy">
-              <label class="taxControl autoPlanWidget__strategySelect" for="auto-plan-strategy">
-                <span>Сохранить в стратегию</span>
-                <select
-                  id="auto-plan-strategy"
-                  class="input taxControl__input autoPlanWidget__strategyInput"
-                  aria-label="Стратегия для сохранения результата автопланирования"
-                ></select>
-              </label>
-              <button id="auto-plan-save-strategy-btn" class="btn autoPlanWidget__saveBtn" type="button">Сохранить в стратегию</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Row 2b (wide) -->
-        <div class="card widget widget--wide" data-widget="plan">
-          <div class="widget__header">
-            <div>
-              <div class="widget__title">Покупки облигаций</div>
-              <div class="widget__hint">Укажите год чтобы отфильтровать строки и откройте строку чтобы править.</div>
-            </div>
-            <div class="widget__headerRight widget__headerRight--stackedSelects">
-              <label class="taxControl" for="buy-table-year-filter">
-                <span>Год</span>
-                <select
-                  id="buy-table-year-filter"
-                  class="input taxControl__input buyTableYearFilter"
-                  aria-label="Показать покупки за год"
-                ></select>
-              </label>
-              <label class="taxControl" for="buy-strategy-header-select">
-                <span>Стратегия</span>
-                <select
-                  id="buy-strategy-header-select"
-                  class="input taxControl__input"
-                  aria-label="Стратегия покупок облигаций"
-                ></select>
-              </label>
-            </div>
-          </div>
-
-          <div class="tableWrap" role="region" aria-label="Таблица покупок облигаций">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th style="width: 220px;">Дата</th>
-                  <th>Покупаемые облигации</th>
-                  <th style="width: 160px;">Сумма покупки</th>
-                  <th style="width: 56px;"></th>
-                </tr>
-              </thead>
-
-              <tbody id="txns-tbody">
-                <!-- JS inject -->
-              </tbody>
-            </table>
-          </div>
-          <div class="widget__footerActions">
-            <button id="add-txn-row" class="btn" type="button">Добавить строку</button>
-          </div>
-        </div>
       </section>
 
       <section id="tab-panel-charts" class="grid tabPanel" data-tab-panel="charts" hidden>
@@ -490,17 +514,17 @@
             <div class="summaryLayout__left">
               <div class="summaryTotals">
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат gross: сумма всех купонных выплат до удержания налога. Формула: выплаты net / (1 - ставка налога)." aria-label="Как считается показатель Всего выплат gross">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Всего выплат: сумма всех купонных выплат до удержания налога. Формула: сумма к выплате после налога ÷ (1 − ставка налога)." aria-label="Как считается показатель Всего выплат">?</button>
                   <div class="summaryStat__label">Всего выплат</div>
                   <div id="total-gross" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="Налог: оценка удержания с купонных выплат по заданной ставке. Формула: выплаты до налога − выплаты net." aria-label="Как считается показатель Налог">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="Налог: оценка удержания с купонных выплат по заданной ставке. Формула: выплаты до налога − сумма к выплате после налога." aria-label="Как считается показатель Налог">?</button>
                   <div class="summaryStat__label">Налог</div>
                   <div id="total-tax" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button id="total-income-help" type="button" class="summaryInfoBtn" data-summary-help="К выплате net: итоговая сумма купонов после налога. Формула: сумма всех net-выплат." aria-label="Как считается показатель К выплате">?</button>
+                  <button id="total-income-help" type="button" class="summaryInfoBtn" data-summary-help="К выплате: итоговая сумма купонов после налога. Формула: сумма всех выплат по покупкам после удержания налога." aria-label="Как считается показатель К выплате">?</button>
                   <div id="total-income-label" class="summaryStat__label">К выплате</div>
                   <div id="total-net" class="summaryStat__value">0.00</div>
                 </div>
@@ -510,12 +534,12 @@
                   <div id="total-invested" class="summaryStat__value">0.00</div>
                 </div>
                 <div class="summaryStat">
-                  <button type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой справа: (сумма net-купонов за этот календарный год) / (сумма вложений по покупкам с датой в этот же год — только цена×количество, без купонов) × 100%." aria-label="Как считается показатель Средняя доходность за год">?</button>
+                  <button type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой справа: (сумма купонных выплат за этот календарный год после налога) / (сумма вложений по покупкам с датой в этот же год — только цена×количество, без купонов) × 100%." aria-label="Как считается показатель Средняя доходность за год">?</button>
                   <div id="yield-annual-label" class="summaryStat__label">Средняя доходность за год</div>
                   <div id="yield-annual" class="summaryStat__value">—</div>
                 </div>
                 <div class="summaryStat">
-                  <button id="yield-monthly-help" type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой: (выплаты net за год ÷ вложения за год) ÷ 12 × 100% — доля от вложений в среднем за календарный месяц. Без годов выплат: по всему горизонту и всем вложениям, деление на число месяцев горизонта." aria-label="Как считается показатель Среднемесячная доходность">?</button>
+                  <button id="yield-monthly-help" type="button" class="summaryInfoBtn" data-summary-help="За год из переключателя под круговой диаграммой: (выплаты за год после налога ÷ вложения за год) ÷ 12 × 100% — доля от вложений в среднем за календарный месяц. Без годов выплат: по всему горизонту и всем вложениям, деление на число месяцев горизонта." aria-label="Как считается показатель Среднемесячная доходность">?</button>
                   <div id="yield-monthly-label" class="summaryStat__label">Среднемесячная доходность</div>
                   <div id="yield-monthly" class="summaryStat__value">—</div>
                 </div>
@@ -529,7 +553,7 @@
                       <th style="width: 140px;" data-sort-table="summary" data-sort-field="qty" scope="col">Количество</th>
                       <th style="width: 180px;" data-sort-table="summary" data-sort-field="invested" scope="col">Вложено</th>
                       <th style="width: 180px;" data-sort-table="summary" data-sort-field="tax" scope="col">Налог</th>
-                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="net" scope="col">Выплаты net</th>
+                      <th style="width: 180px;" data-sort-table="summary" data-sort-field="net" scope="col">Выплаты</th>
                     </tr>
                   </thead>
                   <tbody id="summary-tbody"></tbody>
@@ -538,25 +562,19 @@
             </div>
 
             <div class="summaryLayout__right">
-              <div id="year-pies" class="yearPies" aria-label="Диаграмма выплат net по облигациям за выбранный год"></div>
+              <div id="year-pies" class="yearPies" aria-label="Диаграмма выплат по облигациям за выбранный год"></div>
             </div>
           </div>
         </div>
 
         <div class="card widget widget--wide" data-widget="returns">
-          <div class="widget__header">
-            <div>
-              <div class="widget__title">График выплат купонов (gross)</div>
-              <div class="widget__hint">Выберите год чтобы сравнить выплаты по месяцам до налога.</div>
-            </div>
-            <div class="widget__headerRight">
-              <label class="taxControl" for="chart-year">
-                <span>Год</span>
-                <select id="chart-year" class="input taxControl__input" aria-label="Год для графика выплат или за все время"></select>
-              </label>
-            </div>
-          </div>
-
+          <select
+            id="chart-year"
+            class="input taxControl__input chartYearSelect--detached"
+            aria-label="Год для графика выплат или за все время"
+            hidden
+            tabindex="-1"
+          ></select>
           <div id="chart-legend" class="chartLegend" aria-label="Легенда графика"></div>
           <div class="chartWrap" role="region" aria-label="Диаграмма выплат купонов">
             <svg id="returns-chart" viewBox="0 0 520 640" class="chart chart--returns" aria-hidden="true">
@@ -686,13 +704,13 @@
           </aside>
 
           <div class="strategyTabShell__center" role="region" aria-label="Центральная область стратегии">
-            <div id="strategy-pane-buys" class="strategyTabShell__pane strategyTabShell__pane--buys" aria-label="Планы">
-              <div class="strategyTabShell__mainHead">
-                <div class="strategyTabShell__mainHeadText">
-                  <div class="widget__title strategyTabShell__title">Планы</div>
-                  <div class="widget__hint strategyTabShell__hint">Откройте строку чтобы править или нажмите кнопку чтобы добавить покупку.</div>
+            <div id="strategy-pane-buys" class="strategyTabShell__pane strategyTabShell__pane--buys strategyPlansPane" aria-label="Планы">
+              <header class="strategyPlansPane__head">
+                <div class="strategyPlansPane__intro">
+                  <h2 class="strategyPlansPane__title">Планы</h2>
+                  <p class="strategyPlansPane__subtitle">Строки покупок по выбранной стратегии. Год для таблицы и графика — в «Параметрах» справа.</p>
                 </div>
-                <div class="strategyTabShell__mainHeadActions">
+                <div class="strategyPlansPane__toolbar" role="toolbar" aria-label="Действия с планом покупок">
                   <div class="btnAiGradientWrap" title="Автопланирование">
                     <button
                       id="strategy-tab-auto-plan-btn"
@@ -703,36 +721,34 @@
                       Автопланирование
                     </button>
                   </div>
-                  <button id="strategy-tab-add-buy" type="button" class="btn strategyTabShell__addBuyBtn">Добавить покупку</button>
+                  <button id="strategy-tab-add-buy" type="button" class="btn strategyPlansPane__addBuy">Добавить покупку</button>
                 </div>
-              </div>
+              </header>
               <div
                 id="strategy-plans-empty"
-                class="featureEmptyState strategyTabShell__featureEmpty strategyTabShell__featureEmpty--plans"
+                class="featureEmptyState strategyTabShell__featureEmpty strategyTabShell__featureEmpty--plans strategyPlansPane__empty"
                 hidden
               >
                 <div class="featureEmptyState__title">Нет покупок в плане</div>
-                <div class="featureEmptyState__subtitle">Добавьте покупку чтобы заполнить план или откройте вкладку Планирование.</div>
+                <div class="featureEmptyState__subtitle">Добавьте покупку или воспользуйтесь автопланированием.</div>
               </div>
-              <div class="tableWrap strategyTabShell__tableWrap" data-strategy-plans-table>
-                <table class="table strategyTabShell__table">
+              <div class="tableWrap strategyTabShell__tableWrap strategyPlansPane__tableWrap" data-strategy-plans-table>
+                <table class="table strategyTabShell__table strategyPlansPane__table">
                   <thead>
                     <tr>
-                      <th style="width: 200px;">Дата</th>
-                      <th>Состав</th>
-                      <th style="width: 140px;">Сумма</th>
+                      <th class="strategyPlansPane__colDate">Дата</th>
+                      <th class="strategyPlansPane__colItems">Состав</th>
+                      <th class="strategyPlansPane__colSum">Сумма</th>
+                      <th class="strategyPlansPane__colActions" aria-label="Действия"></th>
                     </tr>
                   </thead>
                   <tbody id="strategy-tab-buys-tbody"></tbody>
                 </table>
               </div>
             </div>
-            <div id="strategy-pane-charts" class="strategyTabShell__pane strategyTabShell__pane--charts" hidden aria-label="Динамика">
-              <div class="strategyTabShell__mainHead strategyTabShell__mainHead--strategyCenter" id="strategy-charts-mainhead">
-                <div class="strategyTabShell__mainHeadText">
-                  <div class="widget__title strategyTabShell__title">Динамика</div>
-                  <div class="widget__hint strategyTabShell__hint">Выберите год на графике чтобы сравнить выплаты по месяцам.</div>
-                </div>
+            <div id="strategy-pane-charts" class="strategyTabShell__pane strategyTabShell__pane--charts strategyDynamics" hidden aria-label="Динамика">
+              <div class="strategyDynamics__titleRow" id="strategy-charts-mainhead">
+                <h2 class="strategyDynamics__title">Динамика</h2>
               </div>
               <div
                 id="strategy-charts-empty"
@@ -743,12 +759,9 @@
                 <div class="featureEmptyState__subtitle">Укажите облигации и покупки чтобы увидеть выплаты по месяцам.</div>
               </div>
             </div>
-            <div id="strategy-pane-portfolio" class="strategyTabShell__pane strategyTabShell__pane--portfolio" hidden aria-label="Портфель">
-              <div class="strategyTabShell__mainHead strategyTabShell__mainHead--strategyCenter" id="strategy-portfolio-mainhead">
-                <div class="strategyTabShell__mainHeadText">
-                  <div class="widget__title strategyTabShell__title">Портфель</div>
-                  <div class="widget__hint strategyTabShell__hint">Укажите старт пополнения и стратегию чтобы увидеть динамику стоимости.</div>
-                </div>
+            <div id="strategy-pane-portfolio" class="strategyTabShell__pane strategyTabShell__pane--portfolio strategyPortfolio" hidden aria-label="Портфель">
+              <div class="strategyPortfolio__titleRow" id="strategy-portfolio-mainhead">
+                <h2 class="strategyPortfolio__title">Портфель</h2>
               </div>
               <div
                 id="strategy-portfolio-empty"
@@ -784,6 +797,18 @@
                 <div class="widget__title strategyTabShell__title strategyTabShell__title--small">Параметры</div>
               </div>
               <div class="strategyTabShell__paramsBody">
+                <label class="strategyTabShell__paramField" for="strategy-plans-year">
+                  <span class="strategyTabShell__paramLabel">Год</span>
+                  <select
+                    id="strategy-plans-year"
+                    class="input strategyTabShell__paramControl"
+                    aria-label="Год для таблицы планов и графика динамики"
+                  ></select>
+                </label>
+                <p class="strategyTabShell__paramHint strategyTabShell__paramHint--afterYear">
+                  Фильтрует строки в «Планах» и задаёт период на графике «Динамика» (или «За все время»).
+                </p>
+
                 <label class="strategyTabShell__paramField" for="strategy-sidebar-tax-rate">
                   <span class="strategyTabShell__paramLabel">Налог, %</span>
                   <input
@@ -802,14 +827,14 @@
                 </p>
 
                 <fieldset class="strategyTabShell__fieldset">
-                  <legend class="strategyTabShell__fieldsetLegend">Купоны на графике</legend>
+                  <legend class="strategyTabShell__fieldsetLegend">Выплаты купонов</legend>
                   <label class="strategyTabShell__checkRow">
                     <input type="radio" name="strategy-coupon-display" id="strategy-coupon-display-net" value="net" />
-                    <span>С учётом налога (net)</span>
+                    <span>С учётом налога</span>
                   </label>
                   <label class="strategyTabShell__checkRow">
                     <input type="radio" name="strategy-coupon-display" id="strategy-coupon-display-gross" value="gross" checked />
-                    <span>Без учёта налога (gross)</span>
+                    <span>Без учёта налога</span>
                   </label>
                 </fieldset>
 
@@ -1192,6 +1217,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=9"></script>
+    <script src="./app.js?v=10"></script>
   </body>
 </html>
