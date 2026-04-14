@@ -6,7 +6,6 @@ const TAX_RATE_KEY = "invest_planner_tax_rate_v1";
 const COUPON_DISPLAY_MODE_KEY = "invest_planner_coupon_display_mode_v1";
 /** Комиссия за сделку, % (число в localStorage). */
 const TRADE_COMMISSION_PCT_KEY = "invest_planner_trade_commission_pct_v1";
-const ACTIVE_TAB_KEY = "invest_planner_active_tab_v1";
 const CHART_YEAR_KEY = "invest_planner_chart_year_v1";
 const SUMMARY_PIE_YEAR_KEY = "invest_planner_summary_pie_year_v1";
 const PORTFOLIO_CHART_YEAR_KEY = "invest_planner_portfolio_chart_year_v1";
@@ -21,8 +20,8 @@ const BUY_STRATEGIES_KEY = "invest_planner_buy_strategies_v1";
 const ACTIVE_BUY_STRATEGY_KEY = "invest_planner_active_buy_strategy_v1";
 /** Центр вкладки «Стратегия»: buys | charts (localStorage). */
 const STRATEGY_CENTER_VIEW_KEY = "invest_planner_strategy_center_view_v1";
-const ACCRUED_CALC_KEY = "invest_planner_accrued_calc_v1";
-const YIELD_CALC_KEY = "invest_planner_yield_calc_v1";
+const STRATEGY_LEFT_SIDEBAR_WIDTH_KEY = "invest_planner_strategy_left_sidebar_width_v1";
+const STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY = "invest_planner_strategy_right_sidebar_width_v1";
 /** localStorage: «light» | «dark» | «system» (по умолчанию — как в ОС). */
 const THEME_PREF_KEY = "invest_planner_theme_v1";
 /** Ожидаемое удорожание чистой цены в автоплане, % в месяц (составная модель). */
@@ -32,18 +31,15 @@ const bondsTbody = document.getElementById("assets-tbody");
 const buysTbody = document.getElementById("txns-tbody");
 const holdingsTbody = document.getElementById("holdings-tbody");
 const portfolioHoldingsTbody = document.getElementById("portfolio-holdings-tbody");
-const yieldTbody = document.getElementById("yield-tbody");
 
 const bondTpl = document.getElementById("asset-row-template");
 const buyTpl = document.getElementById("txn-row-template");
 const holdingTpl = document.getElementById("holding-row-template");
-const yieldTpl = document.getElementById("yield-row-template");
 
 const addBondBtn = document.getElementById("add-asset-row");
 const addBuyBtn = document.getElementById("add-txn-row");
 const addHoldingBtn = document.getElementById("add-holding-row");
 const addPortfolioHoldingBtn = document.getElementById("add-portfolio-holding-row");
-const addYieldRowBtn = document.getElementById("add-yield-row");
 const buyStrategySelect = document.getElementById("buy-strategy-select");
 const buyTableYearFilterSelect = document.getElementById("buy-table-year-filter");
 const buyStrategyHeaderSelect = document.getElementById("buy-strategy-header-select");
@@ -55,7 +51,7 @@ const autoPlanTopupAmountInput = document.getElementById("auto-plan-topup-amount
 const autoPlanReinvestCheckbox = document.getElementById("auto-plan-reinvest");
 const autoPlanDiversifyCheckbox = document.getElementById("auto-plan-diversify");
 const autoPlanPriceDriftPctInput = document.getElementById("auto-plan-price-drift-pct");
-const autoPlanSaveStrategyBtn = document.getElementById("auto-plan-save-strategy-btn");
+const autoPlanGenerateBtn = document.getElementById("auto-plan-generate-btn");
 const buyStrategyNewBtn = document.getElementById("buy-strategy-new-btn");
 const buyStrategyEditBtn = document.getElementById("buy-strategy-edit-btn");
 const buyStrategyDuplicateBtn = document.getElementById("buy-strategy-duplicate-btn");
@@ -135,11 +131,6 @@ const strategyModalTitle = document.getElementById("strategy-modal-title");
 const strategyNameInput = document.getElementById("strategy-name-input");
 const strategyDeleteBtn = document.getElementById("strategy-delete");
 const strategySaveBtn = document.getElementById("strategy-save");
-const portfolioPanel = document.getElementById("tab-panel-portfolio");
-const planningPanel = document.getElementById("tab-panel-planning");
-const chartsPanel = document.getElementById("tab-panel-charts");
-const calculatorsPanel = document.getElementById("tab-panel-calculators");
-const strategyPanel = document.getElementById("tab-panel-strategy");
 const strategyTabStrategyList = document.getElementById("strategy-tab-strategy-list");
 const strategyTabBuysTbody = document.getElementById("strategy-tab-buys-tbody");
 const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
@@ -147,10 +138,19 @@ const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-stra
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
 const strategyTabAddBuyBtn = document.getElementById("strategy-tab-add-buy");
 const strategyTabAutoPlanBtn = document.getElementById("strategy-tab-auto-plan-btn");
+const strategyTabShell = document.querySelector(".strategyTabShell");
 const autoPlanModalOverlay = document.getElementById("auto-plan-modal-overlay");
 const autoPlanModalBody = document.getElementById("auto-plan-modal-body");
 const autoPlanModalClose = document.getElementById("auto-plan-modal-close");
+const autoPlanModalFooter = document.querySelector("#auto-plan-modal-overlay .autoPlanModal__footer");
+const autoPlanConflictModalOverlay = document.getElementById("auto-plan-conflict-modal-overlay");
+const autoPlanConflictModalClose = document.getElementById("auto-plan-conflict-close");
+const autoPlanConflictDatesList = document.getElementById("auto-plan-conflict-dates");
+const autoPlanConflictKeepBtn = document.getElementById("auto-plan-conflict-keep");
+const autoPlanConflictOverwriteBtn = document.getElementById("auto-plan-conflict-overwrite");
 let autoPlanScaffoldRestore = null;
+let autoPlanGenerateTooltipHost = null;
+let autoPlanConflictResolve = null;
 const strategyPaneBuys = document.getElementById("strategy-pane-buys");
 const strategyPaneCharts = document.getElementById("strategy-pane-charts");
 const strategyPanePortfolio = document.getElementById("strategy-pane-portfolio");
@@ -159,30 +159,6 @@ const strategyCouponDisplayNetRadio = document.getElementById("strategy-coupon-d
 const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon-display-gross");
 const strategySidebarCommissionInput = document.getElementById("strategy-sidebar-commission-pct");
 const strategyPlansYearSelect = document.getElementById("strategy-plans-year");
-const accruedNominalInput = document.getElementById("accrued-nominal");
-const accruedCouponRateInput = document.getElementById("accrued-coupon-rate");
-const accruedLastCouponDateInput = document.getElementById("accrued-last-coupon-date");
-const accruedNextCouponDateInput = document.getElementById("accrued-next-coupon-date");
-const accruedSettlementDateInput = document.getElementById("accrued-settlement-date");
-const accruedDaysElapsedEl = document.getElementById("accrued-days-elapsed");
-const accruedDaysPeriodEl = document.getElementById("accrued-days-period");
-const accruedIncomeResultEl = document.getElementById("accrued-income-result");
-const accruedFormulaEl = document.getElementById("accrued-formula");
-const yieldFormulaEl = document.getElementById("yield-formula");
-const yieldModalOverlay = document.getElementById("yield-modal-overlay");
-const yieldModalClose = document.getElementById("yield-modal-close");
-const yieldModalTitle = document.getElementById("yield-modal-title");
-const yieldModalBondNameInput = document.getElementById("yield-modal-bond-name");
-const yieldModalPurchaseDateInput = document.getElementById("yield-modal-purchase-date");
-const yieldModalMaturityDateInput = document.getElementById("yield-modal-maturity-date");
-const yieldModalPaymentsPerYearInput = document.getElementById("yield-modal-payments-per-year");
-const yieldModalPaidCouponsCountInput = document.getElementById("yield-modal-paid-coupons-count");
-const yieldModalNominalInput = document.getElementById("yield-modal-nominal");
-const yieldModalPurchasePriceInput = document.getElementById("yield-modal-purchase-price");
-const yieldModalCouponPerPaymentInput = document.getElementById("yield-modal-coupon-per-payment");
-const yieldModalAccruedIncomeInput = document.getElementById("yield-modal-accrued-income");
-const yieldModalRedemptionPriceInput = document.getElementById("yield-modal-redemption-price");
-const yieldSaveBtn = document.getElementById("yield-save");
 const themeSelect = document.getElementById("theme-select");
 
 const DATE_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -193,8 +169,6 @@ const MONTHS_RU = [
 
 const BUY_MODAL_TITLE_NEW = "Новая покупка облигаций";
 const BUY_MODAL_TITLE_EDIT = "Редактирование покупки";
-const YIELD_MODAL_TITLE_NEW = "Новая облигация для сравнения";
-const YIELD_MODAL_TITLE_EDIT = "Редактирование облигации";
 const tableSortState = {
   assets: { field: "", dir: "asc" },
   holdings: { field: "", dir: "asc" },
@@ -251,9 +225,17 @@ function applyDocumentTheme(effective) {
   document.documentElement.style.colorScheme = effective === "dark" ? "dark" : "light";
 }
 
+function syncAppShellHeaderOffset() {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) return;
+  const h = Math.round(topbar.getBoundingClientRect().height || 0);
+  if (h > 0) document.documentElement.style.setProperty("--app-shell-header-offset", `${h}px`);
+}
+
 function initThemeUi() {
   const pref = getThemePreference();
   applyDocumentTheme(effectiveThemeFromPreference(pref));
+  syncAppShellHeaderOffset();
   if (themeSelect) {
     themeSelect.value = pref;
     themeSelect.addEventListener("change", () => {
@@ -265,6 +247,7 @@ function initThemeUi() {
         /* ignore */
       }
       applyDocumentTheme(effectiveThemeFromPreference(next));
+      syncAppShellHeaderOffset();
     });
   }
   if (window.matchMedia) {
@@ -272,6 +255,7 @@ function initThemeUi() {
     const onSchemeChange = () => {
       if (getThemePreference() !== "system") return;
       applyDocumentTheme(effectiveThemeFromPreference("system"));
+      syncAppShellHeaderOffset();
     };
     mq.addEventListener("change", onSchemeChange);
   }
@@ -374,45 +358,6 @@ function syncStrategyPlansYearSelectFromChart() {
   strategyPlansYearSelect.value = chartYearSelect.value;
 }
 
-function ensureChartsWidgetsInChartsTab() {
-  if (!strategyPaneCharts || !chartsPanel) return;
-  const returnsWidget = strategyPaneCharts.querySelector('[data-widget="returns"]');
-  if (returnsWidget && returnsWidget.parentNode === strategyPaneCharts) {
-    chartsPanel.appendChild(returnsWidget);
-  }
-}
-
-function ensureChartsWidgetsInStrategyPane() {
-  if (!strategyPaneCharts || !chartsPanel) return;
-  const returnsWidget = chartsPanel.querySelector('[data-widget="returns"]');
-  if (returnsWidget && returnsWidget.parentNode === chartsPanel) {
-    strategyPaneCharts.appendChild(returnsWidget);
-  }
-}
-
-function ensurePortfolioWidgetsInPortfolioTab() {
-  if (!strategyPanePortfolio || !portfolioPanel) return;
-  const controls = strategyPanePortfolio.querySelector('[data-widget="portfolio-controls"]');
-  const value = strategyPanePortfolio.querySelector('[data-widget="portfolio-value"]');
-  if (controls && controls.parentNode === strategyPanePortfolio) portfolioPanel.appendChild(controls);
-  if (value && value.parentNode === strategyPanePortfolio) portfolioPanel.appendChild(value);
-}
-
-function ensurePortfolioWidgetsInStrategyPane() {
-  if (!strategyPanePortfolio || !portfolioPanel) return;
-  const controls = portfolioPanel.querySelector('[data-widget="portfolio-controls"]');
-  const value = portfolioPanel.querySelector('[data-widget="portfolio-value"]');
-  const emptyEl = document.getElementById("strategy-portfolio-empty");
-  const mainHead = document.getElementById("strategy-portfolio-mainhead");
-  if (controls && controls.parentNode === portfolioPanel) strategyPanePortfolio.appendChild(controls);
-  if (value && value.parentNode === portfolioPanel) strategyPanePortfolio.appendChild(value);
-  if (mainHead && emptyEl && controls && value) {
-    mainHead.after(controls);
-    controls.after(emptyEl);
-    emptyEl.after(value);
-  }
-}
-
 function updateStrategyDisplayNavUi(mode) {
   const list = document.getElementById("strategy-tab-display-list");
   if (!list) return;
@@ -430,20 +375,14 @@ function setStrategyCenterView(mode) {
   if (!strategyPaneBuys || !strategyPaneCharts || !strategyPanePortfolio) return;
 
   if (mode === "charts") {
-    ensurePortfolioWidgetsInPortfolioTab();
-    ensureChartsWidgetsInStrategyPane();
     strategyPaneBuys.hidden = true;
     strategyPaneCharts.hidden = false;
     strategyPanePortfolio.hidden = true;
   } else if (mode === "portfolio") {
-    ensureChartsWidgetsInChartsTab();
-    ensurePortfolioWidgetsInStrategyPane();
     strategyPaneBuys.hidden = true;
     strategyPaneCharts.hidden = true;
     strategyPanePortfolio.hidden = false;
   } else {
-    ensureChartsWidgetsInChartsTab();
-    ensurePortfolioWidgetsInPortfolioTab();
     strategyPaneBuys.hidden = false;
     strategyPaneCharts.hidden = true;
     strategyPanePortfolio.hidden = true;
@@ -462,16 +401,6 @@ function applyStrategyCenterViewFromStorage() {
   const raw = localStorage.getItem(STRATEGY_CENTER_VIEW_KEY);
   const mode = raw === "charts" || raw === "portfolio" ? raw : "buys";
   setStrategyCenterView(mode);
-}
-
-function setActiveTab(_tab) {
-  if (portfolioPanel) portfolioPanel.hidden = true;
-  if (planningPanel) planningPanel.hidden = true;
-  if (chartsPanel) chartsPanel.hidden = true;
-  if (calculatorsPanel) calculatorsPanel.hidden = true;
-  if (strategyPanel) strategyPanel.hidden = false;
-  localStorage.setItem(ACTIVE_TAB_KEY, "strategy");
-  applyStrategyCenterViewFromStorage();
 }
 
 function writeRows(tbody, template, rows) {
@@ -550,14 +479,6 @@ function syncStaticTableEmptyStates() {
       4,
       "План покупок пока пуст",
       "Добавьте будущие покупки облигаций, чтобы увидеть, как они повлияют на выплаты и стоимость портфеля."
-    );
-  }
-  if (yieldTbody && !yieldTbody.querySelector("tr")) {
-    renderTableEmptyState(
-      yieldTbody,
-      10,
-      "Сравнение доходности пока пусто",
-      "Добавьте облигацию: цена покупки, НКД, купон в ₽ за выплату, выплаты в год и даты."
     );
   }
   mirrorHoldingsMainToPortfolio();
@@ -854,6 +775,7 @@ function renderBuyStrategySelect() {
     autoPlanStrategySelect.innerHTML = head + optionsHtml;
     const validPrev = buyStrategies.some((s) => s.id === prev);
     autoPlanStrategySelect.value = validPrev ? prev : "";
+    syncAutoPlanGenerateButtonState();
   }
   if (buyStrategyEditBtn) {
     const isDefault = activeBuyStrategyId === DEFAULT_BUY_STRATEGY_ID;
@@ -882,16 +804,13 @@ function renderBuyStrategySelect() {
 }
 
 function isStrategyTabPortfolioView() {
-  return Boolean(
-    strategyPanel && !strategyPanel.hidden && strategyPanePortfolio && !strategyPanePortfolio.hidden
-  );
+  return Boolean(strategyPanePortfolio && !strategyPanePortfolio.hidden);
 }
 
 /** Пока открыт экран с таблицей «Текущий портфель» в виджете (#portfolio-holdings-tbody), правки идут туда; каноническая таблица планирования (#holdings-tbody) может отставать до сохранения. */
 function shouldFlushHoldingsFromPortfolioWidget() {
   if (!portfolioHoldingsTbody || !holdingsTbody) return false;
   if (isStrategyTabPortfolioView()) return true;
-  if (portfolioPanel && !portfolioPanel.hidden) return true;
   return false;
 }
 
@@ -1368,259 +1287,11 @@ function setInputNumericValue(input, value, fallback = "0") {
   input.value = Number.isFinite(numeric) ? String(numeric) : fallback;
 }
 
-function getDefaultAccruedCalcState() {
-  return {
-    nominal: 1000,
-    couponRate: 12,
-    lastCouponDate: "",
-    nextCouponDate: "",
-    settlementDate: getTodayYMD(),
-  };
-}
-
-function getDefaultYieldCalcState() {
-  return [];
-}
-
-function getDefaultYieldCalcRow() {
-  return {
-    bondName: "",
-    purchaseDate: "",
-    maturityDate: "",
-    paymentsPerYear: 4,
-    paidCouponsCount: 0,
-    nominal: 1000,
-    purchasePrice: 950,
-    couponPerPayment: 30,
-    accruedIncome: 0,
-    redemptionPrice: 1000,
-  };
-}
-
-function readCalcState(storageKey, fallback) {
-  try {
-    const raw = localStorage.getItem(storageKey);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(fallback)) return Array.isArray(parsed) ? parsed : fallback;
-    return parsed && typeof parsed === "object" ? { ...fallback, ...parsed } : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveAccruedCalcState() {
-  const payload = {
-    nominal: parseNumber(accruedNominalInput?.value || ""),
-    couponRate: parseNumber(accruedCouponRateInput?.value || ""),
-    lastCouponDate: normalizeYMD(accruedLastCouponDateInput?.value || "") || "",
-    nextCouponDate: normalizeYMD(accruedNextCouponDateInput?.value || "") || "",
-    settlementDate: normalizeYMD(accruedSettlementDateInput?.value || "") || "",
-  };
-  localStorage.setItem(ACCRUED_CALC_KEY, JSON.stringify(payload));
-}
-
-function saveYieldCalcState() {
-  const payload = readRows(yieldTbody);
-  localStorage.setItem(YIELD_CALC_KEY, JSON.stringify(payload));
-}
-
-function loadCalculatorStates() {
-  const accrued = readCalcState(ACCRUED_CALC_KEY, getDefaultAccruedCalcState());
-  setInputNumericValue(accruedNominalInput, accrued.nominal, "1000");
-  setInputNumericValue(accruedCouponRateInput, accrued.couponRate, "12");
-  if (accruedLastCouponDateInput) accruedLastCouponDateInput.value = normalizeYMD(accrued.lastCouponDate || "") || "";
-  if (accruedNextCouponDateInput) accruedNextCouponDateInput.value = normalizeYMD(accrued.nextCouponDate || "") || "";
-  if (accruedSettlementDateInput) accruedSettlementDateInput.value = normalizeYMD(accrued.settlementDate || "") || getTodayYMD();
-
-  const yieldCalc = readCalcState(YIELD_CALC_KEY, getDefaultYieldCalcState());
-  const normalizedRows = Array.isArray(yieldCalc) ? yieldCalc : getDefaultYieldCalcState();
-  writeRows(yieldTbody, yieldTpl, normalizeYieldCalcRowsForStorage(normalizedRows));
-  renderYieldCalculator();
-}
-
 function formatDateRu(ymd) {
   const normalized = normalizeYMD(ymd || "");
   if (!normalized) return "—";
   const [y, m, d] = normalized.split("-");
   return `${d}.${m}.${y}`;
-}
-
-function renderAccruedIncomeCalculator() {
-  if (!accruedDaysElapsedEl || !accruedDaysPeriodEl || !accruedIncomeResultEl) return;
-  const nominal = parseNumber(accruedNominalInput?.value || "");
-  const couponRate = parseNumber(accruedCouponRateInput?.value || "");
-  const lastCouponDate = normalizeYMD(accruedLastCouponDateInput?.value || "");
-  const nextCouponDate = normalizeYMD(accruedNextCouponDateInput?.value || "");
-  const settlementDate = normalizeYMD(accruedSettlementDateInput?.value || "");
-  const daysPeriod = diffDaysInclusiveStartExclusiveEnd(lastCouponDate, nextCouponDate);
-  const daysElapsed = diffDaysInclusiveStartExclusiveEnd(lastCouponDate, settlementDate);
-  const isValidRange = Number.isFinite(daysPeriod) && Number.isFinite(daysElapsed) && daysPeriod > 0 && daysElapsed >= 0 && daysElapsed <= daysPeriod;
-  const annualCouponIncome = Number.isFinite(nominal) && Number.isFinite(couponRate) ? nominal * (couponRate / 100) : NaN;
-  const accruedIncome = isValidRange && Number.isFinite(annualCouponIncome) ? annualCouponIncome * (daysElapsed / 365) : NaN;
-  const canShowFormula = isValidRange && Number.isFinite(nominal) && Number.isFinite(couponRate) && Number.isFinite(accruedIncome);
-
-  accruedDaysElapsedEl.textContent = Number.isFinite(daysElapsed) && daysElapsed >= 0 ? String(daysElapsed) : "0";
-  accruedDaysPeriodEl.textContent = Number.isFinite(daysPeriod) && daysPeriod >= 0 ? String(daysPeriod) : "0";
-  accruedIncomeResultEl.textContent = Number.isFinite(accruedIncome) ? formatMoney(accruedIncome) : "—";
-  if (accruedFormulaEl) {
-    accruedFormulaEl.textContent = canShowFormula
-      ? `Формула: ${formatAmount(nominal)} × ${formatAmount(couponRate)}% / 100 × ${daysElapsed} / 365 = ${formatMoney(accruedIncome)}.`
-      : "Укажите номинал, ставку купона и корректные даты внутри одного купонного периода.";
-  }
-}
-
-/**
- * Купон за одну выплату в ₽. Новые строки: поле couponPerPayment.
- * Старые данные: годовая ставка % в couponRate → пересчёт через номинал и выплат в год.
- */
-function resolveYieldCouponPerPaymentRub(row) {
-  const cppDirect = parseNumber(row.couponPerPayment);
-  if (Number.isFinite(cppDirect) && cppDirect >= 0) return cppDirect;
-
-  const nominal = parseNumber(row.nominal);
-  const couponRatePct = parseNumber(row.couponRate);
-  const ppyRaw = parseNumber(row.paymentsPerYear);
-  const ppy = Number.isFinite(ppyRaw) && ppyRaw > 0 ? Math.max(1, Math.round(ppyRaw)) : NaN;
-  if (Number.isFinite(nominal) && Number.isFinite(couponRatePct) && Number.isFinite(ppy)) {
-    return (nominal * (couponRatePct / 100)) / ppy;
-  }
-  return NaN;
-}
-
-/** Строки калькулятора доходности из localStorage: перенос couponRate → couponPerPayment для нового шаблона. */
-function normalizeYieldCalcRowsForStorage(rows) {
-  if (!Array.isArray(rows)) return [];
-  return rows.map((row) => {
-    const out = { ...row };
-    const cpp = resolveYieldCouponPerPaymentRub(out);
-    if (Number.isFinite(cpp) && cpp >= 0) {
-      out.couponPerPayment = String(roundRub2(cpp));
-    } else if (out.couponPerPayment === undefined || out.couponPerPayment === null) {
-      out.couponPerPayment = "";
-    }
-    delete out.couponRate;
-    return out;
-  });
-}
-
-function computeYieldMetrics(row) {
-  const purchaseDate = normalizeYMD(row.purchaseDate);
-  const maturityDate = normalizeYMD(row.maturityDate);
-  const paymentsPerYearRaw = parseNumber(row.paymentsPerYear);
-  const paidCouponsCountRaw = parseNumber(row.paidCouponsCount);
-  const purchasePrice = parseNumber(row.purchasePrice);
-  const accruedIncome = parseNumber(row.accruedIncome);
-  const redemptionPrice = parseNumber(row.redemptionPrice);
-  const purchaseTs = ymdToUTCms(purchaseDate || "");
-  const maturityTs = ymdToUTCms(maturityDate || "");
-  const holdingYears = Number.isFinite(purchaseTs) && Number.isFinite(maturityTs) && maturityTs > purchaseTs
-    ? (maturityTs - purchaseTs) / (365 * 86400000)
-    : NaN;
-  const paymentsPerYear = Number.isFinite(paymentsPerYearRaw) && paymentsPerYearRaw > 0
-    ? Math.max(1, Math.round(paymentsPerYearRaw))
-    : NaN;
-  const paidCouponsCount = Number.isFinite(paidCouponsCountRaw) && paidCouponsCountRaw >= 0
-    ? Math.max(0, Math.round(paidCouponsCountRaw))
-    : NaN;
-
-  const investedAmount = Number.isFinite(purchasePrice) && Number.isFinite(accruedIncome)
-    ? purchasePrice + accruedIncome
-    : NaN;
-  const couponPerPayment = resolveYieldCouponPerPaymentRub(row);
-  const annualCouponIncome = Number.isFinite(couponPerPayment) && Number.isFinite(paymentsPerYear)
-    ? couponPerPayment * paymentsPerYear
-    : NaN;
-  const plannedCouponPayments = Number.isFinite(holdingYears) && Number.isFinite(paymentsPerYear)
-    ? Math.max(0, Math.ceil(holdingYears * paymentsPerYear))
-    : NaN;
-  const remainingCouponPayments = Number.isFinite(plannedCouponPayments) && Number.isFinite(paidCouponsCount)
-    ? Math.max(0, plannedCouponPayments - paidCouponsCount)
-    : NaN;
-  const couponIncome = Number.isFinite(couponPerPayment) && Number.isFinite(remainingCouponPayments)
-    ? couponPerPayment * remainingCouponPayments
-    : NaN;
-  const redemptionIncome = Number.isFinite(redemptionPrice) && Number.isFinite(investedAmount)
-    ? redemptionPrice - investedAmount
-    : NaN;
-  const totalIncome = Number.isFinite(couponIncome) && Number.isFinite(redemptionIncome)
-    ? couponIncome + redemptionIncome
-    : NaN;
-  const investmentReturn = Number.isFinite(totalIncome) && Number.isFinite(investedAmount) && investedAmount > 0
-    ? (totalIncome / investedAmount) * 100
-    : NaN;
-  const currentYield = Number.isFinite(annualCouponIncome) && Number.isFinite(investedAmount) && investedAmount > 0
-    ? (annualCouponIncome / investedAmount) * 100
-    : NaN;
-  const ytmApprox = Number.isFinite(totalIncome)
-    && Number.isFinite(investedAmount)
-    && Number.isFinite(holdingYears)
-    && holdingYears > 0
-    && investedAmount > 0
-    ? (totalIncome / investedAmount / holdingYears) * 100
-    : NaN;
-
-  return {
-    annualCouponIncome,
-    investedAmount,
-    currentYield,
-    ytmApprox,
-    paymentsPerYear,
-    paidCouponsCount,
-    holdingYears,
-    remainingCouponPayments,
-    couponIncome,
-    redemptionIncome,
-    totalIncome,
-    investmentReturn,
-  };
-}
-
-function renderYieldCalculator() {
-  if (!yieldTbody) return;
-  if (!yieldTbody.querySelector("tr")) {
-    syncStaticTableEmptyStates();
-  }
-  const rows = Array.from(yieldTbody.querySelectorAll("tr"));
-  let hasCalculatedRow = false;
-  rows.forEach((tr) => {
-    const row = {};
-    tr.querySelectorAll("input[data-field]").forEach((el) => {
-      const key = el.getAttribute("data-field");
-      if (key) row[key] = el.value;
-    });
-    const metrics = computeYieldMetrics(row);
-    const bondNameEl = tr.querySelector('[data-display-for="bondName"]');
-    const paymentsPerYearEl = tr.querySelector('[data-display-for="paymentsPerYear"]');
-    const couponIncomeEl = tr.querySelector('[data-display-for="couponIncome"]');
-    const redemptionIncomeEl = tr.querySelector('[data-display-for="redemptionIncome"]');
-    const totalIncomeEl = tr.querySelector('[data-display-for="totalIncome"]');
-    const investmentReturnEl = tr.querySelector('[data-display-for="investmentReturn"]');
-    const holdingYearsEl = tr.querySelector('[data-display-for="holdingYears"]');
-    const currentYieldEl = tr.querySelector('[data-display-for="currentYield"]');
-    const ytmEl = tr.querySelector('[data-display-for="ytm"]');
-    if (bondNameEl) bondNameEl.textContent = String(row.bondName || "").trim() || "—";
-    if (paymentsPerYearEl) paymentsPerYearEl.textContent = Number.isFinite(metrics.paymentsPerYear) ? String(metrics.paymentsPerYear) : "—";
-    if (couponIncomeEl) couponIncomeEl.textContent = Number.isFinite(metrics.couponIncome) ? formatMoney(metrics.couponIncome) : "—";
-    if (redemptionIncomeEl) redemptionIncomeEl.textContent = Number.isFinite(metrics.redemptionIncome) ? formatMoney(metrics.redemptionIncome) : "—";
-    if (totalIncomeEl) totalIncomeEl.textContent = Number.isFinite(metrics.totalIncome) ? formatMoney(metrics.totalIncome) : "—";
-    if (investmentReturnEl) investmentReturnEl.textContent = formatPercentValue(metrics.investmentReturn);
-    if (holdingYearsEl) holdingYearsEl.textContent = Number.isFinite(metrics.holdingYears) ? `${formatAmount(metrics.holdingYears)} г.` : "—";
-    if (currentYieldEl) currentYieldEl.textContent = formatPercentValue(metrics.currentYield);
-    if (ytmEl) ytmEl.textContent = formatPercentValue(metrics.ytmApprox);
-    if (Number.isFinite(metrics.ytmApprox)) hasCalculatedRow = true;
-  });
-  if (yieldFormulaEl) {
-    yieldFormulaEl.textContent = hasCalculatedRow
-      ? "Грязная цена = цена покупки + НКД. Купоны к получению = купон за выплату (₽) × оставшиеся выплаты. Текущая доходность = (купон × выплат в год) / грязная цена. Доходность к погашению ≈ (купоны + погашение − грязная цена) / грязная цена / срок в годах."
-      : "Добавьте облигацию: цена покупки, НКД, номинал, купон в ₽ за одну выплату, выплат в год, уже выплаченных купонов, даты покупки и погашения, цена погашения.";
-  }
-}
-
-function renderCalculators() {
-  renderAccruedIncomeCalculator();
-  renderYieldCalculator();
-  syncStaticTableEmptyStates();
 }
 
 /**
@@ -2024,6 +1695,60 @@ function showBuyPlanTooltip(titleHtml, metaHtml, clientX, clientY) {
   positionBuyPlanTooltip(clientX, clientY);
 }
 
+function ensureAutoPlanGenerateTooltip() {
+  if (autoPlanGenerateTooltipHost) return autoPlanGenerateTooltipHost;
+  const el = document.createElement("div");
+  el.className = "chartTooltip autoPlanGenerateTooltip";
+  el.setAttribute("role", "tooltip");
+  el.hidden = true;
+  document.body.appendChild(el);
+  autoPlanGenerateTooltipHost = el;
+  return el;
+}
+
+function hideAutoPlanGenerateTooltip() {
+  if (!autoPlanGenerateTooltipHost) return;
+  autoPlanGenerateTooltipHost.hidden = true;
+  autoPlanGenerateTooltipHost.classList.remove("chartTooltip--visible");
+  autoPlanGenerateTooltipHost.innerHTML = "";
+}
+
+function positionAutoPlanGenerateTooltip(clientX, clientY) {
+  const el = autoPlanGenerateTooltipHost;
+  if (!el) return;
+  const margin = 14;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  requestAnimationFrame(() => {
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    let left = clientX + margin;
+    let top = clientY + margin;
+    if (left + tw > vw - 8) left = clientX - tw - margin;
+    if (top + th > vh - 8) top = clientY - th - margin;
+    left = Math.max(8, Math.min(left, vw - tw - 8));
+    top = Math.max(8, Math.min(top, vh - th - 8));
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  });
+}
+
+function showAutoPlanGenerateTooltip(hintText, clientX, clientY) {
+  if (!hintText) return;
+  const el = ensureAutoPlanGenerateTooltip();
+  const lines = String(hintText)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const listHtml = lines.length
+    ? `<ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+    : `<span>${escapeHtml(hintText)}</span>`;
+  el.innerHTML = `<div class="chartTooltip__title">Для генерации необходимо</div><div class="chartTooltip__meta">${listHtml}</div>`;
+  el.hidden = false;
+  el.classList.add("chartTooltip--visible");
+  positionAutoPlanGenerateTooltip(clientX, clientY);
+}
+
 function buildBuyPlanBudgetTooltipMeta(entry, options = {}) {
   const pctRaw = strategySidebarCommissionInput ? parseNumber(strategySidebarCommissionInput.value) : 0;
   const pct = Number.isFinite(pctRaw) && pctRaw > 0 ? pctRaw : 0;
@@ -2416,7 +2141,11 @@ function escapeHtml(value) {
 }
 
 function getTaxRateDecimal() {
-  const raw = taxRateInput ? parseNumber(taxRateInput.value) : 13;
+  const raw = taxRateInput
+    ? parseNumber(taxRateInput.value)
+    : strategySidebarTaxInput
+      ? parseNumber(strategySidebarTaxInput.value)
+      : 13;
   if (!Number.isFinite(raw)) return 0.13;
   const clamped = Math.max(0, Math.min(100, raw));
   return clamped / 100;
@@ -3499,7 +3228,7 @@ function renderStrategyTab() {
       const idEsc = escapeHtml(String(s.id));
       const actions = isDefault
         ? ""
-        : `<button type="button" class="strategyTabShell__menuBtn" data-strategy-action="open-menu" data-strategy-id="${idEsc}" title="Действия" aria-label="Действия со стратегией" aria-haspopup="dialog">⋮</button>`;
+        : `<button type="button" class="strategyTabShell__menuBtn" data-strategy-action="open-menu" data-strategy-id="${idEsc}" title="Редактировать стратегию" aria-label="Редактировать стратегию">⋮</button>`;
       return `<li class="strategyTabShell__strategyRow${isActive ? " is-active" : ""}" data-strategy-id="${idEsc}">
         <button type="button" class="strategyTabShell__strategySelect">
           <span class="strategyTabShell__strategyName">${escapeHtml(String(s.name))}</span>
@@ -3602,7 +3331,7 @@ function initStrategyTabPanel() {
     const menuBtn = e.target.closest('[data-strategy-action="open-menu"]');
     if (menuBtn) {
       e.stopPropagation();
-      openStrategyActionsModal(menuBtn.getAttribute("data-strategy-id") || "");
+      openStrategyModalEditForId(menuBtn.getAttribute("data-strategy-id") || "");
       return;
     }
     const sel = e.target.closest(".strategyTabShell__strategySelect");
@@ -3616,7 +3345,7 @@ function initStrategyTabPanel() {
     const menuBtn = e.target.closest(".strategyTabShell__menuBtn");
     if (menuBtn) {
       e.preventDefault();
-      openStrategyActionsModal(menuBtn.getAttribute("data-strategy-id") || "");
+      openStrategyModalEditForId(menuBtn.getAttribute("data-strategy-id") || "");
       return;
     }
     const sel = e.target.closest(".strategyTabShell__strategySelect");
@@ -3693,11 +3422,6 @@ function initStrategyTabPanel() {
       if (mainTr) openBuyModalForEdit(mainTr);
     });
 
-    bindBuyPlanBudgetTooltipOnTbody(strategyTabBuysTbody, {
-      rowSelector: "tr[data-strategy-buy-key]",
-      getPurchaseYmd: (tr) => normalizeYMD(tr.getAttribute("data-plan-purchase-ymd") || ""),
-      getActualSpentRub: (tr) => computeBuyRowOutlayFromStrategyMirrorTr(tr),
-    });
   }
   if (strategyTabBondsList) {
     strategyTabBondsList.addEventListener("click", (e) => {
@@ -3718,6 +3442,85 @@ function initStrategyTabPanel() {
   initStrategySidebarParams();
 }
 
+function initStrategyShellResize() {
+  if (!strategyTabShell || strategyTabShell.dataset.resizerInit === "1") return;
+  strategyTabShell.dataset.resizerInit = "1";
+
+  const leftResizer = strategyTabShell.querySelector('[data-resize-side="left"]');
+  const rightResizer = strategyTabShell.querySelector('[data-resize-side="right"]');
+  if (!leftResizer || !rightResizer) return;
+
+  const clampSidebarWidth = (side, widthPx) => {
+    const shellWidth = strategyTabShell.getBoundingClientRect().width || window.innerWidth || 0;
+    if (side === "left") {
+      const min = 240;
+      const max = Math.max(min, Math.min(560, shellWidth * 0.48));
+      return Math.round(Math.max(min, Math.min(widthPx, max)));
+    }
+    const min = 220;
+    const max = Math.max(min, Math.min(460, shellWidth * 0.4));
+    return Math.round(Math.max(min, Math.min(widthPx, max)));
+  };
+
+  const applyWidth = (side, widthPx, save = true) => {
+    const clamped = clampSidebarWidth(side, widthPx);
+    if (side === "left") {
+      strategyTabShell.style.setProperty("--strategy-left-width", `${clamped}px`);
+      if (save) localStorage.setItem(STRATEGY_LEFT_SIDEBAR_WIDTH_KEY, String(clamped));
+    } else {
+      strategyTabShell.style.setProperty("--strategy-right-width", `${clamped}px`);
+      if (save) localStorage.setItem(STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY, String(clamped));
+    }
+  };
+
+  const restoreSavedWidths = () => {
+    const leftRaw = Number(localStorage.getItem(STRATEGY_LEFT_SIDEBAR_WIDTH_KEY));
+    if (Number.isFinite(leftRaw) && leftRaw > 0) applyWidth("left", leftRaw, false);
+    const rightRaw = Number(localStorage.getItem(STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY));
+    if (Number.isFinite(rightRaw) && rightRaw > 0) applyWidth("right", rightRaw, false);
+  };
+  restoreSavedWidths();
+
+  const startResize = (side, ev) => {
+    if (window.matchMedia("(max-width: 1100px)").matches) return;
+    ev.preventDefault();
+    const pointerId = ev.pointerId;
+    const target = side === "left" ? leftResizer : rightResizer;
+    target.classList.add("is-dragging");
+    if (target.setPointerCapture) target.setPointerCapture(pointerId);
+    const shellRect = strategyTabShell.getBoundingClientRect();
+    const shellLeft = shellRect.left;
+    const shellRight = shellRect.right;
+    const onMove = (moveEv) => {
+      if (side === "left") {
+        applyWidth("left", moveEv.clientX - shellLeft);
+      } else {
+        applyWidth("right", shellRight - moveEv.clientX);
+      }
+    };
+    const stop = () => {
+      target.classList.remove("is-dragging");
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+  };
+
+  leftResizer.addEventListener("pointerdown", (ev) => startResize("left", ev));
+  rightResizer.addEventListener("pointerdown", (ev) => startResize("right", ev));
+
+  const onResizeViewport = () => {
+    const leftRaw = Number(localStorage.getItem(STRATEGY_LEFT_SIDEBAR_WIDTH_KEY));
+    if (Number.isFinite(leftRaw) && leftRaw > 0) applyWidth("left", leftRaw, false);
+    const rightRaw = Number(localStorage.getItem(STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY));
+    if (Number.isFinite(rightRaw) && rightRaw > 0) applyWidth("right", rightRaw, false);
+  };
+  window.addEventListener("resize", onResizeViewport);
+}
+
 function renderAll() {
   flushHoldingsFromPortfolioWidgetIfNeeded();
   syncHoldingsBondSelects();
@@ -3731,7 +3534,6 @@ function renderAll() {
   renderPortfolioChart(payoutSeriesPortfolio);
   renderChart(payoutSeries);
   renderSummary(payoutSeries, buys, holdings);
-  renderCalculators();
   refreshAutoPlanBondPicker();
   renderStrategyTab();
   syncStrategyDynamicsEmptyState();
@@ -4335,6 +4137,68 @@ function mergeBuyRowsByDateForAutoPlan(existingRows, newRows) {
   return sortBuyRowsByDate(Array.from(byDate.values())).rows;
 }
 
+function getAutoPlanConflictDates(existingRows, newRows) {
+  const existingDates = new Set();
+  for (const row of existingRows) {
+    if (!isBuyRowComplete(row)) continue;
+    const d = normalizeYMD(row.date);
+    if (d) existingDates.add(d);
+  }
+  const conflicts = [];
+  for (const row of newRows) {
+    const d = normalizeYMD(row.date);
+    if (!d) continue;
+    if (existingDates.has(d)) conflicts.push(d);
+  }
+  return [...new Set(conflicts)].sort((a, b) => (ymdToUTCms(a) || 0) - (ymdToUTCms(b) || 0));
+}
+
+function mergeBuyRowsByDateForAutoPlanWithStrategy(existingRows, newRows, conflictMode) {
+  const byDate = new Map();
+  for (const row of existingRows) {
+    if (!isBuyRowComplete(row)) continue;
+    const d = normalizeYMD(row.date);
+    if (!d) continue;
+    byDate.set(d, { date: d, items: row.items });
+  }
+  for (const row of newRows) {
+    const d = normalizeYMD(row.date);
+    if (!d) continue;
+    const hasExisting = byDate.has(d);
+    if (!hasExisting) {
+      byDate.set(d, { date: d, items: row.items });
+      continue;
+    }
+    if (conflictMode === "overwrite") {
+      byDate.set(d, { date: d, items: row.items });
+    }
+  }
+  return sortBuyRowsByDate(Array.from(byDate.values())).rows;
+}
+
+function closeAutoPlanConflictModal(decision = "cancel") {
+  if (autoPlanConflictModalOverlay) closeModalOverlay(autoPlanConflictModalOverlay);
+  const resolve = autoPlanConflictResolve;
+  autoPlanConflictResolve = null;
+  if (typeof resolve === "function") resolve(decision);
+}
+
+function openAutoPlanConflictModal(conflictDates) {
+  if (!autoPlanConflictModalOverlay) return Promise.resolve("overwrite");
+  if (autoPlanConflictDatesList) {
+    const maxToShow = 7;
+    const shown = conflictDates.slice(0, maxToShow);
+    const more = Math.max(0, conflictDates.length - shown.length);
+    const items = shown.map((d) => `<li>${escapeHtml(formatDateRuMonthWords(d))}</li>`);
+    if (more > 0) items.push(`<li>... и еще ${more}</li>`);
+    autoPlanConflictDatesList.innerHTML = items.join("");
+  }
+  openModalOverlay(autoPlanConflictModalOverlay);
+  return new Promise((resolve) => {
+    autoPlanConflictResolve = resolve;
+  });
+}
+
 /**
  * Собирает и проверяет входные данные автоплана. Без побочных эффектов.
  * @returns {{ ok: true, ctx: object } | { ok: false, message: string }}
@@ -4511,7 +4375,46 @@ function generateAutoPlanBuyRows() {
   return { ok: true, rows: generatedRows };
 }
 
-function onAutoPlanSaveToStrategy() {
+function getAutoPlanMissingRequirements() {
+  const missing = [];
+  if (!normalizeYMD(autoPlanStartInput?.value || "") || !normalizeYMD(autoPlanEndInput?.value || "")) {
+    missing.push("укажите даты начала и окончания");
+  }
+  if (!getSelectedAutoPlanBondKeys().length) missing.push("выберите хотя бы одну облигацию");
+  if (!getSelectedAutoPlanDayNums().length) missing.push("выберите хотя бы один день пополнения");
+  const topup = parseNumber(autoPlanTopupAmountInput?.value ?? "");
+  if (!Number.isFinite(topup) || topup <= 0) missing.push("укажите положительную сумму пополнения");
+  const strategyId = String(autoPlanStrategySelect?.value || "").trim();
+  if (!strategyId) missing.push("выберите стратегию");
+  const collected = collectAutoPlanGenerationContext();
+  if (!collected.ok && !missing.length) missing.push(collected.message.toLowerCase());
+  return missing;
+}
+
+function isAutoPlanReadyToGenerate() {
+  return getAutoPlanMissingRequirements().length === 0;
+}
+
+function syncAutoPlanGenerateButtonState() {
+  if (!autoPlanGenerateBtn) return;
+  const ready = isAutoPlanReadyToGenerate();
+  const missing = ready ? [] : getAutoPlanMissingRequirements();
+  const hint = ready ? "" : missing.join("\n");
+  autoPlanGenerateBtn.disabled = false;
+  autoPlanGenerateBtn.classList.toggle("is-disabled", !ready);
+  autoPlanGenerateBtn.setAttribute("aria-disabled", ready ? "false" : "true");
+  autoPlanGenerateBtn.title = "";
+  autoPlanGenerateBtn.dataset.disabledHint = hint;
+  if (autoPlanModalFooter) autoPlanModalFooter.title = "";
+  if (ready) hideAutoPlanGenerateTooltip();
+}
+
+async function onAutoPlanSaveToStrategy() {
+  const missing = getAutoPlanMissingRequirements();
+  if (missing.length) {
+    window.alert(`Чтобы сгенерировать план, выполните:\n- ${missing.join("\n- ")}`);
+    return;
+  }
   const strategyId = String(autoPlanStrategySelect?.value || "").trim();
   if (!strategyId) {
     window.alert("Выберите стратегию для сохранения результата.");
@@ -4526,7 +4429,14 @@ function onAutoPlanSaveToStrategy() {
 
   saveCurrentBuysToActiveStrategy();
   const existing = (buyRowsByStrategyId.get(strategyId) || []).filter(isBuyRowComplete);
-  const merged = mergeBuyRowsByDateForAutoPlan(existing, gen.rows);
+  const conflictDates = getAutoPlanConflictDates(existing, gen.rows);
+  let conflictMode = "overwrite";
+  if (conflictDates.length) {
+    const decision = await openAutoPlanConflictModal(conflictDates);
+    if (decision === "cancel") return;
+    conflictMode = decision === "overwrite" ? "overwrite" : "keep";
+  }
+  const merged = mergeBuyRowsByDateForAutoPlanWithStrategy(existing, gen.rows, conflictMode);
 
   buyRowsByStrategyId.set(strategyId, merged);
   activeBuyStrategyId = strategyId;
@@ -4541,6 +4451,8 @@ function onAutoPlanSaveToStrategy() {
   syncStaticTableEmptyStates();
   persistBuyStrategiesState();
   renderAll();
+  closeAutoPlanModal();
+  syncAutoPlanGenerateButtonState();
 }
 
 function initAutoPlanWidgetUi() {
@@ -4552,13 +4464,29 @@ function initAutoPlanWidgetUi() {
         const on = btn.classList.toggle("planScheduleDayChip--selected");
         btn.setAttribute("aria-pressed", on ? "true" : "false");
         invalidateBuyPlanLedgerCache();
+        syncAutoPlanGenerateButtonState();
       });
     });
   }
 
-  if (autoPlanSaveStrategyBtn && autoPlanSaveStrategyBtn.dataset.autoPlanBound !== "1") {
-    autoPlanSaveStrategyBtn.dataset.autoPlanBound = "1";
-    autoPlanSaveStrategyBtn.addEventListener("click", onAutoPlanSaveToStrategy);
+  if (autoPlanGenerateBtn && autoPlanGenerateBtn.dataset.autoPlanBound !== "1") {
+    autoPlanGenerateBtn.dataset.autoPlanBound = "1";
+    autoPlanGenerateBtn.addEventListener("click", onAutoPlanSaveToStrategy);
+    autoPlanGenerateBtn.addEventListener("mousemove", (e) => {
+      if (autoPlanGenerateBtn.getAttribute("aria-disabled") !== "true") {
+        hideAutoPlanGenerateTooltip();
+        return;
+      }
+      const hint = String(autoPlanGenerateBtn.dataset.disabledHint || "").trim();
+      if (!hint) {
+        hideAutoPlanGenerateTooltip();
+        return;
+      }
+      showAutoPlanGenerateTooltip(hint, e.clientX, e.clientY);
+    });
+    autoPlanGenerateBtn.addEventListener("mouseleave", () => {
+      hideAutoPlanGenerateTooltip();
+    });
   }
   if (autoPlanPriceDriftPctInput && autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound !== "1") {
     autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound = "1";
@@ -4568,6 +4496,8 @@ function initAutoPlanWidgetUi() {
     };
     autoPlanPriceDriftPctInput.addEventListener("input", persistDrift);
     autoPlanPriceDriftPctInput.addEventListener("change", persistDrift);
+    autoPlanPriceDriftPctInput.addEventListener("input", syncAutoPlanGenerateButtonState);
+    autoPlanPriceDriftPctInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
 
   const autoPlanInv = () => invalidateBuyPlanLedgerCache();
@@ -4575,28 +4505,37 @@ function initAutoPlanWidgetUi() {
     autoPlanStartInput.dataset.autoPlanLedgerInv = "1";
     autoPlanStartInput.addEventListener("input", autoPlanInv);
     autoPlanStartInput.addEventListener("change", autoPlanInv);
+    autoPlanStartInput.addEventListener("input", syncAutoPlanGenerateButtonState);
+    autoPlanStartInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
   if (autoPlanEndInput && autoPlanEndInput.dataset.autoPlanLedgerInv !== "1") {
     autoPlanEndInput.dataset.autoPlanLedgerInv = "1";
     autoPlanEndInput.addEventListener("input", autoPlanInv);
     autoPlanEndInput.addEventListener("change", autoPlanInv);
+    autoPlanEndInput.addEventListener("input", syncAutoPlanGenerateButtonState);
+    autoPlanEndInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
   if (autoPlanTopupAmountInput && autoPlanTopupAmountInput.dataset.autoPlanLedgerInv !== "1") {
     autoPlanTopupAmountInput.dataset.autoPlanLedgerInv = "1";
     autoPlanTopupAmountInput.addEventListener("input", autoPlanInv);
     autoPlanTopupAmountInput.addEventListener("change", autoPlanInv);
+    autoPlanTopupAmountInput.addEventListener("input", syncAutoPlanGenerateButtonState);
+    autoPlanTopupAmountInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
   if (autoPlanReinvestCheckbox && autoPlanReinvestCheckbox.dataset.autoPlanLedgerInv !== "1") {
     autoPlanReinvestCheckbox.dataset.autoPlanLedgerInv = "1";
     autoPlanReinvestCheckbox.addEventListener("change", autoPlanInv);
+    autoPlanReinvestCheckbox.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
   if (autoPlanDiversifyCheckbox && autoPlanDiversifyCheckbox.dataset.autoPlanLedgerInv !== "1") {
     autoPlanDiversifyCheckbox.dataset.autoPlanLedgerInv = "1";
     autoPlanDiversifyCheckbox.addEventListener("change", autoPlanInv);
+    autoPlanDiversifyCheckbox.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
   if (autoPlanStrategySelect && autoPlanStrategySelect.dataset.autoPlanLedgerInv !== "1") {
     autoPlanStrategySelect.dataset.autoPlanLedgerInv = "1";
     autoPlanStrategySelect.addEventListener("change", autoPlanInv);
+    autoPlanStrategySelect.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
 
   const planScaffold = document.getElementById("planning-scaffold-body");
@@ -4604,9 +4543,13 @@ function initAutoPlanWidgetUi() {
     planScaffold.dataset.autoPlanBondsLedgerInv = "1";
     planScaffold.addEventListener("change", (e) => {
       const t = e.target;
-      if (t instanceof HTMLInputElement && t.matches('input[type="checkbox"][data-bond]')) invalidateBuyPlanLedgerCache();
+      if (t instanceof HTMLInputElement && t.matches('input[type="checkbox"][data-bond]')) {
+        invalidateBuyPlanLedgerCache();
+        syncAutoPlanGenerateButtonState();
+      }
     });
   }
+  syncAutoPlanGenerateButtonState();
 }
 
 function loadAll() {
@@ -4673,7 +4616,6 @@ function loadAll() {
     if (portfolioMonthlyTopupEndDateInput) {
       portfolioMonthlyTopupEndDateInput.value = normalizeYMD(portfolioMonthlyTopupEndDateRaw || "") || "";
     }
-    loadCalculatorStates();
     try {
       const driftRaw = localStorage.getItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
       if (autoPlanPriceDriftPctInput && driftRaw !== null && driftRaw !== undefined) {
@@ -4696,7 +4638,6 @@ function loadAll() {
     if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
     setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, "0");
-    loadCalculatorStates();
     if (autoPlanPriceDriftPctInput) autoPlanPriceDriftPctInput.value = "";
   }
   syncStaticTableEmptyStates();
@@ -4864,23 +4805,6 @@ function copyBuyRow(tr) {
 
 }
 
-if (yieldTbody) {
-  yieldTbody.addEventListener("click", (e) => {
-    const btn = e.target.closest('[data-action="remove"]');
-    if (btn) {
-      const tr = btn.closest("tr");
-      if (tr) tr.remove();
-      saveYieldCalcState();
-      renderYieldCalculator();
-      return;
-    }
-    const tr = e.target.closest("tr");
-    if (!tr || tr.parentElement !== yieldTbody) return;
-    if (tr.hasAttribute("data-empty-state")) return;
-    openYieldModalForEdit(tr);
-  });
-}
-
 addBondBtn.addEventListener("click", () => {
   openBondModalNew();
 });
@@ -4947,12 +4871,6 @@ if (addPortfolioHoldingBtn && portfolioHoldingsTbody) {
     scheduleSave();
   });
 }
-if (addYieldRowBtn) {
-  addYieldRowBtn.addEventListener("click", () => {
-    openYieldModal();
-  });
-}
-
 document.querySelectorAll("th[data-sort-table][data-sort-field]").forEach((th) => {
   th.addEventListener("click", () => {
     const tableName = th.getAttribute("data-sort-table") || "";
@@ -4998,7 +4916,6 @@ resetAllBtn.addEventListener("click", () => {
   localStorage.removeItem(ACTIVE_BUY_STRATEGY_KEY);
   localStorage.removeItem(HOLDINGS_KEY);
   localStorage.removeItem(TAX_RATE_KEY);
-  localStorage.removeItem(ACTIVE_TAB_KEY);
   localStorage.removeItem(CHART_YEAR_KEY);
   localStorage.removeItem(SUMMARY_PIE_YEAR_KEY);
   localStorage.removeItem(PORTFOLIO_CHART_YEAR_KEY);
@@ -5007,10 +4924,10 @@ resetAllBtn.addEventListener("click", () => {
   localStorage.removeItem(PORTFOLIO_START_VALUE_KEY);
   localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
   localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
-  localStorage.removeItem(ACCRUED_CALC_KEY);
-  localStorage.removeItem(YIELD_CALC_KEY);
   localStorage.removeItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
   localStorage.removeItem(STRATEGY_CENTER_VIEW_KEY);
+  localStorage.removeItem(STRATEGY_LEFT_SIDEBAR_WIDTH_KEY);
+  localStorage.removeItem(STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY);
   localStorage.removeItem(COUPON_DISPLAY_MODE_KEY);
   localStorage.removeItem(TRADE_COMMISSION_PCT_KEY);
   if (taxRateInput) taxRateInput.value = "13";
@@ -5020,12 +4937,6 @@ resetAllBtn.addEventListener("click", () => {
   if (autoPlanPriceDriftPctInput) autoPlanPriceDriftPctInput.value = "";
   loadAll();
 });
-
-if (taxRateInput) {
-  taxRateInput.addEventListener("input", () => {
-    persistAndRender();
-  });
-}
 
 function initStrategySidebarParams() {
   const host = document.querySelector(".strategyTabShell__paramsPane");
@@ -5120,24 +5031,6 @@ if (portfolioMonthlyTopupEndDateInput) {
 bindPortfolioMoneyInput(portfolioStartValueInput, PORTFOLIO_START_VALUE_KEY);
 bindPortfolioMoneyInput(portfolioMonthlyTopupInput, PORTFOLIO_MONTHLY_TOPUP_KEY);
 
-[
-  accruedNominalInput,
-  accruedCouponRateInput,
-  accruedLastCouponDateInput,
-  accruedNextCouponDateInput,
-  accruedSettlementDateInput,
-].forEach((input) => {
-  if (!input) return;
-  input.addEventListener("input", () => {
-    saveAccruedCalcState();
-    renderAccruedIncomeCalculator();
-  });
-  input.addEventListener("change", () => {
-    saveAccruedCalcState();
-    renderAccruedIncomeCalculator();
-  });
-});
-
 function closeSummaryInfoPopovers(exceptBtn = null) {
   document.querySelectorAll(".summaryInfoPopover").forEach((el) => el.remove());
   document.querySelectorAll(".summaryInfoBtn[aria-expanded='true']").forEach((btn) => {
@@ -5202,11 +5095,13 @@ document.addEventListener("click", (e) => {
   btn.setAttribute("aria-expanded", "true");
 });
 
-setActiveTab("strategy");
+applyStrategyCenterViewFromStorage();
 
 initThemeUi();
+window.addEventListener("resize", syncAppShellHeaderOffset);
 bindChartTooltips();
 updateSortableHeaders();
+initStrategyShellResize();
 loadAll();
 initAutoPlanWidgetUi();
 initStrategyTabPanel();
@@ -5805,79 +5700,6 @@ if (strategyActionsDeleteBtn) {
   });
 }
 
-/** @type {HTMLTableRowElement | null} */
-let yieldModalEditingTr = null;
-
-function setYieldModalOpen(open) {
-  if (!yieldModalOverlay) return;
-  if (open) openModalOverlay(yieldModalOverlay);
-  else closeModalOverlay(yieldModalOverlay);
-}
-
-function fillYieldModalForm(row = {}) {
-  if (yieldModalBondNameInput) yieldModalBondNameInput.value = String(row.bondName || "").trim();
-  if (yieldModalPurchaseDateInput) yieldModalPurchaseDateInput.value = normalizeYMD(row.purchaseDate || "") || "";
-  if (yieldModalMaturityDateInput) yieldModalMaturityDateInput.value = normalizeYMD(row.maturityDate || "") || "";
-  setInputNumericValue(yieldModalPaymentsPerYearInput, row.paymentsPerYear, "4");
-  setInputNumericValue(yieldModalPaidCouponsCountInput, row.paidCouponsCount, "0");
-  setInputNumericValue(yieldModalNominalInput, row.nominal, "1000");
-  setInputNumericValue(yieldModalPurchasePriceInput, row.purchasePrice, "950");
-  const cppResolved = resolveYieldCouponPerPaymentRub(row);
-  setInputNumericValue(
-    yieldModalCouponPerPaymentInput,
-    Number.isFinite(cppResolved) ? cppResolved : parseNumber(row.couponPerPayment),
-    "30"
-  );
-  setInputNumericValue(yieldModalAccruedIncomeInput, row.accruedIncome, "0");
-  setInputNumericValue(yieldModalRedemptionPriceInput, row.redemptionPrice, "1000");
-}
-
-function getYieldModalRowData() {
-  return {
-    bondName: String(yieldModalBondNameInput?.value || "").trim(),
-    purchaseDate: normalizeYMD(yieldModalPurchaseDateInput?.value || "") || "",
-    maturityDate: normalizeYMD(yieldModalMaturityDateInput?.value || "") || "",
-    paymentsPerYear: String(Math.max(1, Math.round(parseNumber(yieldModalPaymentsPerYearInput?.value || "") || 0))),
-    paidCouponsCount: String(Math.max(0, Math.round(parseNumber(yieldModalPaidCouponsCountInput?.value || "") || 0))),
-    nominal: String(parseNumber(yieldModalNominalInput?.value || "") || 0),
-    purchasePrice: String(parseNumber(yieldModalPurchasePriceInput?.value || "") || 0),
-    couponPerPayment: String(parseNumber(yieldModalCouponPerPaymentInput?.value || "") || 0),
-    accruedIncome: String(parseNumber(yieldModalAccruedIncomeInput?.value || "") || 0),
-    redemptionPrice: String(parseNumber(yieldModalRedemptionPriceInput?.value || "") || 0),
-  };
-}
-
-function openYieldModal() {
-  yieldModalEditingTr = null;
-  if (yieldModalTitle) yieldModalTitle.textContent = YIELD_MODAL_TITLE_NEW;
-  fillYieldModalForm(getDefaultYieldCalcRow());
-  const today = getTodayYMD();
-  if (yieldModalPurchaseDateInput) yieldModalPurchaseDateInput.value = today;
-  if (yieldModalMaturityDateInput) {
-    yieldModalMaturityDateInput.value = addDaysToYmd(today, 365) || "";
-  }
-  setYieldModalOpen(true);
-}
-
-function openYieldModalForEdit(tr) {
-  if (!tr || tr.closest("tbody") !== yieldTbody) return;
-  yieldModalEditingTr = tr;
-  if (yieldModalTitle) yieldModalTitle.textContent = YIELD_MODAL_TITLE_EDIT;
-  const row = {};
-  tr.querySelectorAll("input[data-field]").forEach((el) => {
-    const key = el.getAttribute("data-field");
-    if (key) row[key] = el.value;
-  });
-  fillYieldModalForm(row);
-  setYieldModalOpen(true);
-}
-
-function closeYieldModal() {
-  yieldModalEditingTr = null;
-  if (yieldModalTitle) yieldModalTitle.textContent = YIELD_MODAL_TITLE_NEW;
-  setYieldModalOpen(false);
-}
-
 let buyModalItems = [];
 /** @type {HTMLTableRowElement | null} */
 let buyModalEditingTr = null;
@@ -5969,6 +5791,7 @@ function refreshAutoPlanBondPicker() {
     autoPlanBondPickerSig = "";
     el.innerHTML =
       '<span class="autoPlanBonds__empty">Добавьте облигации в таблицу выше — они появятся в этом списке.</span>';
+    syncAutoPlanGenerateButtonState();
     return;
   }
 
@@ -5981,6 +5804,7 @@ function refreshAutoPlanBondPicker() {
     })
     .join("");
   autoPlanBondPickerSig = sig;
+  syncAutoPlanGenerateButtonState();
 }
 
 /** Плановая цена из карточки облигации (для автоподстановки в покупках). */
@@ -6006,6 +5830,7 @@ function openAutoPlanModal() {
   }
   openModalOverlay(autoPlanModalOverlay);
   refreshAutoPlanBondPicker();
+  syncAutoPlanGenerateButtonState();
 }
 
 function closeAutoPlanModal() {
@@ -6019,6 +5844,7 @@ function closeAutoPlanModal() {
     }
   }
   autoPlanScaffoldRestore = null;
+  hideAutoPlanGenerateTooltip();
   if (autoPlanModalOverlay) closeModalOverlay(autoPlanModalOverlay);
 }
 
@@ -6507,80 +6333,25 @@ if (autoPlanModalOverlay) {
   });
 }
 
-if (yieldSaveBtn) {
-  yieldSaveBtn.addEventListener("click", () => {
-    const row = getYieldModalRowData();
-    const purchaseYmd = normalizeYMD(row.purchaseDate) || String(row.purchaseDate || "").trim();
-    const maturityYmd = normalizeYMD(row.maturityDate) || String(row.maturityDate || "").trim();
-    const purchaseTs = ymdToUTCms(purchaseYmd);
-    const maturityTs = ymdToUTCms(maturityYmd);
-
-    if (!String(row.bondName || "").trim()) {
-      window.alert("Укажите название или тикер облигации.");
-      return;
-    }
-    if (purchaseTs == null || !Number.isFinite(purchaseTs)) {
-      window.alert("Укажите корректную дату покупки.");
-      return;
-    }
-    if (maturityTs == null || !Number.isFinite(maturityTs)) {
-      window.alert("Укажите корректную дату погашения.");
-      return;
-    }
-    if (maturityTs <= purchaseTs) {
-      window.alert("Дата погашения должна быть позже даты покупки.");
-      return;
-    }
-
-    const rowToSave = {
-      ...row,
-      purchaseDate: purchaseYmd,
-      maturityDate: maturityYmd,
-    };
-
-    if (yieldModalEditingTr) {
-      const tr = yieldModalEditingTr;
-      yieldModalEditingTr = null;
-      tr.querySelectorAll("input[data-field]").forEach((el) => {
-        const key = el.getAttribute("data-field");
-        if (key && rowToSave[key] !== undefined) el.value = rowToSave[key];
-      });
-      saveYieldCalcState();
-      renderYieldCalculator();
-      closeYieldModal();
-      return;
-    }
-
-    if (!yieldTpl || !yieldTbody) return;
-    const node = yieldTpl.content.cloneNode(true);
-    const tr = node.querySelector("tr");
-    if (!tr) return;
-    tr.querySelectorAll("input[data-field]").forEach((el) => {
-      const key = el.getAttribute("data-field");
-      if (key && rowToSave[key] !== undefined) el.value = rowToSave[key];
-    });
-    clearTableEmptyState(yieldTbody);
-    yieldTbody.appendChild(node);
-    saveYieldCalcState();
-    renderYieldCalculator();
-    closeYieldModal();
-  });
+if (autoPlanConflictModalClose) {
+  autoPlanConflictModalClose.addEventListener("click", () => closeAutoPlanConflictModal("cancel"));
 }
-
-if (yieldModalClose) {
-  yieldModalClose.addEventListener("click", () => closeYieldModal());
+if (autoPlanConflictKeepBtn) {
+  autoPlanConflictKeepBtn.addEventListener("click", () => closeAutoPlanConflictModal("keep"));
 }
-
-if (yieldModalOverlay) {
-  yieldModalOverlay.addEventListener("click", (e) => {
-    if (e.target === yieldModalOverlay) closeYieldModal();
+if (autoPlanConflictOverwriteBtn) {
+  autoPlanConflictOverwriteBtn.addEventListener("click", () => closeAutoPlanConflictModal("overwrite"));
+}
+if (autoPlanConflictModalOverlay) {
+  autoPlanConflictModalOverlay.addEventListener("click", (e) => {
+    if (e.target === autoPlanConflictModalOverlay) closeAutoPlanConflictModal("cancel");
   });
 }
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (yieldModalOverlay && !yieldModalOverlay.hidden) {
-    closeYieldModal();
+  if (autoPlanConflictModalOverlay && !autoPlanConflictModalOverlay.hidden) {
+    closeAutoPlanConflictModal("cancel");
     e.preventDefault();
     return;
   }
