@@ -681,10 +681,19 @@ html[data-theme="dark"] .strategyTabShell__resizer::after{
 .strategyTabShell__bondsHead{
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   padding: 10px var(--strategy-shell-pad) 0;
   flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+.strategyTabShell__bondsHead > .widget__title{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.strategyTabShell__bondsHead > .strategyTabShell__addBtn{
+  margin-left: auto;
 }
 .strategyTabShell__title--bonds{
   font-size: 1.02rem;
@@ -1330,10 +1339,24 @@ html[data-theme="dark"] .strategyTabShell__settingsReset:hover{
 .strategyTabShell__head{
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   padding: 14px var(--strategy-shell-pad) 8px;
   flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+.strategyTabShell__head > .widget__title{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.strategyTabShell__head > .strategyTabShell__addBtn{
+  margin-left: auto;
+}
+/* Тот же горизонтальный ритм, что у подписей полей под заголовком */
+.strategyTabShell__aside .strategyTabShell__head > .widget__title,
+.strategyTabShell__aside .strategyTabShell__bondsHead > .widget__title{
+  letter-spacing: -0.01em;
 }
 .strategyTabShell__title{
   margin: 0;
@@ -1377,6 +1400,12 @@ html[data-theme="dark"] .strategyTabShell__settingsReset:hover{
   list-style: none;
   margin: 0;
   padding: 4px 0 6px;
+}
+.strategyTabShell__aside .strategyTabShell__list,
+.strategyTabShell__aside .strategyTabShell__bondsList{
+  margin-inline: 0;
+  padding-inline-start: 0;
+  padding-inline-end: 0;
 }
 .strategyTabShell__aside--right .strategyTabShell__list{
   width: 100%;
