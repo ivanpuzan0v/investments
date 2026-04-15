@@ -1770,6 +1770,9 @@ function buildBuyPlanBudgetTooltipMeta(entry, options = {}) {
     } else {
       lines.push("Купоны за предыдущий месяц в эту дату: не начислялись");
     }
+    if (entry.redemptionsSincePrevPurchaseRub > 0) {
+      lines.push(`Возврат номинала к дате покупки: ${escapeHtml(formatMoney(entry.redemptionsSincePrevPurchaseRub))}`);
+    }
   } else {
     lines.push("Реинвестирование выключено — купоны в бюджет не добавлялись.");
   }
@@ -3995,6 +3998,27 @@ function grossCouponsForCalendarMonth(monthKey, bondConfigs, buyEvents) {
 }
 
 /**
+ * Возврат номинала (модельно = cleanPrice из таблицы) по погашенным облигациям в интервале (fromTs, toTs], в руб.
+ * Возвраты считаются один раз в момент endDate облигации и могут быть направлены в бюджет реинвеста.
+ */
+function grossPrincipalRedemptionsForPeriod(fromTsExclusive, toTsInclusive, bondConfigs, buyEvents) {
+  if (!Number.isFinite(toTsInclusive)) return 0;
+  const fromTs = Number.isFinite(fromTsExclusive) ? fromTsExclusive : -Infinity;
+  let sum = 0;
+  for (const br of bondConfigs) {
+    const endTs = ymdToUTCms(br.endDate);
+    if (!Number.isFinite(endTs)) continue;
+    if (!(endTs > fromTs && endTs <= toTsInclusive)) continue;
+    const nominal = Number(br.cleanPrice) || 0;
+    if (!(nominal > 0)) continue;
+    const q = quantityHeldAtPaymentTs(br.matchBond, endTs, buyEvents);
+    if (!(q > 0)) continue;
+    sum += q * nominal;
+  }
+  return sum;
+}
+
+/**
  * Распределение бюджета по чистой цене из таблицы (НКД не оценивается).
  * На дату покупки жадно выбираются наиболее выгодные бумаги; не требуется покупать каждую отмеченную.
  * В режиме diversification=true используется убывающий скор по уже набранному количеству,
@@ -4331,10 +4355,13 @@ function simulateAutoPlanBuys(ctx) {
   const ledgerByDate = new Map();
   const generatedRows = [];
   const comm = Number.isFinite(commissionFraction) && commissionFraction >= 0 ? commissionFraction : 0;
+  let lastPurchaseTs = Number.NEGATIVE_INFINITY;
 
   for (const dateYmd of scheduleAsc) {
     const mk = toMonthKeyFromYMD(dateYmd);
+    const dateTs = ymdToUTCms(dateYmd) || 0;
     let couponsAdded = 0;
+    let redemptionsAdded = 0;
     let couponSourceMonthKey = "";
     if (reinvest) {
       if (lastMk === null) {
@@ -4346,6 +4373,13 @@ function simulateAutoPlanBuys(ctx) {
         couponsAdded = grossCouponsForCalendarMonth(lastMk, bondConfigsForCoupons, simulatedEvents);
         cash = roundRub2(cash + couponsAdded);
       }
+      redemptionsAdded = grossPrincipalRedemptionsForPeriod(
+        lastPurchaseTs,
+        dateTs,
+        bondConfigsForCoupons,
+        simulatedEvents
+      );
+      cash = roundRub2(cash + redemptionsAdded);
     }
 
     cash = roundRub2(cash + topup);
@@ -4365,6 +4399,7 @@ function simulateAutoPlanBuys(ctx) {
       dateYmd,
       reinvest,
       couponsFromPrevMonthRub: roundRub2(couponsAdded),
+      redemptionsSincePrevPurchaseRub: roundRub2(redemptionsAdded),
       couponSourceMonthKey,
       userTopupRub: topup,
       cashBeforePurchaseRub: roundRub2(cashBeforePurchase),
@@ -4374,17 +4409,17 @@ function simulateAutoPlanBuys(ctx) {
 
     if (items.length) {
       generatedRows.push({ date: dateYmd, items: JSON.stringify(items) });
-      const ts = ymdToUTCms(dateYmd) || 0;
       for (const it of items) {
         simulatedEvents.push({
           dateYMD: dateYmd,
-          dateUTCms: ts,
+          dateUTCms: dateTs,
           bond: it.bond,
           quantity: it.quantity,
         });
       }
     }
 
+    lastPurchaseTs = dateTs;
     lastMk = mk;
   }
 

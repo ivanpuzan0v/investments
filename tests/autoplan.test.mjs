@@ -376,3 +376,38 @@ test("diversification spreads budget across selected bonds", async () => {
     dom.window.close();
   }
 });
+
+test("reinvest budget includes principal returned on maturity", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        { bond: "MAT", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2026-05-05" },
+        { bond: "LONG", coupon: "15", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
+      ],
+      holdings: [{ bond: "MAT", quantity: "1" }],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["LONG"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2026-05-01";
+    document.getElementById("auto-plan-end").value = "2026-05-31";
+    document.getElementById("auto-plan-topup-amount").value = "100";
+    document.getElementById("auto-plan-reinvest").checked = true;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    const result = window.generateAutoPlanBuyRows();
+    assert.equal(result.ok, true, result.message || "expected successful generation");
+
+    const rows = parseRowItems(result.rows);
+    assert.equal(rows.length, 1, "expected one generated date");
+    const byBond = qtyByBond(rows[0].items);
+    assert.equal(byBond.get("LONG"), 2, "100 topup + 10 coupon + 100 principal return => 2 lots at 100");
+  } finally {
+    dom.window.close();
+  }
+});
