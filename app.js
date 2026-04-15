@@ -3047,15 +3047,11 @@ function renderPortfolioChart(chartData) {
     ? lastCouponMonthKey
     : defaultEndMonthKey;
 
-  const bondRowsForValue = readRows(bondsTbody);
-  const holdingRowsForValue = sanitizeHoldingRows(readRows(holdingsTbody));
-  const holdingsMarketValue = computeCurrentHoldingsMarketValue(bondRowsForValue, holdingRowsForValue);
-
-  portfolioStartTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
+  portfolioStartTotalEl.textContent = formatMoney(startValue);
 
   const monthRange = buildMonthRange(startMonthKey, lastMonthKey);
 
-  let cumulative = startValue + holdingsMarketValue;
+  let cumulative = startValue;
   const allPoints = monthRange.map((monthKey) => {
     const topupForMonth = !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? monthlyTopup : 0;
     const couponForMonth = getGrossCouponTotalForMonth(seriesByBond, monthKey);
@@ -3067,10 +3063,10 @@ function renderPortfolioChart(chartData) {
   const points = isAllTime ? allPoints : allPoints.filter((p) => getYearFromMonthKey(p.monthKey) === selectedYear);
 
   if (!points.length) {
-    portfolioStartTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
+    portfolioStartTotalEl.textContent = formatMoney(startValue);
     portfolioCouponTotalEl.textContent = formatMoney(0);
     portfolioTopupTotalEl.textContent = formatMoney(0);
-    portfolioEndTotalEl.textContent = formatMoney(startValue + holdingsMarketValue);
+    portfolioEndTotalEl.textContent = formatMoney(startValue);
     portfolioChartContent.innerHTML = buildSvgEmptyState(
       isAllTime ? "Нет данных для графика" : "За выбранный год нет движений",
       isAllTime
