@@ -153,6 +153,16 @@ html[data-theme="dark"] body{
   box-shadow: none;
   overflow: hidden;
 }
+@media (max-width: 1440px){
+  .planningEditor{
+    grid-template-columns: minmax(240px, 28vw) minmax(0, 1fr) minmax(200px, 24vw);
+  }
+}
+@media (max-width: 1280px){
+  .planningEditor{
+    grid-template-columns: minmax(220px, 25vw) minmax(0, 1fr) minmax(184px, 22vw);
+  }
+}
 .planningEditor__rail{
   display: flex;
   flex-direction: column;
@@ -608,6 +618,24 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   box-shadow: none;
   overflow: hidden;
 }
+@media (max-width: 1440px){
+  .strategyTabShell{
+    --strategy-left-width: min(320px, 30vw);
+    --strategy-right-width: min(17rem, 25vw);
+  }
+}
+@media (max-width: 1280px){
+  .strategyTabShell{
+    --strategy-left-width: min(280px, 27vw);
+    --strategy-right-width: min(15rem, 22vw);
+  }
+}
+@media (max-width: 1160px){
+  .strategyTabShell{
+    --strategy-left-width: min(250px, 24vw);
+    --strategy-right-width: min(13.5rem, 20vw);
+  }
+}
 .strategyTabShell__aside{
   display: flex;
   flex-direction: column;
@@ -859,17 +887,17 @@ html[data-theme="dark"] .strategyPlansPane{
 }
 .strategyPlansPane__head{
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
   padding: 20px var(--strategy-shell-pad) 18px;
   flex-shrink: 0;
   border-bottom: 0.5px solid var(--plansHeadSep);
 }
 .strategyPlansPane__intro{
   min-width: 0;
-  flex: 1 1 200px;
+  flex: 0 0 auto;
   text-align: left;
 }
 .strategyPlansPane__title{
@@ -889,18 +917,26 @@ html[data-theme="dark"] .strategyPlansPane{
 }
 .strategyPlansPane__toolbar{
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   flex-shrink: 0;
-  min-width: min(100%, 220px);
+  min-width: 0;
+  width: auto;
   align-self: flex-start;
-  margin-top: 2px;
+  margin-top: 0;
+}
+.strategyPlansPane__toolbar .btnAiGradientWrap,
+.strategyPlansPane__toolbar .btn{
+  flex: 0 0 auto;
+  width: auto;
 }
 .strategyPlansPane__addBuy{
   flex-shrink: 0;
-  align-self: stretch;
+  align-self: auto;
   margin-top: 0;
+  padding-inline: 16px;
   border-radius: 12px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -1022,6 +1058,30 @@ html[data-theme="dark"] .strategyPlansPane__empty.featureEmptyState{
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: visible;
+  /* Палитра облигаций в «Статистике» (см. getSeriesPalette в app.js). Светлые оттенки усилены для контраста на белом фоне. */
+  --sky-blue-light: #52a8cfff;
+  --blue-green: #1a8babff;
+  --cerulean: #0d5670ff;
+  --deep-space-blue: #022a42ff;
+  --amber-flame: #e8a200ff;
+  --amber-glow: #e89200ff;
+  --princeton-orange: #e67d00ff;
+  --rusty-spice: #bb3e03ff;
+  --oxidized-iron: #ae2012ff;
+  --brown-red: #9b2226ff;
+}
+html[data-theme="dark"] .strategyDynamics{
+  /* Тёмная тема: светлее на тёмном фоне колонки. */
+  --sky-blue-light: #b9e6fcff;
+  --blue-green: #7cdcf4ff;
+  --cerulean: #68c4e8ff;
+  --deep-space-blue: #9ae0ffff;
+  --amber-flame: #ffd163ff;
+  --amber-glow: #ffc44dff;
+  --princeton-orange: #ffb23dff;
+  --rusty-spice: #ff8f62ff;
+  --oxidized-iron: #ff8a84ff;
+  --brown-red: #ff9090ff;
 }
 .strategyDynamics__titleRow{
   flex-shrink: 0;
@@ -1676,9 +1736,10 @@ html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active:hover{
   }
 }
 .btn.btn--autoPlanAi{
-  display: block;
-  width: 100%;
+  display: inline-flex;
+  width: auto;
   margin: 0;
+  padding-inline: 16px;
   border-radius: 999px;
   border: none;
   background: #ffffff;
@@ -2626,6 +2687,64 @@ html[data-theme="dark"] .chartWrap{
     fill 0.16s ease,
     opacity 0.16s ease;
 }
+/* Подписи сумм на графике выплат: крупнее; размер задаётся здесь, а не inline в SVG. */
+.widget[data-widget="returns"] .chart--returns .chartValueLabel{
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.widget[data-widget="returns"] .chart--returns .chartValueLabel:not(.chartBondMonthHint){
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.widget[data-widget="returns"] .chart--returns .chartBondMonthHint{
+  font-size: 11px;
+  font-weight: 600;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="mid"] .chartValueLabel:not(.chartBondMonthHint){
+  font-size: 11.5px;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="mid"] .chartBondMonthHint{
+  font-size: 10.25px;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartValueLabel:not(.chartBondMonthHint){
+  font-size: 10.75px;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartBondMonthHint{
+  font-size: 10px;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartValueLabel:not(.chartBondMonthHint){
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 3px;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartBondMonthHint{
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 2.5px;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartBondMonthHint.chartValueLabel--active{
+  stroke: none;
+  paint-order: normal;
+}
+.widget[data-widget="returns"] .chart--returns .chartValueConnector{
+  fill: none;
+  stroke: rgba(60, 60, 67, 0.32);
+  stroke-width: 0.85;
+  stroke-linecap: round;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.16s ease;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartValueConnector{
+  stroke: rgba(255, 255, 255, 0.26);
+}
+/* Выше специфичность, чем у .widget … .chartValueConnector { opacity: 1 }, иначе линии не скрываются при dimOthers. */
+.widget[data-widget="returns"] .chart--returns g#chart-content.chartContent--dimOthers .chartValueConnector{
+  opacity: 0;
+}
+.widget[data-widget="returns"] .chart--returns g#chart-content.chartContent--dimOthers .chartValueConnector.chartValueConnector--focus{
+  opacity: 1;
+}
 .chartAxisLabel--interactive{
   cursor: help;
 }
@@ -2660,6 +2779,23 @@ html[data-theme="dark"] .chartWrap{
 }
 .chartText--active{
   font-weight: 600;
+}
+/* Подписи сумм на графике при выделении с легенды: как у итога месяца; цвет задаётся fill из JS. */
+.widget[data-widget="returns"] .chart--returns .chartValueLabel.chartText--active{
+  font-weight: 600;
+}
+.widget[data-widget="returns"] .chart--returns .chartAxisLabel.chartText--active{
+  font-weight: inherit;
+}
+.widget[data-widget="returns"] .chart--returns .chartBondMonthHint.chartValueLabel--active{
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="mid"] .chartBondMonthHint.chartValueLabel--active{
+  font-size: 11.5px;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartBondMonthHint.chartValueLabel--active{
+  font-size: 10.75px;
 }
 html[data-theme="dark"] .chartContent--dimOthers .chartBar:not(.chartHover--active),
 html[data-theme="dark"] .yearPie--dimOthers .yearPieSlice:not(.chartHover--active){
@@ -2814,6 +2950,10 @@ html[data-theme="dark"] .chartLegend__item--active{
   white-space: nowrap;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
+}
+.chartLegend__item:hover .chartLegend__sum,
+.chartLegend__item--active .chartLegend__sum{
+  color: var(--text);
 }
 
 .taxControl{

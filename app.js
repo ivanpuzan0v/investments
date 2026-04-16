@@ -959,16 +959,46 @@ function formatMonthKeyRuLong(monthKey) {
   return `${ml.month} ${ml.year}`;
 }
 
+const STATISTICS_SERIES_PALETTE_KEYS = [
+  "--sky-blue-light",
+  "--blue-green",
+  "--cerulean",
+  "--deep-space-blue",
+  "--amber-flame",
+  "--amber-glow",
+  "--princeton-orange",
+  "--rusty-spice",
+  "--oxidized-iron",
+  "--brown-red",
+];
+
+const STATISTICS_SERIES_PALETTE_FALLBACK = [
+  "#52a8cfff",
+  "#1a8babff",
+  "#0d5670ff",
+  "#022a42ff",
+  "#e8a200ff",
+  "#e89200ff",
+  "#e67d00ff",
+  "#bb3e03ff",
+  "#ae2012ff",
+  "#9b2226ff",
+];
+
+/** Палитра облигаций в разделе «Статистика» (круговая диаграмма и график выплат). Берётся из CSS `.strategyDynamics`, иначе запасной список (тесты без стилей). */
 function getSeriesPalette() {
-  return [
-    "#007AFF",
-    "#34C759",
-    "#FF9500",
-    "#AF52DE",
-    "#FF2D55",
-    "#30B0C7",
-    "#8E8E93",
-  ];
+  const el = document.querySelector(".strategyDynamics");
+  if (el && typeof getComputedStyle === "function") {
+    const cs = getComputedStyle(el);
+    const fromCss = STATISTICS_SERIES_PALETTE_KEYS.map((k) => {
+      const raw = cs.getPropertyValue(k).trim();
+      if (!raw) return "";
+      const first = raw.split(/\s+/)[0];
+      return first || "";
+    });
+    if (fromCss.every((v) => v.length > 0)) return fromCss;
+  }
+  return [...STATISTICS_SERIES_PALETTE_FALLBACK];
 }
 
 function getYearFromMonthKey(monthKey) {
@@ -1439,6 +1469,29 @@ function clearLegendHover() {
   }
 }
 
+/** При dimOthers оставляет линию сумма↔столбец только для выделенного месяца / сегмента. */
+function syncChartConnectorFocus() {
+  if (!chartContent) return;
+  const lines = chartContent.querySelectorAll(".chartValueConnector");
+  lines.forEach((el) => el.classList.remove("chartValueConnector--focus"));
+  if (!chartContent.classList.contains("chartContent--dimOthers")) return;
+  const activeMonths = new Set();
+  chartContent.querySelectorAll(".chartBar.chartHover--active").forEach((el) => {
+    const mk = el.getAttribute("data-bar-month");
+    if (mk) activeMonths.add(mk);
+  });
+  if (activeMonths.size === 0) {
+    chartContent.querySelectorAll(".chartBondMonthHint.chartValueLabel--active").forEach((el) => {
+      const mk = el.getAttribute("data-label-month");
+      if (mk) activeMonths.add(mk);
+    });
+  }
+  lines.forEach((el) => {
+    const mk = el.getAttribute("data-connector-month");
+    if (mk && activeMonths.has(mk)) el.classList.add("chartValueConnector--focus");
+  });
+}
+
 function hidePortfolioHoverDot() {
   if (!portfolioChartContent) return;
   const dot = portfolioChartContent.querySelector(".portfolioHoverDot");
@@ -1460,6 +1513,8 @@ function clearChartTextHighlight() {
     el.classList.remove("chartValueLabel--active");
     el.setAttribute("fill", el.getAttribute("data-default-fill") || "currentColor");
     el.setAttribute("opacity", el.getAttribute("data-default-opacity") || "1");
+    const y0 = el.getAttribute("data-label-y-default");
+    if (y0 != null && String(y0).trim() !== "") el.setAttribute("y", y0);
   });
 }
 
@@ -1483,6 +1538,15 @@ function applyChartTextHighlight(matchBond, color, monthKey = "", valueMode = "s
     el.classList.add("chartValueLabel--active");
     el.setAttribute("fill", activeColor);
     el.setAttribute("opacity", "0.98");
+    if (el.classList.contains("chartBondMonthHint") && chartContent) {
+      const tot = chartContent.querySelector(
+        `.chartValueLabel[data-label-month="${labelMonth}"]:not(.chartBondMonthHint)`
+      );
+      if (tot instanceof SVGTextElement) {
+        const ty = tot.getAttribute("y");
+        if (ty != null && String(ty).trim() !== "") el.setAttribute("y", ty);
+      }
+    }
   });
 
   document.querySelectorAll(".chartAxisLabel").forEach((el) => {
@@ -1503,6 +1567,7 @@ function setLegendFilterBond(matchBond, color = "", legendItem = null) {
   clearChartTextHighlight();
   if (!chartContent || !bond) {
     if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+    syncChartConnectorFocus();
     return;
   }
   chartContent.classList.add("chartContent--dimOthers");
@@ -1516,6 +1581,7 @@ function setLegendFilterBond(matchBond, color = "", legendItem = null) {
     legendItem.classList.add("chartLegend__item--active");
     lastHoveredLegendItem = legendItem;
   }
+  syncChartConnectorFocus();
 }
 
 function clearAllChartHover() {
@@ -1525,6 +1591,7 @@ function clearAllChartHover() {
   clearPortfolioHover();
   clearChartTextHighlight();
   if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+  syncChartConnectorFocus();
   document.querySelectorAll(".yearPie.yearPie--dimOthers").forEach((svg) => svg.classList.remove("yearPie--dimOthers"));
 }
 
@@ -1932,6 +1999,7 @@ function onBarChartPointerMove(e) {
       }, 0);
 
       if (chartContent && monthKey) applyMonthAxisHoverHighlight(monthKey);
+      syncChartConnectorFocus();
 
       const period = monthLabelFromKey(monthKey);
 
@@ -1957,6 +2025,7 @@ function onBarChartPointerMove(e) {
     clearBarHover();
     clearChartTextHighlight();
     if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+    syncChartConnectorFocus();
     return;
   }
   if (chartContent) chartContent.classList.add("chartContent--dimOthers");
@@ -1972,6 +2041,7 @@ function onBarChartPointerMove(e) {
   const color = bar.getAttribute("fill") || "";
   const period = monthLabelFromKey(monthKey);
   applyChartTextHighlight(matchBond, color, monthKey, "single");
+  syncChartConnectorFocus();
   showChartTooltip(
     escapeHtml(bond),
     `Выплата за ${escapeHtml(period)}<br/>${escapeHtml(formatMoney(amount))}`,
@@ -2027,6 +2097,7 @@ function onBarChartPointerLeave() {
   }
   clearChartTextHighlight();
   if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+  syncChartConnectorFocus();
 }
 
 function onPieChartPointerLeave() {
@@ -2113,6 +2184,7 @@ function bindChartTooltips() {
         clearBarHover();
         clearChartTextHighlight();
         if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+        syncChartConnectorFocus();
         return;
       }
       const bond = item.getAttribute("data-legend-bond") || "";
@@ -2124,6 +2196,7 @@ function bindChartTooltips() {
       clearBarHover();
       clearChartTextHighlight();
       if (chartContent) chartContent.classList.remove("chartContent--dimOthers");
+      syncChartConnectorFocus();
     });
   }
   if (yearPiesEl && !yearPiesEl.dataset.tooltipBound) {
@@ -2749,9 +2822,17 @@ function renderChart(chartData) {
   const { w: W, h: H } = measureReturnsChartViewport();
   const left = 40;
   const right = 12;
-  const top = 18;
-  const bottom = 56;
+  const nCols = visibleDates.length;
+  /** Нижний отступ: больше столбцов — больше места под подписи сумм (многоуровневый сдвиг по высоте). */
+  const bottom = Math.min(92, 56 + Math.min(36, Math.max(0, nCols - 4) * 2));
   const innerW = W - left - right;
+  const groupWidthForLabels = nCols > 0 ? innerW / nCols : innerW;
+  /** Уже колонка → больше вертикальных «рядов» подписей (одинаковый шаг по Y). */
+  const yLanePitch = 13;
+  const yLaneCount =
+    groupWidthForLabels < 28 ? 5 : groupWidthForLabels < 34 ? 4 : groupWidthForLabels < 42 ? 3 : groupWidthForLabels < 52 ? 2 : 1;
+  const labelTopReserve = yLaneCount > 1 ? (yLaneCount - 1) * yLanePitch + 8 : 0;
+  const top = 18 + labelTopReserve;
   const innerH = H - top - bottom;
 
   const lines = [];
@@ -2767,7 +2848,11 @@ function renderChart(chartData) {
       buildSvgEmptyState(emptyTitle, "Добавьте облигации и даты купонов, чтобы построить график выплат.", W, emptyH)
     );
     chartContent.innerHTML = lines.join("");
-    if (returnsChartSvg) returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${emptyH}`);
+    syncChartConnectorFocus();
+    if (returnsChartSvg) {
+      returnsChartSvg.removeAttribute("data-chart-density");
+      returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${emptyH}`);
+    }
     ensureReturnsChartResizeObserver();
     return;
   }
@@ -2781,8 +2866,10 @@ function renderChart(chartData) {
   const maxY = Math.max(...monthTotals, 0);
   const safeMaxY = maxY <= 0 ? 1 : maxY * 1.15;
 
-  const groupWidth = innerW / visibleDates.length;
+  const groupWidth = groupWidthForLabels;
   const barWidth = Math.max(12, Math.min(48, groupWidth * 0.54));
+  /** Оценка ширины строки суммы (px) для решения о сдвиге влево. */
+  const chartMoneyCharPx = nCols > 14 ? 5.5 : nCols > 10 ? 5.85 : 6.35;
 
   for (let i = 0; i <= 4; i += 1) {
     const y = top + (innerH / 4) * i;
@@ -2835,6 +2922,29 @@ function renderChart(chartData) {
     });
 
     const stackTopY = yStackBottom;
+    const yLane = yLaneCount > 1 ? dateIdx % yLaneCount : 0;
+    const yTierOffset = yLane * yLanePitch;
+    const bondHintY = stackTopY - 36 - yTierOffset;
+    const monthTotalY = stackTopY - 15 - yTierOffset;
+    const moneyLabel = formatMoney(monthTotal);
+    const maxMoneyChars = Math.max(
+      moneyLabel.length,
+      ...activeBars.map(({ amount }) => formatMoney(amount).length)
+    );
+    const estLabelW = maxMoneyChars * chartMoneyCharPx;
+    /** Сдвиг только влево и только если подпись шире доступной полосы колонки (риск наезда на соседа справа). */
+    const overlapRisk = estLabelW > groupWidth * 0.74;
+    const labelDx = overlapRisk ? -Math.min(20, Math.max(3, (estLabelW - groupWidth * 0.58) / 2)) : 0;
+    let sumLabelX = groupCenterX + labelDx;
+    const labelClampPad = 12;
+    const minLabelX = left + labelClampPad;
+    const maxLabelX = W - right - labelClampPad;
+    if (sumLabelX < minLabelX) sumLabelX = minLabelX;
+    if (sumLabelX > maxLabelX) sumLabelX = maxLabelX;
+    const connectorY1 = monthTotalY + 7;
+    lines.push(
+      `<line class="chartValueConnector" data-connector-month="${escapeHtml(bucketKey)}" vector-effect="non-scaling-stroke" x1="${sumLabelX}" y1="${connectorY1}" x2="${groupCenterX}" y2="${stackTopY}" />`
+    );
     seriesByBond.forEach((series, sIdx) => {
       const amt = amountByBondAndDate[sIdx].get(bucketKey) || 0;
       if (!(amt > 0)) return;
@@ -2842,11 +2952,11 @@ function renderChart(chartData) {
       const safeColor = escapeHtml(color);
       const safeMatch = escapeHtml(String(series.matchBond || ""));
       lines.push(
-        `<text class="chartValueLabel chartBondMonthHint" data-label-match="${safeMatch}" data-label-month="${bucketKey}" data-default-fill="${safeColor}" data-default-opacity="0" pointer-events="none" x="${groupCenterX}" y="${stackTopY - 13}" text-anchor="middle" fill="${safeColor}" opacity="0" font-size="9.5">${formatMoney(amt)}</text>`
+        `<text class="chartValueLabel chartBondMonthHint" data-label-match="${safeMatch}" data-label-month="${bucketKey}" data-label-y-default="${bondHintY}" data-default-fill="${safeColor}" data-default-opacity="0" pointer-events="none" x="${sumLabelX}" y="${bondHintY}" text-anchor="middle" fill="${safeColor}" opacity="0">${formatMoney(amt)}</text>`
       );
     });
     lines.push(
-      `<text class="chartValueLabel" data-label-month="${bucketKey}" data-label-match="" data-default-fill="currentColor" data-default-opacity="0.72" pointer-events="none" x="${groupCenterX}" y="${stackTopY - 6}" text-anchor="middle" fill="currentColor" opacity="0.72" font-size="10">${formatMoney(monthTotal)}</text>`
+      `<text class="chartValueLabel" data-label-month="${bucketKey}" data-label-match="" data-default-fill="currentColor" data-default-opacity="0.72" pointer-events="none" x="${sumLabelX}" y="${monthTotalY}" text-anchor="middle" fill="currentColor" opacity="0.72">${formatMoney(monthTotal)}</text>`
     );
 
     const labelX = groupCenterX;
@@ -2879,7 +2989,12 @@ function renderChart(chartData) {
   });
 
   chartContent.innerHTML = lines.join("");
-  if (returnsChartSvg) returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  syncChartConnectorFocus();
+  if (returnsChartSvg) {
+    const density = nCols > 14 ? "high" : nCols > 10 ? "mid" : "low";
+    returnsChartSvg.setAttribute("data-chart-density", density);
+    returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  }
   ensureReturnsChartResizeObserver();
 }
 
