@@ -427,6 +427,36 @@ html[data-theme="dark"] .planScheduleDayChip--selected:hover{
 .autoPlanWidget__strategyInput{
   min-width: 180px;
 }
+.autoPlanWidget__error{
+  margin-top: 8px;
+  font-size: var(--fs-small);
+  line-height: 1.35;
+  color: #d70015;
+}
+.autoPlanWidget__error--section{
+  width: 100%;
+  margin-top: 10px;
+}
+html[data-theme="dark"] .autoPlanWidget__error{
+  color: #ff6961;
+}
+.autoPlanWidget__field.autoPlanWidget__field--invalid .floatingField__input,
+.autoPlanWidget__strategySelect.autoPlanWidget__strategySelect--invalid .taxControl__input,
+.autoPlanBonds.autoPlanBonds--invalid,
+.planScheduleDays.planScheduleDays--invalid{
+  box-shadow: 0 0 0 1px rgba(215, 0, 21, 0.5);
+}
+html[data-theme="dark"] .autoPlanWidget__field.autoPlanWidget__field--invalid .floatingField__input,
+html[data-theme="dark"] .autoPlanWidget__strategySelect.autoPlanWidget__strategySelect--invalid .taxControl__input,
+html[data-theme="dark"] .autoPlanBonds.autoPlanBonds--invalid,
+html[data-theme="dark"] .planScheduleDays.planScheduleDays--invalid{
+  box-shadow: 0 0 0 1px rgba(255, 105, 97, 0.65);
+}
+.autoPlanBonds.autoPlanBonds--invalid,
+.planScheduleDays.planScheduleDays--invalid{
+  border-radius: 12px;
+  padding: 8px;
+}
 .autoPlanWidget__saveBtn{
   flex: 0 0 auto;
   align-self: flex-end;
@@ -631,12 +661,12 @@ html[data-theme="dark"] .strategyTabShell__resizer{
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 5px;
-  height: 42px;
+  width: 3px;
+  height: 24px;
   border-radius: 999px;
   transform: translate(-50%, -50%);
-  background: #d9d9de;
-  opacity: 1;
+  background: #d1d1d6;
+  opacity: 0.9;
   z-index: 2;
 }
 .strategyTabShell__resizer:hover::after,
@@ -673,10 +703,10 @@ html[data-theme="dark"] .strategyTabShell__resizer::after{
 .strategyTabShell__bondsPane::before{
   content: "";
   display: block;
-  height: 20px;
+  height: 10px;
   background: #f2f2f7;
-  margin-top: 14px;
-  margin-bottom: 16px;
+  margin-top: 8px;
+  margin-bottom: 10px;
 }
 .strategyTabShell__bondsHead{
   display: flex;
@@ -1265,10 +1295,10 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .card.widget[data-wid
 .strategyTabShell__paramsPane::before{
   content: "";
   display: block;
-  height: 20px;
+  height: 10px;
   background: #f2f2f7;
-  margin-top: 14px;
-  margin-bottom: 16px;
+  margin-top: 8px;
+  margin-bottom: 10px;
 }
 html[data-theme="dark"] .strategyTabShell__bondsPane::before,
 html[data-theme="dark"] .strategyTabShell__paramsPane::before{
@@ -1283,10 +1313,10 @@ html[data-theme="dark"] .strategyTabShell__paramsPane::before{
 .strategyTabShell__settingsPane::before{
   content: "";
   display: block;
-  height: 20px;
+  height: 10px;
   background: #f2f2f7;
-  margin-top: 14px;
-  margin-bottom: 16px;
+  margin-top: 8px;
+  margin-bottom: 10px;
 }
 html[data-theme="dark"] .strategyTabShell__settingsPane::before{
   background: rgba(255, 255, 255, 0.08);

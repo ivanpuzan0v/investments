@@ -103,6 +103,7 @@ const bondModalTitle = document.getElementById("bond-modal-title");
 const bondModalNameInput = document.getElementById("bond-modal-name");
 const bondModalCouponInput = document.getElementById("bond-modal-coupon");
 const bondModalBondPriceInput = document.getElementById("bond-modal-bond-price");
+const bondModalNominalInput = document.getElementById("bond-modal-nominal");
 const bondModalOpenMonthPickerBtn = document.getElementById("bond-modal-open-month-picker");
 const bondModalPayoutMonthsInput = document.getElementById("bond-modal-payoutMonths");
 const bondModalPayoutMonthsSelect = document.getElementById("bond-modal-payoutMonths-select");
@@ -520,6 +521,7 @@ function getSortValue(row, field) {
       return String(row.bond || "").trim().toUpperCase();
     case "coupon":
     case "bondPrice":
+    case "nominal":
     case "quantity": {
       const n = parseNumber(row[field]);
       return Number.isFinite(n) ? n : NaN;
@@ -585,10 +587,11 @@ function sanitizeBondRows(rows) {
   return rows.filter((row) => {
     const bond = String(row.bond || "").trim();
     const coupon = String(row.coupon || "").trim();
+    const nominal = String(row.nominal || "").trim();
     const payoutMonths = String(row.payoutMonths || "").trim();
     const startDate = String(row.startDate || "").trim();
     const endDate = String(row.endDate || "").trim();
-    return Boolean(bond || coupon || payoutMonths || startDate || endDate);
+    return Boolean(bond || coupon || nominal || payoutMonths || startDate || endDate);
   });
 }
 
@@ -3820,6 +3823,7 @@ function readBondConfigsForAutoPlanFromTable(options) {
     const payoutMonths = Array.from(new Set(parseMonthList(row.payoutMonths))).sort((a, b) => a - b);
     const coupon = parseNumber(row.coupon);
     const cleanPrice = parseNumber(row.bondPrice);
+    const nominalRaw = parseNumber(row.nominal);
 
     if (!startDate || !endDate || compareYmd(startDate, endDate) > 0) continue;
     if (!payoutMonths.length) continue;
@@ -3833,6 +3837,7 @@ function readBondConfigsForAutoPlanFromTable(options) {
       startDate,
       endDate,
       cleanPrice,
+      nominal: Number.isFinite(nominalRaw) && nominalRaw > 0 ? nominalRaw : cleanPrice,
     });
   }
   return out;
@@ -4009,7 +4014,7 @@ function grossPrincipalRedemptionsForPeriod(fromTsExclusive, toTsInclusive, bond
     const endTs = ymdToUTCms(br.endDate);
     if (!Number.isFinite(endTs)) continue;
     if (!(endTs > fromTs && endTs <= toTsInclusive)) continue;
-    const nominal = Number(br.cleanPrice) || 0;
+    const nominal = Number(br.nominal) || 0;
     if (!(nominal > 0)) continue;
     const q = quantityHeldAtPaymentTs(br.matchBond, endTs, buyEvents);
     if (!(q > 0)) continue;
@@ -4455,6 +4460,62 @@ function getAutoPlanMissingRequirements() {
   return missing;
 }
 
+function clearAutoPlanValidationErrors() {
+  document.querySelectorAll("[data-autoplan-error-for]").forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    el.textContent = "";
+    el.hidden = true;
+  });
+  autoPlanStartInput?.closest(".autoPlanWidget__field")?.classList.remove("autoPlanWidget__field--invalid");
+  autoPlanEndInput?.closest(".autoPlanWidget__field")?.classList.remove("autoPlanWidget__field--invalid");
+  autoPlanTopupAmountInput?.closest(".autoPlanWidget__field")?.classList.remove("autoPlanWidget__field--invalid");
+  autoPlanStrategySelect?.closest(".autoPlanWidget__strategySelect")?.classList.remove("autoPlanWidget__strategySelect--invalid");
+  document.getElementById("auto-plan-bonds")?.classList.remove("autoPlanBonds--invalid");
+  document.getElementById("auto-plan-topup-days")?.classList.remove("planScheduleDays--invalid");
+}
+
+function setAutoPlanValidationError(key, text) {
+  const el = document.querySelector(`[data-autoplan-error-for="${key}"]`);
+  if (!(el instanceof HTMLElement) || !text) return;
+  el.textContent = text;
+  el.hidden = false;
+}
+
+function showAutoPlanValidationErrors() {
+  clearAutoPlanValidationErrors();
+  const startVal = autoPlanStartInput?.value || "";
+  const endVal = autoPlanEndInput?.value || "";
+  const startOk = Boolean(normalizeYMD(startVal));
+  const endOk = Boolean(normalizeYMD(endVal));
+  if (!startOk || !endOk) {
+    autoPlanStartInput?.closest(".autoPlanWidget__field")?.classList.add("autoPlanWidget__field--invalid");
+    autoPlanEndInput?.closest(".autoPlanWidget__field")?.classList.add("autoPlanWidget__field--invalid");
+    setAutoPlanValidationError("period", "Укажите даты начала и окончания инвестиций.");
+  } else if (compareYmd(startVal, endVal) > 0) {
+    autoPlanStartInput?.closest(".autoPlanWidget__field")?.classList.add("autoPlanWidget__field--invalid");
+    autoPlanEndInput?.closest(".autoPlanWidget__field")?.classList.add("autoPlanWidget__field--invalid");
+    setAutoPlanValidationError("period", "Дата начала не может быть позже даты окончания.");
+  }
+  if (!getSelectedAutoPlanBondKeys().length) {
+    document.getElementById("auto-plan-bonds")?.classList.add("autoPlanBonds--invalid");
+    setAutoPlanValidationError("bonds", "Выберите хотя бы одну облигацию.");
+  }
+  if (!getSelectedAutoPlanDayNums().length) {
+    document.getElementById("auto-plan-topup-days")?.classList.add("planScheduleDays--invalid");
+    setAutoPlanValidationError("days", "Выберите хотя бы один день пополнения.");
+  }
+  const topup = parseNumber(autoPlanTopupAmountInput?.value ?? "");
+  if (!Number.isFinite(topup) || topup <= 0) {
+    autoPlanTopupAmountInput?.closest(".autoPlanWidget__field")?.classList.add("autoPlanWidget__field--invalid");
+    setAutoPlanValidationError("topup", "Укажите положительную сумму пополнения.");
+  }
+  const strategyId = String(autoPlanStrategySelect?.value || "").trim();
+  if (!strategyId) {
+    autoPlanStrategySelect?.closest(".autoPlanWidget__strategySelect")?.classList.add("autoPlanWidget__strategySelect--invalid");
+    setAutoPlanValidationError("strategy", "Выберите стратегию для сохранения результата.");
+  }
+}
+
 function isAutoPlanReadyToGenerate() {
   return getAutoPlanMissingRequirements().length === 0;
 }
@@ -4476,12 +4537,13 @@ function syncAutoPlanGenerateButtonState() {
 async function onAutoPlanSaveToStrategy() {
   const missing = getAutoPlanMissingRequirements();
   if (missing.length) {
-    window.alert(`Чтобы сгенерировать план, выполните:\n- ${missing.join("\n- ")}`);
+    showAutoPlanValidationErrors();
     return;
   }
+  clearAutoPlanValidationErrors();
   const strategyId = String(autoPlanStrategySelect?.value || "").trim();
   if (!strategyId) {
-    window.alert("Выберите стратегию для сохранения результата.");
+    showAutoPlanValidationErrors();
     return;
   }
 
@@ -4528,6 +4590,7 @@ function initAutoPlanWidgetUi() {
         const on = btn.classList.toggle("planScheduleDayChip--selected");
         btn.setAttribute("aria-pressed", on ? "true" : "false");
         invalidateBuyPlanLedgerCache();
+        clearAutoPlanValidationErrors();
         syncAutoPlanGenerateButtonState();
       });
     });
@@ -4536,21 +4599,6 @@ function initAutoPlanWidgetUi() {
   if (autoPlanGenerateBtn && autoPlanGenerateBtn.dataset.autoPlanBound !== "1") {
     autoPlanGenerateBtn.dataset.autoPlanBound = "1";
     autoPlanGenerateBtn.addEventListener("click", onAutoPlanSaveToStrategy);
-    autoPlanGenerateBtn.addEventListener("mousemove", (e) => {
-      if (autoPlanGenerateBtn.getAttribute("aria-disabled") !== "true") {
-        hideAutoPlanGenerateTooltip();
-        return;
-      }
-      const hint = String(autoPlanGenerateBtn.dataset.disabledHint || "").trim();
-      if (!hint) {
-        hideAutoPlanGenerateTooltip();
-        return;
-      }
-      showAutoPlanGenerateTooltip(hint, e.clientX, e.clientY);
-    });
-    autoPlanGenerateBtn.addEventListener("mouseleave", () => {
-      hideAutoPlanGenerateTooltip();
-    });
   }
   if (autoPlanPriceDriftPctInput && autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound !== "1") {
     autoPlanPriceDriftPctInput.dataset.autoPlanPersistBound = "1";
@@ -4569,6 +4617,8 @@ function initAutoPlanWidgetUi() {
     autoPlanStartInput.dataset.autoPlanLedgerInv = "1";
     autoPlanStartInput.addEventListener("input", autoPlanInv);
     autoPlanStartInput.addEventListener("change", autoPlanInv);
+    autoPlanStartInput.addEventListener("input", clearAutoPlanValidationErrors);
+    autoPlanStartInput.addEventListener("change", clearAutoPlanValidationErrors);
     autoPlanStartInput.addEventListener("input", syncAutoPlanGenerateButtonState);
     autoPlanStartInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
@@ -4576,6 +4626,8 @@ function initAutoPlanWidgetUi() {
     autoPlanEndInput.dataset.autoPlanLedgerInv = "1";
     autoPlanEndInput.addEventListener("input", autoPlanInv);
     autoPlanEndInput.addEventListener("change", autoPlanInv);
+    autoPlanEndInput.addEventListener("input", clearAutoPlanValidationErrors);
+    autoPlanEndInput.addEventListener("change", clearAutoPlanValidationErrors);
     autoPlanEndInput.addEventListener("input", syncAutoPlanGenerateButtonState);
     autoPlanEndInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
@@ -4583,6 +4635,8 @@ function initAutoPlanWidgetUi() {
     autoPlanTopupAmountInput.dataset.autoPlanLedgerInv = "1";
     autoPlanTopupAmountInput.addEventListener("input", autoPlanInv);
     autoPlanTopupAmountInput.addEventListener("change", autoPlanInv);
+    autoPlanTopupAmountInput.addEventListener("input", clearAutoPlanValidationErrors);
+    autoPlanTopupAmountInput.addEventListener("change", clearAutoPlanValidationErrors);
     autoPlanTopupAmountInput.addEventListener("input", syncAutoPlanGenerateButtonState);
     autoPlanTopupAmountInput.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
@@ -4599,6 +4653,7 @@ function initAutoPlanWidgetUi() {
   if (autoPlanStrategySelect && autoPlanStrategySelect.dataset.autoPlanLedgerInv !== "1") {
     autoPlanStrategySelect.dataset.autoPlanLedgerInv = "1";
     autoPlanStrategySelect.addEventListener("change", autoPlanInv);
+    autoPlanStrategySelect.addEventListener("change", clearAutoPlanValidationErrors);
     autoPlanStrategySelect.addEventListener("change", syncAutoPlanGenerateButtonState);
   }
 
@@ -4609,6 +4664,7 @@ function initAutoPlanWidgetUi() {
       const t = e.target;
       if (t instanceof HTMLInputElement && t.matches('input[type="checkbox"][data-bond]')) {
         invalidateBuyPlanLedgerCache();
+        clearAutoPlanValidationErrors();
         syncAutoPlanGenerateButtonState();
       }
     });
@@ -5184,6 +5240,8 @@ function syncDateSummaries() {
     const payoutRangeDisplay = tr.querySelector('[data-display-for="payoutRange"]');
     const bondPriceHidden = tr.querySelector('[data-field="bondPrice"]');
     const bondPriceDisplay = tr.querySelector('[data-display-for="bondPrice"]');
+    const nominalHidden = tr.querySelector('[data-field="nominal"]');
+    const nominalDisplay = tr.querySelector('[data-display-for="nominal"]');
     if (!monthsHidden || !startHidden || !endHidden) return;
 
     const selected = parseMonthList(monthsHidden.value);
@@ -5205,6 +5263,10 @@ function syncDateSummaries() {
     if (bondPriceDisplay && bondPriceHidden) {
       const bp = parseNumber(bondPriceHidden.value);
       bondPriceDisplay.textContent = Number.isFinite(bp) && bp > 0 ? formatMoney(bp) : "—";
+    }
+    if (nominalDisplay && nominalHidden) {
+      const n = parseNumber(nominalHidden.value);
+      nominalDisplay.textContent = Number.isFinite(n) && n > 0 ? formatMoney(n) : "—";
     }
 
     if (payoutCountDisplay) {
@@ -5565,7 +5627,11 @@ function fillBondModalFormFromRow(tr) {
   // Нормализуем купон на случай значений вида "36,5" из старых сохранений.
   setInputNumericValue(bondModalCouponInput, parseNumber(couponInput.value), "");
   const priceHidden = tr.querySelector('input[data-field="bondPrice"]');
+  const nominalHidden = tr.querySelector('input[data-field="nominal"]');
   if (bondModalBondPriceInput) setInputNumericValue(bondModalBondPriceInput, parseNumber(priceHidden?.value || ""), "");
+  if (bondModalNominalInput) {
+    setInputNumericValue(bondModalNominalInput, parseNumber(nominalHidden?.value || ""), "");
+  }
   bondModalPayoutMonthsInput.value = String(payoutMonthsInput.value || "").trim();
   if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = String(startHidden.value || "").trim();
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = String(endHidden.value || "").trim();
@@ -5583,8 +5649,10 @@ function getBondModalRowData() {
   const endDate = normalizeYMD(bondModalEndDateVisibleInput?.value || "") || "";
   const bondPriceRaw = parseNumber(bondModalBondPriceInput?.value || "");
   const bondPrice = Number.isFinite(bondPriceRaw) && bondPriceRaw > 0 ? String(bondPriceRaw) : "";
+  const nominalRaw = parseNumber(bondModalNominalInput?.value || "");
+  const nominal = Number.isFinite(nominalRaw) && nominalRaw > 0 ? String(nominalRaw) : "";
 
-  return { bond, coupon, payoutMonths, startDate, endDate, bondPrice };
+  return { bond, coupon, payoutMonths, startDate, endDate, bondPrice, nominal };
 }
 
 function openBondModalNew() {
@@ -5595,6 +5663,7 @@ function openBondModalNew() {
   if (bondModalNameInput) bondModalNameInput.value = "";
   if (bondModalCouponInput) bondModalCouponInput.value = "";
   if (bondModalBondPriceInput) bondModalBondPriceInput.value = "";
+  if (bondModalNominalInput) bondModalNominalInput.value = "";
   if (bondModalPayoutMonthsInput) bondModalPayoutMonthsInput.value = "";
   if (bondModalStartDateVisibleInput) bondModalStartDateVisibleInput.value = "";
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = "";
@@ -5671,7 +5740,8 @@ if (bondModalSaveBtn) {
       const startHidden = tr.querySelector('input[data-field="startDate"]');
       const endHidden = tr.querySelector('input[data-field="endDate"]');
       const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
-      if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden) return;
+      const nominalHidden = tr.querySelector('input[data-field="nominal"]');
+      if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden || !nominalHidden) return;
 
       const newKey = normalizeBondKey(row.bond);
       const oldKey = bondModalPrevBondKey;
@@ -5682,6 +5752,7 @@ if (bondModalSaveBtn) {
       startHidden.value = row.startDate;
       endHidden.value = row.endDate;
       bondPriceHidden.value = row.bondPrice || "";
+      nominalHidden.value = row.nominal || "";
 
       syncDateSummaries();
 
@@ -5706,7 +5777,8 @@ if (bondModalSaveBtn) {
     const startHidden = tr.querySelector('input[data-field="startDate"]');
     const endHidden = tr.querySelector('input[data-field="endDate"]');
     const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
-    if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden) return;
+    const nominalHidden = tr.querySelector('input[data-field="nominal"]');
+    if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden || !nominalHidden) return;
 
     bondInput.value = row.bond;
     couponInput.value = String(row.coupon);
@@ -5714,6 +5786,7 @@ if (bondModalSaveBtn) {
     startHidden.value = row.startDate;
     endHidden.value = row.endDate;
     bondPriceHidden.value = row.bondPrice || "";
+    nominalHidden.value = row.nominal || "";
 
     bondsTbody.appendChild(node);
     syncDateSummaries();

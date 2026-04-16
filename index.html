@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=66" />
+    <link rel="stylesheet" href="./styles.css?v=68" />
     <script>
       (function () {
         try {
@@ -40,7 +40,8 @@
                 <tr>
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="bond" scope="col">Облигация</th>
                   <th style="width: 160px;" data-sort-table="assets" data-sort-field="coupon" scope="col">Купон за 1 выплату</th>
-                  <th style="width: 130px;" data-sort-table="assets" data-sort-field="bondPrice" scope="col">Цена</th>
+                  <th style="width: 120px;" data-sort-table="assets" data-sort-field="bondPrice" scope="col">Цена</th>
+                  <th style="width: 120px;" data-sort-table="assets" data-sort-field="nominal" scope="col">Номинал</th>
                   <th data-sort-table="assets" data-sort-field="payoutPeriod" scope="col">Периодичность выплат</th>
                   <th style="width: 96px;"></th>
                 </tr>
@@ -127,11 +128,13 @@
                 />
                 <span class="floatingField__label">Окончание инвестиций</span>
               </label>
+              <div class="autoPlanWidget__error autoPlanWidget__error--section" data-autoplan-error-for="period" hidden></div>
             </div>
 
             <div class="autoPlanWidget__section">
               <div class="autoPlanWidget__sectionLabel">Облигации</div>
               <div id="auto-plan-bonds" class="autoPlanBonds" role="group" aria-label="Облигации из таблицы для автопланирования"></div>
+              <div class="autoPlanWidget__error autoPlanWidget__error--section" data-autoplan-error-for="bonds" hidden></div>
             </div>
 
             <div class="autoPlanWidget__section">
@@ -206,6 +209,8 @@
                   Укажите процент чтобы учесть рост чистой цены по месяцам от даты начала до покупки. Пусто или 0 без сдвига.
                 </p>
               </div>
+              <div class="autoPlanWidget__error autoPlanWidget__error--section" data-autoplan-error-for="days" hidden></div>
+              <div class="autoPlanWidget__error autoPlanWidget__error--section" data-autoplan-error-for="topup" hidden></div>
             </div>
 
             <div class="autoPlanWidget__reinvest">
@@ -228,6 +233,7 @@
                   aria-label="Стратегия для сохранения результата автопланирования"
                 ></select>
               </label>
+              <div class="autoPlanWidget__error autoPlanWidget__error--section" data-autoplan-error-for="strategy" hidden></div>
             </div>
           </div>
         </div>
@@ -773,6 +779,10 @@
           <div class="bondTableValue" data-display-for="bondPrice">—</div>
         </td>
         <td>
+          <input type="hidden" data-field="nominal" value="" />
+          <div class="bondTableValue" data-display-for="nominal">—</div>
+        </td>
+        <td>
           <input type="hidden" data-field="payoutMonths" value="" />
           <input type="hidden" data-field="startDate" value="" />
           <input type="hidden" data-field="endDate" value="" />
@@ -868,6 +878,11 @@
                 <label class="floatingField bondModal__field" for="bond-modal-bond-price">
                   <input id="bond-modal-bond-price" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
                   <span class="floatingField__label">Цена за 1 облигацию</span>
+                </label>
+
+                <label class="floatingField bondModal__field" for="bond-modal-nominal">
+                  <input id="bond-modal-nominal" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
+                  <span class="floatingField__label">Номинал 1 облигации</span>
                 </label>
               </div>
             </div>

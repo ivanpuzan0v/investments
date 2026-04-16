@@ -382,7 +382,7 @@ test("reinvest budget includes principal returned on maturity", async () => {
   try {
     setTableRows(window, {
       bonds: [
-        { bond: "MAT", coupon: "10", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2026-05-05" },
+        { bond: "MAT", coupon: "10", bondPrice: "100", nominal: "250", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2026-05-05" },
         { bond: "LONG", coupon: "15", bondPrice: "100", payoutMonths: "1,2,3,4,5,6,7,8,9,10,11,12", startDate: "2025-01-01", endDate: "2030-12-31" },
       ],
       holdings: [{ bond: "MAT", quantity: "1" }],
@@ -406,7 +406,7 @@ test("reinvest budget includes principal returned on maturity", async () => {
     const rows = parseRowItems(result.rows);
     assert.equal(rows.length, 1, "expected one generated date");
     const byBond = qtyByBond(rows[0].items);
-    assert.equal(byBond.get("LONG"), 2, "100 topup + 10 coupon + 100 principal return => 2 lots at 100");
+    assert.equal(byBond.get("LONG"), 3, "100 topup + 10 coupon + 250 nominal return => 3 lots at 100");
   } finally {
     dom.window.close();
   }
