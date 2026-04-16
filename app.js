@@ -224,6 +224,7 @@ function effectiveThemeFromPreference(pref) {
 function applyDocumentTheme(effective) {
   document.documentElement.setAttribute("data-theme", effective);
   document.documentElement.style.colorScheme = effective === "dark" ? "dark" : "light";
+  refreshStatisticsVisualsForTheme();
 }
 
 function syncAppShellHeaderOffset() {
@@ -973,16 +974,16 @@ const STATISTICS_SERIES_PALETTE_KEYS = [
 ];
 
 const STATISTICS_SERIES_PALETTE_FALLBACK = [
-  "#52a8cfff",
-  "#1a8babff",
-  "#0d5670ff",
-  "#022a42ff",
-  "#e8a200ff",
-  "#e89200ff",
-  "#e67d00ff",
-  "#bb3e03ff",
-  "#ae2012ff",
-  "#9b2226ff",
+  "#f02e2eff",
+  "#f06f2eff",
+  "#779820ff",
+  "#177844ff",
+  "#1a5d87ff",
+  "#2f3aa2ff",
+  "#792cafff",
+  "#9f3085ff",
+  "#f02e2eff",
+  "#f06f2eff",
 ];
 
 /** Палитра облигаций в разделе «Статистика» (круговая диаграмма и график выплат). Берётся из CSS `.strategyDynamics`, иначе запасной список (тесты без стилей). */
@@ -1204,6 +1205,14 @@ function renderYearPies(chartData) {
     </div>
     <div class="yearPieYearSeg" role="tablist" aria-label="Год выплат">${segButtons}</div>
   </div>`;
+}
+
+/**
+ * После смены data-theme CSS-переменные палитры меняются; перерисовываем SVG с заливками из getSeriesPalette().
+ */
+function refreshStatisticsVisualsForTheme() {
+  if (lastCouponPayoutChartData) renderChart(lastCouponPayoutChartData);
+  if (lastSummaryPieChartData) renderYearPies(lastSummaryPieChartData);
 }
 
 function onYearPieYearSegmentClick(e) {
@@ -2828,12 +2837,15 @@ function renderChart(chartData) {
   const innerW = W - left - right;
   const groupWidthForLabels = nCols > 0 ? innerW / nCols : innerW;
   /** Уже колонка → больше вертикальных «рядов» подписей (одинаковый шаг по Y). */
-  const yLanePitch = 13;
+  const yLanePitch = 15;
   const yLaneCount =
     groupWidthForLabels < 28 ? 5 : groupWidthForLabels < 34 ? 4 : groupWidthForLabels < 42 ? 3 : groupWidthForLabels < 52 ? 2 : 1;
   const labelTopReserve = yLaneCount > 1 ? (yLaneCount - 1) * yLanePitch + 8 : 0;
-  const top = 18 + labelTopReserve;
+  /** Запас под чередующийся подъём длинных сумм, когда рядов по Y нет (широкие колонки). */
+  const labelLongReserve = yLaneCount === 1 ? 24 : 0;
+  const top = 18 + labelTopReserve + labelLongReserve;
   const innerH = H - top - bottom;
+  const plotBottomY = top + innerH;
 
   const lines = [];
 
@@ -2875,6 +2887,11 @@ function renderChart(chartData) {
     const y = top + (innerH / 4) * i;
     lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
   }
+
+  /** Для решения о сдвиге суммы влево: геометрия предыдущего столбца. */
+  let prevCouponColForLabelDx = /** @type {{ x: number; barWidth: number; stackTopY: number; barTotalH: number; chartBottomY: number } | null} */ (
+    null
+  );
 
   visibleDates.forEach((bucketKey, dateIdx) => {
     const activeBars = seriesByBond
@@ -2922,19 +2939,42 @@ function renderChart(chartData) {
     });
 
     const stackTopY = yStackBottom;
-    const yLane = yLaneCount > 1 ? dateIdx % yLaneCount : 0;
-    const yTierOffset = yLane * yLanePitch;
-    const bondHintY = stackTopY - 36 - yTierOffset;
-    const monthTotalY = stackTopY - 15 - yTierOffset;
+    /** Многоуровневый сдвиг по Y только если столбец достаточно высокий — иначе подпись и так далеко от вершины, смещение лишнее. */
+    const minBarHForYLanes = 26;
+    const yLaneEffective =
+      yLaneCount > 1 && barTotalH >= minBarHForYLanes ? dateIdx % yLaneCount : 0;
+    const yTierOffset = yLaneEffective * yLanePitch;
     const moneyLabel = formatMoney(monthTotal);
     const maxMoneyChars = Math.max(
       moneyLabel.length,
       ...activeBars.map(({ amount }) => formatMoney(amount).length)
     );
     const estLabelW = maxMoneyChars * chartMoneyCharPx;
-    /** Сдвиг только влево и только если подпись шире доступной полосы колонки (риск наезда на соседа справа). */
-    const overlapRisk = estLabelW > groupWidth * 0.74;
-    const labelDx = overlapRisk ? -Math.min(20, Math.max(3, (estLabelW - groupWidth * 0.58) / 2)) : 0;
+    /** Широкие колонки, один «ряд» по Y: длинные суммы чуть выше и поочерёдно — меньше горизонтальных пересечений. */
+    const longLabelBoost =
+      yLaneCount === 1 && estLabelW > groupWidth * 0.58 ? 10 + (dateIdx % 2) * 11 : 0;
+    const bondHintY = stackTopY - 36 - yTierOffset - longLabelBoost;
+    const monthTotalY = stackTopY - 15 - yTierOffset - longLabelBoost;
+    /** Сдвиг влево только при явном риске наезда на соседа; у узкой колонки порог выше — иначе подпись зря уезжает над столбец. */
+    const overlapFrac = groupWidth < 34 ? 0.84 : 0.74;
+    const overlapRisk = estLabelW > groupWidth * overlapFrac;
+    let labelDx = overlapRisk ? -Math.min(20, Math.max(3, (estLabelW - groupWidth * 0.58) / 2)) : 0;
+    if (labelDx < 0 && prevCouponColForLabelDx) {
+      const tallLeftThreshold = Math.max(30, innerH * 0.2);
+      const leftTall = prevCouponColForLabelDx.barTotalH >= tallLeftThreshold;
+      const pad = 3;
+      const lblHalf = estLabelW / 2;
+      const cxAfter = groupCenterX + labelDx;
+      const leftEdge = cxAfter - lblHalf;
+      const leftBarRight = prevCouponColForLabelDx.x + prevCouponColForLabelDx.barWidth;
+      const labelTop = monthTotalY - 12;
+      const labelBot = monthTotalY + 5;
+      const crossesLeftBarVertically =
+        labelBot >= prevCouponColForLabelDx.stackTopY - pad && labelTop <= prevCouponColForLabelDx.chartBottomY + pad;
+      if (leftTall && crossesLeftBarVertically && leftEdge < leftBarRight + pad) {
+        labelDx = 0;
+      }
+    }
     let sumLabelX = groupCenterX + labelDx;
     const labelClampPad = 12;
     const minLabelX = left + labelClampPad;
@@ -2962,30 +3002,36 @@ function renderChart(chartData) {
     const labelX = groupCenterX;
     if (isCouponChartAllTime) {
       const yStr = escapeHtml(bucketKey);
+      const yAxis = plotBottomY + 16;
       lines.push(
-        `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${yStr}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 22}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11.5">${yStr}</text>`
+        `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${yStr}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.9" x="${labelX}" y="${yAxis}" text-anchor="middle" fill="currentColor" opacity="0.9">${yStr}</text>`
       );
     } else {
       const monthLabel = formatMonthKey(bucketKey);
       if (typeof monthLabel === "string") {
+        const yAxis = plotBottomY + 16;
         lines.push(
-          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 20}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11">${escapeHtml(
+          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.9" x="${labelX}" y="${yAxis}" text-anchor="middle" fill="currentColor" opacity="0.9">${escapeHtml(
             monthLabel
           )}</text>`
         );
       } else {
+        const yMonth = plotBottomY + 14;
+        const yYear = plotBottomY + 28;
         lines.push(
-          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.68" x="${labelX}" y="${H - 28}" text-anchor="middle" fill="currentColor" opacity="0.68" font-size="11">${escapeHtml(
+          `<text class="chartAxisLabel chartAxisLabel--interactive" data-axis-month="${bucketKey}" data-axis-total="${monthTotal}" data-default-fill="currentColor" data-default-opacity="0.9" x="${labelX}" y="${yMonth}" text-anchor="middle" fill="currentColor" opacity="0.9">${escapeHtml(
             monthLabel.month
           )}</text>`
         );
         lines.push(
-          `<text class="chartAxisLabel" data-axis-month="${bucketKey}" data-default-fill="currentColor" data-default-opacity="0.62" x="${labelX}" y="${H - 12}" text-anchor="middle" fill="currentColor" opacity="0.62" font-size="10">${escapeHtml(
+          `<text class="chartAxisLabel chartAxisLabel--year" data-axis-month="${bucketKey}" data-default-fill="currentColor" data-default-opacity="0.78" x="${labelX}" y="${yYear}" text-anchor="middle" fill="currentColor" opacity="0.78">${escapeHtml(
             monthLabel.year
           )}</text>`
         );
       }
     }
+
+    prevCouponColForLabelDx = { x, barWidth, stackTopY, barTotalH, chartBottomY: plotBottomY };
   });
 
   chartContent.innerHTML = lines.join("");

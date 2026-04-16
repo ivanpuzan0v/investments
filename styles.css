@@ -47,13 +47,15 @@
 }
 
 html[data-theme="dark"]{
-    --bg0: #000000;
-    --bg1: #1c1c1e;
-    --bg2: #000000;
+    --bg0: #1f1f21;
+    --bg1: #1f1f21;
+    --bg2: #1f1f21;
 
-    --card: #1c1c1e;
+    --card: #1f1f21;
     --cardBorder: rgba(255, 255, 255, 0.12);
     --hairline: rgba(255, 255, 255, 0.08);
+    /** Разделители в боковых колонках стратегии (горизонтальные полосы и линия ресайзера). */
+    --strategy-sidebar-sep: #37373b;
 
     --text: #f5f5f7;
     --muted: #a1a1a6;
@@ -87,7 +89,8 @@ body{
 }
 
 html[data-theme="dark"] body{
-  background-image: linear-gradient(180deg, #1c1c1e 0%, var(--bg0) 38%, var(--bg0) 100%);
+  background-color: #1f1f21;
+  background-image: none;
 }
 
 .themePicker{
@@ -205,10 +208,10 @@ html[data-theme="dark"] body{
   overscroll-behavior: contain;
 }
 html[data-theme="dark"] .planningEditor__main{
-    background: var(--card);
+    background: #1f1f21;
   }
 html[data-theme="dark"] .planningEditor__rail{
-    background: rgba(28, 28, 30, 0.5);
+    background: #1f1f21;
     border-color: var(--hairline);
   }
 .planningParams__body{
@@ -705,6 +708,9 @@ html[data-theme="dark"] .strategyTabShell__resizer{
 html[data-theme="dark"] .strategyTabShell__resizer::after{
   background: rgba(174, 174, 178, 0.95);
 }
+html[data-theme="dark"] .strategyTabShell__resizer::before{
+  background: var(--strategy-sidebar-sep);
+}
 .strategyTabShell__resizer:focus-visible{
   outline: 2px solid var(--ring);
   outline-offset: -2px;
@@ -842,8 +848,8 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
   background: transparent !important;
 }
 html[data-theme="dark"] .strategyTabShell__aside{
-    border-color: var(--hairline);
-    background: rgba(28, 28, 30, 0.5);
+    border-color: var(--strategy-sidebar-sep);
+    background: #1f1f21;
   }
 .strategyTabShell__center{
   grid-column: 3;
@@ -862,7 +868,7 @@ html[data-theme="dark"] .strategyTabShell__aside{
   overscroll-behavior: contain;
 }
 html[data-theme="dark"] .strategyTabShell__center{
-    background: var(--card);
+    background: #1f1f21;
   }
 .strategyTabShell__pane[hidden]{
   display: none !important;
@@ -1058,30 +1064,30 @@ html[data-theme="dark"] .strategyPlansPane__empty.featureEmptyState{
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: visible;
-  /* Палитра облигаций в «Статистике» (см. getSeriesPalette в app.js). Светлые оттенки усилены для контраста на белом фоне. */
-  --sky-blue-light: #52a8cfff;
-  --blue-green: #1a8babff;
-  --cerulean: #0d5670ff;
-  --deep-space-blue: #022a42ff;
-  --amber-flame: #e8a200ff;
-  --amber-glow: #e89200ff;
-  --princeton-orange: #e67d00ff;
-  --rusty-spice: #bb3e03ff;
-  --oxidized-iron: #ae2012ff;
-  --brown-red: #9b2226ff;
+  /* Палитра облигаций в «Статистике» (см. getSeriesPalette в app.js). 8 базовых + 9–10 = повтор 1–2 для 10-го ключа в JS. */
+  --sky-blue-light: #f02e2eff;
+  --blue-green: #f06f2eff;
+  --cerulean: #779820ff;
+  --deep-space-blue: #177844ff;
+  --amber-flame: #1a5d87ff;
+  --amber-glow: #2f3aa2ff;
+  --princeton-orange: #792cafff;
+  --rusty-spice: #9f3085ff;
+  --oxidized-iron: #f02e2eff;
+  --brown-red: #f06f2eff;
 }
 html[data-theme="dark"] .strategyDynamics{
-  /* Тёмная тема: светлее на тёмном фоне колонки. */
-  --sky-blue-light: #b9e6fcff;
-  --blue-green: #7cdcf4ff;
-  --cerulean: #68c4e8ff;
-  --deep-space-blue: #9ae0ffff;
-  --amber-flame: #ffd163ff;
-  --amber-glow: #ffc44dff;
-  --princeton-orange: #ffb23dff;
-  --rusty-spice: #ff8f62ff;
-  --oxidized-iron: #ff8a84ff;
-  --brown-red: #ff9090ff;
+  /* Тёмная тема: приглушённые оттенки той же палитры (не «меловые»). */
+  --sky-blue-light: #dc4545ff;
+  --blue-green: #d8653aff;
+  --cerulean: #749628ff;
+  --deep-space-blue: #1c7a52ff;
+  --amber-flame: #2a6f9eff;
+  --amber-glow: #404aa6ff;
+  --princeton-orange: #7a34adff;
+  --rusty-spice: #96377eff;
+  --oxidized-iron: #dc4545ff;
+  --brown-red: #d8653aff;
 }
 .strategyDynamics__titleRow{
   flex-shrink: 0;
@@ -1362,7 +1368,7 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .card.widget[data-wid
 }
 html[data-theme="dark"] .strategyTabShell__bondsPane::before,
 html[data-theme="dark"] .strategyTabShell__paramsPane::before{
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--strategy-sidebar-sep);
 }
 .strategyTabShell__settingsPane{
   flex: 0 0 auto;
@@ -1379,7 +1385,7 @@ html[data-theme="dark"] .strategyTabShell__paramsPane::before{
   margin-bottom: 10px;
 }
 html[data-theme="dark"] .strategyTabShell__settingsPane::before{
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--strategy-sidebar-sep);
 }
 .strategyTabShell__settingsBody{
   padding: 0 var(--strategy-shell-pad) 6px;
@@ -1836,6 +1842,12 @@ html[data-theme="dark"] .strategyPlansPane__table.strategyTabShell__table tbody 
     border-left: none;
     border-top: 1px solid var(--hairline);
   }
+  html[data-theme="dark"] .strategyTabShell__aside{
+    border-bottom-color: var(--strategy-sidebar-sep);
+  }
+  html[data-theme="dark"] .strategyTabShell__aside--right{
+    border-top-color: var(--strategy-sidebar-sep);
+  }
   .strategyTabShell__center{
     min-height: 0;
   }
@@ -2042,7 +2054,7 @@ html[data-theme="dark"] .btn--ghost:hover{
 }
 html[data-theme="dark"] .tableWrap{
     border-color: var(--cardBorder);
-    background: rgba(28, 28, 30, 0.5);
+    background: #1f1f21;
   }
 
 
@@ -2747,6 +2759,35 @@ html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartVal
 }
 .chartAxisLabel--interactive{
   cursor: help;
+}
+.widget[data-widget="returns"] .chart--returns .chartAxisLabel{
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="mid"] .chartAxisLabel{
+  font-size: 11px;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartAxisLabel{
+  font-size: 10.5px;
+}
+.widget[data-widget="returns"] .chart--returns .chartAxisLabel.chartAxisLabel--year{
+  font-weight: 600;
+  font-size: 10.25px;
+  letter-spacing: 0;
+}
+.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartAxisLabel.chartAxisLabel--year{
+  font-size: 9.75px;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartAxisLabel{
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 2.5px;
+}
+html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartAxisLabel.chartText--active{
+  stroke: none;
+  paint-order: normal;
 }
 .chartContent--dimOthers .chartBar:not(.chartHover--active){
   opacity: 0.4;
