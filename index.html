@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=93" />
+    <link rel="stylesheet" href="./styles.css?v=107" />
     <script>
       (function () {
         try {
@@ -387,7 +387,7 @@
               <div class="strategyTabShell__head">
                 <div class="widget__title strategyTabShell__title">Стратегия</div>
                 <button id="strategy-tab-new-strategy" class="strategyTabShell__addBtn" type="button" title="Новая стратегия" aria-label="Новая стратегия">
-                  +
+                  Создать
                 </button>
               </div>
               <ul id="strategy-tab-strategy-list" class="strategyTabShell__list" role="list"></ul>
@@ -396,7 +396,7 @@
               <div class="strategyTabShell__bondsHead">
                 <div class="widget__title strategyTabShell__title strategyTabShell__title--bonds">Облигации</div>
                 <button id="strategy-tab-new-bond" class="strategyTabShell__addBtn" type="button" title="Добавить облигацию" aria-label="Добавить облигацию">
-                  +
+                  Добавить
                 </button>
               </div>
               <div
@@ -881,7 +881,16 @@
                 </label>
 
                 <label class="floatingField bondModal__field" for="bond-modal-nominal">
-                  <input id="bond-modal-nominal" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
+                  <input
+                    id="bond-modal-nominal"
+                    class="input input--num floatingField__input"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder=" "
+                    required
+                    aria-required="true"
+                  />
                   <span class="floatingField__label">Номинал 1 облигации</span>
                 </label>
               </div>
@@ -1045,6 +1054,6 @@
       </div>
     </div>
 
-    <script src="./app.js?v=16"></script>
+    <script src="./app.js?v=23"></script>
   </body>
 </html>

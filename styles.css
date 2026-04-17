@@ -27,6 +27,8 @@
   --ring: rgba(0, 113, 227, 0.45);
 
   --app-shell-header-offset: 0px;
+  /** Масштаб основных кнопок (размер и типографика). */
+  --ui-tap-scale: 1.1;
 
   --font-heading: 1.3125rem;
   --font-large: 1.0625rem;
@@ -332,11 +334,11 @@ html[data-theme="dark"] .planningEditor__rail{
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: #ffffff;
   color: var(--text);
-  min-width: 36px;
-  height: 32px;
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: var(--fs-ui);
+  min-width: calc(36px * var(--ui-tap-scale));
+  height: calc(32px * var(--ui-tap-scale));
+  padding: 0 calc(8px * var(--ui-tap-scale));
+  border-radius: calc(8px * var(--ui-tap-scale));
+  font-size: calc(var(--fs-ui) * var(--ui-tap-scale));
   font-weight: 500;
   cursor: pointer;
   transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
@@ -561,8 +563,7 @@ html[data-theme="dark"] .planScheduleDays.planScheduleDays--invalid{
 [data-widget="plan"] .buyTableDate:focus-visible,
 [data-tab-panel="strategy"] .buyTableDate:focus-visible,
 .strategyTabShell .buyTableDate:focus-visible{
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: none;
   border-radius: 6px;
 }
 html[data-theme="dark"] [data-widget="plan"] .buyTableDate,
@@ -594,7 +595,7 @@ html[data-theme="dark"] [data-widget="plan"] .buyTableDate::-webkit-calendar-pic
   overflow: hidden;
 }
 .strategyTabShell{
-  --strategy-shell-pad: 14px;
+  --strategy-shell-pad: 18px;
   --strategy-left-width: min(380px, 34vw);
   --strategy-right-width: min(20rem, 32vw);
   --strategy-resizer-size: 1px;
@@ -747,7 +748,8 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   align-items: flex-start;
   justify-content: flex-start;
   gap: 10px;
-  padding: 10px var(--strategy-shell-pad) 0;
+  /* Как у .strategyTabShell__head: снизу 8px до списка */
+  padding: 10px var(--strategy-shell-pad) 8px;
   flex-shrink: 0;
   box-sizing: border-box;
   width: 100%;
@@ -771,7 +773,8 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
 .strategyTabShell__bondsList{
   list-style: none;
   margin: 0;
-  padding: 2px 0 12px;
+  /* Как у .strategyTabShell__list: сверху 4px после заголовка */
+  padding: 4px 0 12px;
 }
 .strategyTabShell__bondRow{
   display: block;
@@ -813,16 +816,38 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
   word-break: break-word;
 }
 .strategyTabShell__bondMeta{
-  margin-top: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  line-height: 1.35;
+  margin-top: 5px;
+  min-width: 0;
 }
-.strategyTabShell__bondMetaLine{
-  display: block;
+/* Как в «Планах»: buyChip; внутри сумма купона (bold) · «до ГГГГ» (regular). */
+.strategyTabShell__bondChips{
+  margin-top: 0;
+}
+.strategyTabShell__bondNomCoupChip{
+  max-width: 100%;
+}
+.strategyTabShell__bondNomCoupChip__inner{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  letter-spacing: -0.02em;
+  min-width: 0;
+}
+.strategyTabShell__bondNomCoupChip__until{
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.strategyTabShell__bondNomCoupChip__coupon{
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.strategyTabShell__bondNomCoupChip__dot{
+  flex-shrink: 0;
+  color: var(--text-subhead);
+  font-weight: 400;
 }
 .strategyTabShell__bondPayout{
   flex-shrink: 0;
@@ -1083,9 +1108,9 @@ html[data-theme="dark"] .strategyDynamics{
   --cerulean: #749628ff;
   --deep-space-blue: #1c7a52ff;
   --amber-flame: #2a6f9eff;
-  --amber-glow: #404aa6ff;
-  --princeton-orange: #7a34adff;
-  --rusty-spice: #96377eff;
+  --amber-glow: #5a64b8ff;
+  --princeton-orange: #9557c2ff;
+  --rusty-spice: #b35693ff;
   --oxidized-iron: #dc4545ff;
   --brown-red: #d8653aff;
 }
@@ -1474,24 +1499,34 @@ html[data-theme="dark"] .strategyTabShell__settingsReset:hover{
 }
 .strategyTabShell__addBtn{
   appearance: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid var(--cardBorder);
-  background: var(--bg2);
+  width: auto;
+  min-height: calc(28px * var(--ui-tap-scale));
+  padding: calc(5px * var(--ui-tap-scale)) calc(12px * var(--ui-tap-scale));
+  border-radius: 999px;
+  border: none;
+  background: rgba(242, 242, 247, 0.95);
   color: var(--primary);
-  font-size: 1.15rem;
+  font-size: calc(var(--font-small) * var(--ui-tap-scale));
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .strategyTabShell__addBtn:hover{
-  background: color-mix(in srgb, var(--primary) 12%, var(--bg2));
+  background: color-mix(in srgb, var(--primary) 10%, rgba(242, 242, 247, 0.95));
 }
+html[data-theme="dark"] .strategyTabShell__addBtn{
+    background: rgba(255, 255, 255, 0.08);
+    color: #2997ff;
+  }
+html[data-theme="dark"] .strategyTabShell__addBtn:hover{
+    background: color-mix(in srgb, #2997ff 12%, rgba(255, 255, 255, 0.08));
+  }
 .strategyTabShell__list{
   list-style: none;
   margin: 0;
@@ -1633,15 +1668,15 @@ html[data-theme="dark"] .strategyTabShell__strategySelect:focus-visible{
 .strategyTabShell__menuBtn{
   appearance: none;
   flex-shrink: 0;
-  width: 30px;
-  height: 32px;
+  width: calc(30px * var(--ui-tap-scale));
+  height: calc(32px * var(--ui-tap-scale));
   margin: 0;
   padding: 0 0 2px;
   border: none;
-  border-radius: 8px;
+  border-radius: calc(8px * var(--ui-tap-scale));
   background: transparent;
   color: var(--muted);
-  font-size: 1.15rem;
+  font-size: calc(1.15rem * var(--ui-tap-scale));
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -1745,7 +1780,7 @@ html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active:hover{
   display: inline-flex;
   width: auto;
   margin: 0;
-  padding-inline: 16px;
+  padding-inline: calc(16px * var(--ui-tap-scale));
   border-radius: 999px;
   border: none;
   background: #ffffff;
@@ -1990,9 +2025,9 @@ html[data-theme="dark"] .btn.btn--danger:hover{
   border: none;
   background: var(--primary);
   color: #ffffff;
-  padding: 7px 16px;
+  padding: calc(7px * var(--ui-tap-scale)) calc(16px * var(--ui-tap-scale));
   border-radius: 980px;
-  font-size: var(--font-small);
+  font-size: calc(var(--font-small) * var(--ui-tap-scale));
   font-weight: 500;
   letter-spacing: -0.02em;
   cursor: pointer;
@@ -2224,6 +2259,7 @@ html[data-theme="dark"] .featureEmptyState__subtitle{
   color: var(--text);
   outline: none;
   font-size: var(--fs-body);
+  caret-color: var(--primary);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input::placeholder{ color: rgba(0, 0, 0, 0.35); }
@@ -2231,12 +2267,15 @@ html[data-theme="dark"] .input::placeholder{ color: rgba(235, 235, 245, 0.4); }
 
 
 .input:focus{
-  border-color: rgba(0, 113, 227, 0.55);
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+  border-color: var(--inputBorder);
+  box-shadow: none;
 }
 html[data-theme="dark"] .input:focus{
-    border-color: rgba(41, 151, 255, 0.65);
-    box-shadow: 0 0 0 3px rgba(41, 151, 255, 0.18);
+    border-color: var(--inputBorder);
+    box-shadow: none;
+  }
+html[data-theme="dark"] .input{
+    caret-color: #2997ff;
   }
 
 
@@ -2287,7 +2326,7 @@ input[type="number"]{
   color: inherit;
 }
 .input[type="date"]:focus{
-  border-color: rgba(0,122,255,0.75);
+  border-color: transparent;
   box-shadow: none;
 }
 html[data-theme="dark"] .input[type="date"]{
@@ -2297,7 +2336,7 @@ html[data-theme="dark"] .input[type="date"]{
   }
 
 html[data-theme="dark"] .input[type="date"]:focus{
-    border-color: rgba(77,163,255,0.75);
+    border-color: transparent;
     box-shadow: none;
   }
 
@@ -2452,19 +2491,23 @@ html[data-theme="dark"] .buyChip{
 .bondMonthChips .monthBtn{
   background: rgba(242,242,247,0.95) !important;
   color: rgba(20,20,24,0.92) !important;
+  font-weight: 500;
 }
 .bondMonthChips .monthBtn.is-active{
   background: #0071e3 !important;
   color: #ffffff !important;
+  font-weight: 600;
 }
 html[data-theme="dark"] .bondMonthChips .monthBtn{
     background: rgba(60,60,67,0.28) !important;
     color: var(--text) !important;
+    font-weight: 500;
   }
 
 html[data-theme="dark"] .bondMonthChips .monthBtn.is-active{
     background: #0071e3 !important;
     color: #ffffff !important;
+    font-weight: 600;
   }
 
 
@@ -2554,7 +2597,11 @@ html[data-theme="dark"] .bondMonthChips .monthBtn.is-active{
   min-height: 44px;
   padding-top: 18px;
   padding-bottom: 8px;
+  caret-color: var(--primary);
 }
+html[data-theme="dark"] .floatingField__input{
+    caret-color: #2997ff;
+  }
 .floatingField__label{
   position: absolute;
   left: 11px;
@@ -2602,10 +2649,10 @@ html[data-theme="dark"] .bondMonthChips .monthBtn.is-active{
 .monthBtn{
   appearance: none;
   border: none;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--ui-tap-scale));
   background: rgba(255,255,255,0.2);
-  padding: 8px 10px;
-  font-size: var(--font-small);
+  padding: calc(8px * var(--ui-tap-scale)) calc(10px * var(--ui-tap-scale));
+  font-size: calc(var(--font-small) * var(--ui-tap-scale));
   color: var(--text);
   cursor: pointer;
 }
@@ -2616,14 +2663,14 @@ html[data-theme="dark"] .bondMonthChips .monthBtn.is-active{
 
 .iconBtn{
   appearance: none;
-  width: 34px;
-  height: 34px;
+  width: calc(34px * var(--ui-tap-scale));
+  height: calc(34px * var(--ui-tap-scale));
   border-radius: 999px;
   border: none;
   background: rgba(0, 0, 0, 0.05);
   cursor: pointer;
   color: var(--muted);
-  font-size: var(--font-small);
+  font-size: calc(var(--font-small) * var(--ui-tap-scale));
   transition: background 0.15s ease, color 0.15s ease;
 }
 html[data-theme="dark"] .iconBtn{
@@ -2724,20 +2771,6 @@ html[data-theme="dark"] .chartWrap{
 .widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartBondMonthHint{
   font-size: 10px;
 }
-html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartValueLabel:not(.chartBondMonthHint){
-  paint-order: stroke fill;
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 3px;
-}
-html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartBondMonthHint{
-  paint-order: stroke fill;
-  stroke: rgba(0, 0, 0, 0.4);
-  stroke-width: 2.5px;
-}
-html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartBondMonthHint.chartValueLabel--active{
-  stroke: none;
-  paint-order: normal;
-}
 .widget[data-widget="returns"] .chart--returns .chartValueConnector{
   fill: none;
   stroke: rgba(60, 60, 67, 0.32);
@@ -2827,16 +2860,6 @@ html[data-theme="dark"] .widget[data-widget="returns"] .chart--returns .chartAxi
 }
 .widget[data-widget="returns"] .chart--returns .chartAxisLabel.chartText--active{
   font-weight: inherit;
-}
-.widget[data-widget="returns"] .chart--returns .chartBondMonthHint.chartValueLabel--active{
-  font-size: 12.5px;
-  font-weight: 600;
-}
-.widget[data-widget="returns"] .chart--returns[data-chart-density="mid"] .chartBondMonthHint.chartValueLabel--active{
-  font-size: 11.5px;
-}
-.widget[data-widget="returns"] .chart--returns[data-chart-density="high"] .chartBondMonthHint.chartValueLabel--active{
-  font-size: 10.75px;
 }
 html[data-theme="dark"] .chartContent--dimOthers .chartBar:not(.chartHover--active),
 html[data-theme="dark"] .yearPie--dimOthers .yearPieSlice:not(.chartHover--active){
@@ -3481,12 +3504,12 @@ html[data-theme="dark"] .yearPieYearSeg__btn.is-active{
 
 .dateBtn{
   width: 100%;
-  border-radius: 12px;
-  padding: 9px 10px;
+  border-radius: calc(12px * var(--ui-tap-scale));
+  padding: calc(9px * var(--ui-tap-scale)) calc(10px * var(--ui-tap-scale));
   border: none;
   background: rgba(242,242,247,0.95);
   color: #0071e3;
-  font-size: var(--font-small);
+  font-size: calc(var(--font-small) * var(--ui-tap-scale));
   font-weight: 400;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -3736,9 +3759,7 @@ html[data-theme="dark"] .chip__x:hover{
   background: var(--sheetCard);
   border-radius: 16px;
   padding: 18px 18px 16px;
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.05),
-    0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 .modal--autoPlan .autoPlanModal__body .autoPlanWidget__fields--period{
   gap: 12px;
@@ -3750,9 +3771,7 @@ html[data-theme="dark"] .chip__x:hover{
 html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__fields,
 html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__section,
 html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__reinvest{
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
 /* Компактный блок «Сохранить в стратегию»: строка select + кнопка, без лишней высоты */
@@ -3761,9 +3780,7 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__r
   background: var(--sheetCard);
   border-radius: 16px;
   padding: 11px 14px 12px;
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.05),
-    0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -3771,9 +3788,7 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__r
   gap: 8px;
 }
 html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategy{
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 .modal--autoPlan .autoPlanModal__body .autoPlanWidget__strategySelect{
   flex: 1 1 auto;
@@ -3877,12 +3892,12 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .planScheduleDayCh
   background: var(--sheetCanvas) !important;
 }
 html[data-theme="dark"] .modal--sheet{
-  --sheetCanvas: #000000;
-  --sheetCard: #1c1c1e;
-  --sheetFillFocus: rgba(41, 151, 255, 0.14);
+  --sheetCanvas: #1f1f21;
+  --sheetCard: #2a2a2e;
+  --sheetFillFocus: transparent;
   --sheetSep: rgba(255, 255, 255, 0.12);
-  --sheetHeaderBg: #1c1c1e;
-  --sheetFooterBg: #1c1c1e;
+  --sheetHeaderBg: #1f1f21;
+  --sheetFooterBg: #1f1f21;
   box-shadow:
     0 0 0 0.5px rgba(255, 255, 255, 0.08),
     0 28px 80px rgba(0, 0, 0, 0.55);
@@ -3962,15 +3977,11 @@ html[data-theme="dark"] .modal--sheet .modal__closeBtn:hover{
   border-radius: 16px;
   background: var(--sheetCard);
   overflow: hidden;
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.05),
-    0 2px 10px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 html[data-theme="dark"] .sheetModal__group,
 html[data-theme="dark"] .bondModal__group{
-  box-shadow:
-    0 0 0 0.5px rgba(255, 255, 255, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
 .sheetModal__fieldList{
@@ -4006,20 +4017,20 @@ html[data-theme="dark"] .bondModal__group{
 .modal--sheet .bondModal__field .floatingField__input:focus{
   border: none;
   box-shadow: none;
-  background: var(--sheetFillFocus);
+  background: transparent;
 }
 .modal--sheet .sheetModal__field .floatingField__input:focus-visible,
 .modal--sheet .bondModal__field .floatingField__input:focus-visible{
   border-radius: 12px;
-  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.35);
+  box-shadow: none;
 }
 html[data-theme="dark"] .modal--sheet .sheetModal__field .floatingField__input:focus,
 html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:focus{
-  background: rgba(99, 99, 102, 0.32);
+  background: transparent;
 }
 html[data-theme="dark"] .modal--sheet .sheetModal__field .floatingField__input:focus-visible,
 html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:focus-visible{
-  box-shadow: inset 0 0 0 2px rgba(41, 151, 255, 0.42);
+  box-shadow: none;
 }
 .modal--sheet .sheetModal__field .floatingField__label,
 .modal--sheet .bondModal__field .floatingField__label{
@@ -4040,11 +4051,11 @@ html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:fo
   padding-right: 14px;
 }
 .modal--sheet .sheetModal__dateInput:focus{
-  background: var(--sheetFillFocus);
+  background: transparent;
   box-shadow: none;
 }
 .modal--sheet .sheetModal__dateInput:focus-visible{
-  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.35);
+  box-shadow: none;
 }
 
 .sheetModal__group--buyItems{
@@ -4239,19 +4250,19 @@ html[data-theme="dark"] .modal--bond .bondModal__footer .bondModal__delete:hover
   top: 8px;
 }
 .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus{
-  background: var(--sheetFillFocus);
+  background: transparent;
   border: none;
   box-shadow: none;
 }
 .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus-visible{
   border-radius: 12px;
-  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.38);
+  box-shadow: none;
 }
 html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus{
-  background: rgba(99, 99, 102, 0.38);
+  background: transparent;
 }
 html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[type="date"]:focus-visible{
-  box-shadow: inset 0 0 0 2px rgba(41, 151, 255, 0.45);
+  box-shadow: none;
 }
 
 .bondModal__monthPanel{
@@ -4276,7 +4287,7 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
 .modal--bond .bondModal__monthGrid .monthBtn{
   border-radius: 12px;
   padding: 10px 7px;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.75rem;
   letter-spacing: -0.02em;
   /* Неактивные как вторичные «опции» на странице конфигуратора */
@@ -4290,6 +4301,7 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
 .modal--bond .bondModal__monthGrid .monthBtn.is-active{
   background: var(--primary) !important;
   color: #fff !important;
+  font-weight: 600;
 }
 html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn{
   background: rgba(255, 255, 255, 0.08) !important;

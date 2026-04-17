@@ -1522,6 +1522,9 @@ function clearChartTextHighlight() {
     el.classList.remove("chartValueLabel--active");
     el.setAttribute("fill", el.getAttribute("data-default-fill") || "currentColor");
     el.setAttribute("opacity", el.getAttribute("data-default-opacity") || "1");
+    if (el.hasAttribute("data-default-text")) {
+      el.textContent = el.getAttribute("data-default-text") || "";
+    }
     const y0 = el.getAttribute("data-label-y-default");
     if (y0 != null && String(y0).trim() !== "") el.setAttribute("y", y0);
   });
@@ -1567,6 +1570,21 @@ function applyChartTextHighlight(matchBond, color, monthKey = "", valueMode = "s
     el.setAttribute("fill", activeColor);
     el.setAttribute("opacity", "0.98");
   });
+}
+
+/** Наведение на сегмент столбца: одна подпись итога месяца — меняются только сумма и цвет (без смены элемента/кегля). */
+function applyCouponBarSegmentLabelHover(monthKey, amount, fillColor) {
+  clearChartTextHighlight();
+  if (!chartContent || !monthKey) return;
+  const tot = chartContent.querySelector(
+    `.chartValueLabel[data-label-month="${monthKey}"]:not(.chartBondMonthHint)`
+  );
+  if (!(tot instanceof SVGTextElement)) return;
+  const fill = String(fillColor || "").trim();
+  tot.classList.add("chartText--active", "chartValueLabel--active");
+  tot.setAttribute("fill", fill || tot.getAttribute("data-default-fill") || "currentColor");
+  tot.setAttribute("opacity", "0.98");
+  tot.textContent = formatMoney(amount);
 }
 
 function setLegendFilterBond(matchBond, color = "", legendItem = null) {
@@ -2049,7 +2067,7 @@ function onBarChartPointerMove(e) {
   const amount = parseNumber(bar.getAttribute("data-bar-amount"));
   const color = bar.getAttribute("fill") || "";
   const period = monthLabelFromKey(monthKey);
-  applyChartTextHighlight(matchBond, color, monthKey, "single");
+  applyCouponBarSegmentLabelHover(monthKey, amount, color);
   syncChartConnectorFocus();
   showChartTooltip(
     escapeHtml(bond),
@@ -2366,13 +2384,27 @@ function formatPayoutsPerYearPhrase(n) {
   return `${k} выплат в год`;
 }
 
-function buildStrategyTabBondMetaHtml(price, coupon) {
-  const priceOk = Number.isFinite(price) && price > 0;
+/** Год последней выплаты по дате окончания (YYYY-MM-DD). */
+function lastCouponYearLabelFromEndDate(endDateRaw) {
+  const endNorm = normalizeYMD(String(endDateRaw || "").trim());
+  if (!endNorm || endNorm.length < 4) return "—";
+  const y = endNorm.slice(0, 4);
+  return /^\d{4}$/.test(y) ? y : "—";
+}
+
+function buildStrategyTabBondMetaHtml(endDateRaw, coupon) {
+  const yearStr = lastCouponYearLabelFromEndDate(endDateRaw);
   const couponOk = Number.isFinite(coupon) && coupon > 0;
-  const line1 = priceOk ? `Стоимость ${formatMoney(price)}` : "Стоимость —";
-  const line2 = couponOk ? `Купон ${formatMoney(coupon)}` : "Купон —";
-  return `<div class="strategyTabShell__bondMetaLine">${escapeHtml(line1)}</div>
-            <div class="strategyTabShell__bondMetaLine">${escapeHtml(line2)}</div>`;
+  const coupMoney = couponOk ? formatMoney(coupon) : "—";
+  const coupStr = escapeHtml(coupMoney);
+  const untilPlain = `до ${yearStr}`;
+  const untilEsc = escapeHtml(untilPlain);
+  const tip = escapeHtml(`${coupMoney} • ${untilPlain}`);
+  return `<div class="buyChips strategyTabShell__bondChips">
+            <span class="buyChip strategyTabShell__bondNomCoupChip" title="${tip}">
+              <span class="strategyTabShell__bondNomCoupChip__inner"><span class="strategyTabShell__bondNomCoupChip__coupon">${coupStr}</span><span class="strategyTabShell__bondNomCoupChip__dot" aria-hidden="true">•</span><span class="strategyTabShell__bondNomCoupChip__until">${untilEsc}</span></span>
+            </span>
+          </div>`;
 }
 
 /** Справа в списке облигаций: частота и (если не ежемесячно) месяцы выплат. */
@@ -2996,7 +3028,7 @@ function renderChart(chartData) {
       );
     });
     lines.push(
-      `<text class="chartValueLabel" data-label-month="${bucketKey}" data-label-match="" data-default-fill="currentColor" data-default-opacity="0.72" pointer-events="none" x="${sumLabelX}" y="${monthTotalY}" text-anchor="middle" fill="currentColor" opacity="0.72">${formatMoney(monthTotal)}</text>`
+      `<text class="chartValueLabel" data-label-month="${bucketKey}" data-label-match="" data-default-fill="currentColor" data-default-opacity="0.72" data-default-text="${escapeHtml(formatMoney(monthTotal))}" pointer-events="none" x="${sumLabelX}" y="${monthTotalY}" text-anchor="middle" fill="currentColor" opacity="0.72">${formatMoney(monthTotal)}</text>`
     );
 
     const labelX = groupCenterX;
@@ -3498,10 +3530,9 @@ function renderStrategyTab() {
         const nameRaw = String(row.bond || "").trim();
         const name = normalizeBondKey(nameRaw) || nameRaw || "—";
         const coupon = parseNumber(row.coupon);
-        const price = parseNumber(row.bondPrice);
         const monthsNorm = Array.from(new Set(parseMonthList(row.payoutMonths))).sort((a, b) => a - b);
         const { freq, monthsHtml } = formatStrategyTabBondPayoutBlock(monthsNorm);
-        const metaHtml = buildStrategyTabBondMetaHtml(price, coupon);
+        const metaHtml = buildStrategyTabBondMetaHtml(row.endDate, coupon);
         const keyEsc = escapeHtml(normalizeBondKey(nameRaw));
         return `<li class="strategyTabShell__bondRow">
           <button type="button" class="strategyTabShell__bondOpenBtn" data-strategy-bond="${keyEsc}">
@@ -5885,6 +5916,10 @@ if (bondModalSaveBtn) {
     if (!bondModalNameInput || !bondModalCouponInput) return;
     const row = getBondModalRowData();
     if (!row.bond || !Number.isFinite(row.coupon) || row.coupon <= 0) return;
+    if (!row.nominal) {
+      bondModalNominalInput?.focus();
+      return;
+    }
 
     const months = parseMonthList(row.payoutMonths);
     if (!months.length) return;
