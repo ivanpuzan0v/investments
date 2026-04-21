@@ -1030,7 +1030,7 @@ html[data-theme="dark"] .strategyPlansPane__tableWrap.tableWrap{
   width: auto;
 }
 .strategyPlansPane__table .strategyPlansPane__colActions{
-  width: 92px;
+  width: 132px;
   white-space: nowrap;
   text-align: left;
   vertical-align: middle;

@@ -1337,11 +1337,14 @@ function toNetChartData(chartData, taxRate) {
   };
 }
 
-/** Сумма купонных выплат по всему горизонту данных (как на графике «за всё время», без фильтра года). */
-function sumCouponPayoutsFromChartSeries(chartData) {
+/** Сумма купонных выплат; при selectedYear считает только указанный календарный год. */
+function sumCouponPayoutsFromChartSeries(chartData, selectedYear = PORTFOLIO_CHART_YEAR_ALL) {
+  const year = String(selectedYear || "").trim();
+  const useYearFilter = year && year !== PORTFOLIO_CHART_YEAR_ALL;
   let sum = 0;
   for (const series of chartData?.seriesByBond || []) {
     for (const point of series.points || []) {
+      if (useYearFilter && getYearFromMonthKey(point.monthKey) !== year) continue;
       sum += Number(point.amount) || 0;
     }
   }
@@ -1355,12 +1358,15 @@ function updateStrategyChartsStatWidgets(chartData) {
   if (!valueEl) return;
   const taxR = getTaxRateDecimal();
   const view = getCouponDisplayUsesNet() ? toNetChartData(chartData, taxR) : chartData;
-  const total = sumCouponPayoutsFromChartSeries(view);
+  const selectedYear = String(chartYearSelect?.value || localStorage.getItem(CHART_YEAR_KEY) || PORTFOLIO_CHART_YEAR_ALL);
+  const total = sumCouponPayoutsFromChartSeries(view, selectedYear);
   valueEl.textContent = formatMoney(total);
   if (hintEl) {
+    const periodText =
+      selectedYear === PORTFOLIO_CHART_YEAR_ALL ? "За все время." : `За ${selectedYear} год.`;
     hintEl.textContent = getCouponDisplayUsesNet()
-      ? "После налога по ставке из параметров справа."
-      : "До удержания налога (валовая сумма).";
+      ? `${periodText} После налога по ставке из параметров справа.`
+      : `${periodText} До удержания налога (валовая сумма).`;
   }
 }
 
@@ -3574,6 +3580,13 @@ function renderStrategyTab() {
                 <rect x="9.5" y="9.5" width="12" height="12" rx="2"></rect>
               </svg>
             </button>
+            <button type="button" class="iconBtn" data-action="calendar" title="Добавить в календарь (Mac)" aria-label="Добавить в календарь (Mac)">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3.5" y="5.5" width="17" height="15" rx="2"></rect>
+                <path d="M7 3.5v4M17 3.5v4M3.5 9.5h17"></path>
+                <path d="M12 12v5M9.5 14.5h5"></path>
+              </svg>
+            </button>
             <button type="button" class="iconBtn" data-action="remove" title="Удалить строку" aria-label="Удалить строку">✕</button>
           </div>
         </td>`;
@@ -3706,6 +3719,11 @@ function initStrategyTabPanel() {
       if (e.target.closest('[data-action="copy"]')) {
         e.stopPropagation();
         if (mainTr) copyBuyRow(mainTr);
+        return;
+      }
+      if (e.target.closest('[data-action="calendar"]')) {
+        e.stopPropagation();
+        if (mainTr) addBuyToAppleCalendar(mainTr);
         return;
       }
       if (mainTr) openBuyModalForEdit(mainTr);
@@ -5192,6 +5210,92 @@ function copyBuyRow(tr) {
     });
   }
 
+}
+
+function isMacClient() {
+  const platform = String(navigator.userAgentData?.platform || navigator.platform || "").toLowerCase();
+  const ua = String(navigator.userAgent || "").toLowerCase();
+  return platform.includes("mac") || ua.includes("macintosh") || ua.includes("mac os x");
+}
+
+function escapeIcsText(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
+function formatUtcIcsTimestamp(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${y}${m}${d}T${hh}${mm}${ss}Z`;
+}
+
+function ymdToIcsDate(ymd) {
+  const normalized = normalizeYMD(ymd);
+  return normalized ? normalized.replace(/-/g, "") : "";
+}
+
+function addBuyToAppleCalendar(tr) {
+  if (!tr || tr.parentElement !== buysTbody) return;
+
+  const dateYmd = normalizeYMD(tr.querySelector('[data-field="date"]')?.value || "");
+  if (!dateYmd) return;
+  const dtStart = ymdToIcsDate(dateYmd);
+  const dtEnd = ymdToIcsDate(addDaysToYmd(dateYmd, 1));
+  if (!dtStart || !dtEnd) return;
+
+  const items = parseBuyItems(tr.querySelector('[data-field="items"]')?.value || "[]");
+  const itemLines = items.length
+    ? items.map((item) => `${item.bond} x ${item.quantity} шт. по ${formatMoney(item.price)}`).join("\n")
+    : "—";
+  const description = itemLines;
+  const reminderAt = `${dtStart}T100000`;
+  const uid = `buy-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@investments.local`;
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Investments Planner//RU",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${formatUtcIcsTimestamp()}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${escapeIcsText("Покупка облигаций")}`,
+    `DESCRIPTION:${escapeIcsText(description)}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    `TRIGGER;VALUE=DATE-TIME:${reminderAt}`,
+    `DESCRIPTION:${escapeIcsText("Покупка облигаций")}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+  const ics = `${lines.join("\r\n")}\r\n`;
+  if (isMacClient()) {
+    // Mac deeplink: передаем text/calendar прямо в URL — Calendar открывается с предложением добавить событие.
+    const deepLink = `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;
+    window.location.href = deepLink;
+    return;
+  }
+
+  // Fallback для Windows/Linux/iOS/Android: сохраняем .ics для ручного импорта.
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = `Покупка облигаций ${dateYmd}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
 }
 
 addBondBtn.addEventListener("click", () => {
