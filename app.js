@@ -193,6 +193,8 @@ let buyStrategies = [];
 /** @type {Map<string, any[]>} */
 let buyRowsByStrategyId = new Map();
 let activeBuyStrategyId = DEFAULT_BUY_STRATEGY_ID;
+/** Снимок списка стратегий в сайдбаре: при совпадении обновляем только is-active без innerHTML, чтобы работали CSS-переходы. */
+let strategyTabStrategyListDomFingerprint = "";
 let strategyModalEditingId = null;
 /** Источник для «Дублировать»: id стратегии, строки которой копируются. */
 let strategyModalDuplicatingFromId = null;
@@ -390,13 +392,11 @@ function setStrategyCenterView(mode) {
     strategyPanePortfolio.hidden = true;
   }
   updateStrategyDisplayNavUi(mode);
-  requestAnimationFrame(() => {
-    try {
-      renderAll();
-    } catch {
-      /* ignore */
-    }
-  });
+  try {
+    renderAll();
+  } catch {
+    /* ignore */
+  }
 }
 
 function applyStrategyCenterViewFromStorage() {
@@ -2755,7 +2755,7 @@ function measureReturnsChartViewport() {
     hPx = r.height;
   }
   const w = Math.max(380, Math.min(2000, Math.floor(wPx > 0 ? wPx : 520)));
-  const h = Math.max(260, Math.min(720, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.2))));
+  const h = Math.max(220, Math.min(720, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.2))));
   return { w, h };
 }
 
@@ -2971,13 +2971,14 @@ function renderChart(chartData) {
   const left = 40;
   const right = 12;
   const nCols = visibleDates.length;
-  /** Нижний отступ: больше столбцов — больше места под подписи оси. */
-  const bottom = Math.min(92, 56 + Math.min(36, Math.max(0, nCols - 4) * 2));
+  /** Низ: под ось (годы — одна строка; месяцы — две строки у plotBottomY+14/+28) + запас при узких столбцах. */
+  const axisFootroom = isCouponChartAllTime ? 26 : 40;
+  const bottom = Math.min(86, axisFootroom + Math.min(26, Math.max(0, nCols - 5) * 2));
   const innerW = W - left - right;
   const groupWidthForLabels = nCols > 0 ? innerW / nCols : innerW;
   const yLanePitch = 15;
-  /** Верх: запас под вертикально разведённые суммы (жадный lane); без завышения — иначе пустая полоса и низкие столбцы. */
-  const top = 14 + Math.min(68, 8 + Math.max(0, nCols - 2) * 5);
+  /** Верх: запас под подписи сумм над столбцами (lane); без завышения — иначе полоса пустует, столбцы низкие. */
+  const top = Math.max(24, 10 + Math.min(58, 4 + Math.max(0, nCols - 2) * 4));
   const innerH = H - top - bottom;
   const plotBottomY = top + innerH;
 
@@ -2989,7 +2990,7 @@ function renderChart(chartData) {
     const emptyTitle = isCouponChartAllTime
       ? "Нет выплат за весь выбранный период"
       : "Нет выплат за выбранный год";
-    const emptyH = Math.max(260, Math.min(H, 320));
+    const emptyH = Math.max(220, Math.min(H, 300));
     lines.push(
       buildSvgEmptyState(emptyTitle, "Добавьте облигации и даты купонов, чтобы построить график выплат.", W, emptyH)
     );
@@ -3526,25 +3527,54 @@ function removeBondRowByBondKey(bondKeyRaw) {
   return true;
 }
 
+function getStrategyTabStrategyListFingerprint() {
+  return buyStrategies
+    .map((s) => `${String(s.id)}\x1f${String(s.name)}\x1f${s.id === DEFAULT_BUY_STRATEGY_ID ? 1 : 0}`)
+    .join("\n");
+}
+
+function syncStrategyTabStrategyListRowsIfPossible(fp) {
+  const list = strategyTabStrategyList;
+  if (!list || !list.children.length || fp !== strategyTabStrategyListDomFingerprint) return false;
+  const rows = Array.from(list.querySelectorAll("li[data-strategy-id]"));
+  if (rows.length !== buyStrategies.length) return false;
+  const byId = new Map(rows.map((li) => [li.getAttribute("data-strategy-id") || "", li]));
+  for (const s of buyStrategies) {
+    const li = byId.get(String(s.id));
+    if (!li) return false;
+    const wantsMenu = s.id !== DEFAULT_BUY_STRATEGY_ID;
+    const hasMenu = Boolean(li.querySelector('[data-strategy-action="open-menu"]'));
+    if (wantsMenu !== hasMenu) return false;
+    li.classList.toggle("is-active", s.id === activeBuyStrategyId);
+    const nameEl = li.querySelector(".strategyTabShell__strategyName");
+    if (nameEl) nameEl.textContent = s.name;
+  }
+  return true;
+}
+
 function renderStrategyTab() {
   if (!strategyTabStrategyList || !strategyTabBuysTbody || !strategyTabBondsList) return;
 
-  strategyTabStrategyList.innerHTML = buyStrategies
-    .map((s) => {
-      const isActive = s.id === activeBuyStrategyId;
-      const isDefault = s.id === DEFAULT_BUY_STRATEGY_ID;
-      const idEsc = escapeHtml(String(s.id));
-      const actions = isDefault
-        ? ""
-        : `<button type="button" class="strategyTabShell__menuBtn" data-strategy-action="open-menu" data-strategy-id="${idEsc}" title="Редактировать стратегию" aria-label="Редактировать стратегию">⋮</button>`;
-      return `<li class="strategyTabShell__strategyRow${isActive ? " is-active" : ""}" data-strategy-id="${idEsc}">
+  const strategyListFp = getStrategyTabStrategyListFingerprint();
+  if (!syncStrategyTabStrategyListRowsIfPossible(strategyListFp)) {
+    strategyTabStrategyList.innerHTML = buyStrategies
+      .map((s) => {
+        const isActive = s.id === activeBuyStrategyId;
+        const isDefault = s.id === DEFAULT_BUY_STRATEGY_ID;
+        const idEsc = escapeHtml(String(s.id));
+        const actions = isDefault
+          ? ""
+          : `<button type="button" class="strategyTabShell__menuBtn" data-strategy-action="open-menu" data-strategy-id="${idEsc}" title="Редактировать стратегию" aria-label="Редактировать стратегию">⋮</button>`;
+        return `<li class="strategyTabShell__strategyRow${isActive ? " is-active" : ""}" data-strategy-id="${idEsc}">
         <button type="button" class="strategyTabShell__strategySelect">
           <span class="strategyTabShell__strategyName">${escapeHtml(String(s.name))}</span>
         </button>
         ${actions}
       </li>`;
-    })
-    .join("");
+      })
+      .join("");
+    strategyTabStrategyListDomFingerprint = strategyListFp;
+  }
 
   const planRowsAll = getActiveStrategyBuysRows();
   const buyRowsComplete = planRowsAll.filter(isBuyRowComplete);

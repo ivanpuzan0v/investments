@@ -653,8 +653,8 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   align-items: flex-start;
   justify-content: flex-start;
   gap: 10px;
-  /* Как у .strategyTabShell__head: снизу 8px до списка */
-  padding: 12px var(--strategy-shell-pad) 8px;
+  /* Как у .strategyTabShell__head: сверху/снизу и до списка */
+  padding: 14px var(--strategy-shell-pad) 8px;
   flex-shrink: 0;
   box-sizing: border-box;
   width: 100%;
@@ -665,9 +665,6 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
 }
 .strategyTabShell__bondsHead > .strategyTabShell__addBtn{
   margin-left: auto;
-}
-.strategyTabShell__title--bonds{
-  font-size: 1.02rem;
 }
 .strategyTabShell__hint--bonds{
   padding: 2px var(--strategy-shell-pad) 8px !important;
@@ -1025,7 +1022,7 @@ html[data-theme="dark"] .strategyDynamics{
 }
 .strategyDynamics__titleRow{
   flex-shrink: 0;
-  padding: 14px var(--strategy-shell-pad) 20px;
+  padding: 14px var(--strategy-shell-pad) 12px;
   border-bottom: none;
 }
 .strategyDynamics__title{
@@ -1061,8 +1058,8 @@ html[data-theme="dark"] .strategyDynamics{
 }
 .strategyTabShell__pane--charts .card.widget[data-widget="returns"] .chartLegend{
   flex-shrink: 0;
-  margin: 0 0 6px;
-  padding: 4px 0 0;
+  margin: 0 0 4px;
+  padding: 0;
 }
 .strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
   flex: 0 1 auto;
@@ -1072,9 +1069,9 @@ html[data-theme="dark"] .strategyDynamics{
   margin-right: calc(-1 * var(--_returns-chart-bleed));
   width: calc(100% + 2 * var(--_returns-chart-bleed));
   max-width: none;
-  height: clamp(220px, 42vh, 520px);
-  max-height: min(520px, 52vh);
-  min-height: 200px;
+  height: clamp(240px, 48vh, 560px);
+  max-height: min(560px, 58vh);
+  min-height: 220px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1089,8 +1086,8 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .widget[data-widget="ret
 }
 
 .strategyTabShell__pane--charts .strategyChartsStatTitleRow{
-  margin-top: 16px;
-  margin-bottom: 12px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 .strategyTabShell__pane--charts .strategyChartsStatTitle{
   margin: 0;
@@ -1398,9 +1395,6 @@ html[data-theme="dark"] .strategyTabShell__settingsPane::before{
 .strategyTabShell__head--compact{
   padding-bottom: 4px;
 }
-.strategyTabShell__title--small{
-  font-size: 1.02rem;
-}
 .strategyTabShell__head{
   display: flex;
   align-items: flex-start;
@@ -1422,6 +1416,14 @@ html[data-theme="dark"] .strategyTabShell__settingsPane::before{
 .strategyTabShell__aside .strategyTabShell__head > .widget__title,
 .strategyTabShell__aside .strategyTabShell__bondsHead > .widget__title{
   letter-spacing: -0.01em;
+}
+/* Заголовки колонок стратегии (слева/справа): один размер с карточными .widget__title */
+.strategyTabShell__aside .strategyTabShell__title,
+.strategyTabShell__displayPane .strategyTabShell__title,
+.strategyTabShell__paramsPane .strategyTabShell__title,
+.strategyTabShell__settingsPane .strategyTabShell__title{
+  font-size: var(--fs-widget-title);
+  font-weight: 600;
 }
 .strategyTabShell__title{
   margin: 0;
@@ -1520,31 +1522,39 @@ html[data-theme="dark"] .strategyTabShell__fieldset{
   margin-top: 2px;
   flex-shrink: 0;
 }
-.strategyTabShell__displayNavRow{
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-  border-radius: 0;
-  border: none;
-  font-size: var(--fs-small);
-  line-height: 1.35;
-}
+.strategyTabShell__displayNavRow,
 .strategyTabShell__strategyRow{
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0;
-  border-radius: 0;
-  border: none;
+  /* Та же внутренняя сетка, что и у .is-active: при выделении меняются только цвета,
+     текст не смещается и не «догоняет» рамку. */
+  --strategy-list-active-gutter: 8px;
+  margin-block: 0;
+  margin-inline: var(--strategy-list-active-gutter);
+  padding: 10px max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter))) 10px
+    max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter)));
+  border-radius: var(--radius2);
+  border: 1px solid transparent;
+  background: transparent;
+  box-sizing: border-box;
   font-size: var(--fs-small);
   line-height: 1.35;
+  transition:
+    background-color 0.22s ease,
+    border-color 0.22s ease;
+}
+@media (prefers-reduced-motion: reduce){
+  .strategyTabShell__displayNavRow,
+  .strategyTabShell__strategyRow{
+    transition: none;
+  }
 }
 .strategyTabShell__strategySelect{
   flex: 1;
   min-width: 0;
   margin: 0;
-  padding: 10px var(--strategy-shell-pad);
+  padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1612,25 +1622,13 @@ html[data-theme="dark"] .strategyTabShell__strategyRow.is-active .strategyTabShe
 }
 .strategyTabShell__strategyRow.is-active,
 .strategyTabShell__displayNavRow.is-active{
-  /* Узкая полоса от края sidebar; padding внутри рамки сохраняет выравнивание текста с обычными пунктами:
-     margin + padding-x = var(--strategy-shell-pad) (как padding кнопки у невыделенных). */
-  --strategy-list-active-gutter: 8px;
-  margin-inline: var(--strategy-list-active-gutter);
-  padding: 6px max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter))) 6px
-    max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter)));
-  border-radius: var(--radius2);
-  border: 1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 38%, transparent);
   background: color-mix(in srgb, var(--primary) 5%, transparent);
-  box-sizing: border-box;
 }
 html[data-theme="dark"] .strategyTabShell__strategyRow.is-active,
 html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active{
   border-color: color-mix(in srgb, #2997ff 40%, transparent);
   background: color-mix(in srgb, #2997ff 8%, transparent);
-}
-.strategyTabShell__strategyRow.is-active .strategyTabShell__strategySelect,
-.strategyTabShell__displayNavRow.is-active .strategyTabShell__strategySelect{
-  padding: 6px 0;
 }
 .strategyTabShell__strategyRow.is-active .strategyTabShell__strategyName{
   font-weight: 650;
@@ -2347,12 +2345,13 @@ html[data-theme="dark"] .chartWrap{
 /* График выплат: высота согласована с блоком в .strategyTabShell__pane--charts (ниже — узкие clamp). */
 .widget[data-widget="returns"] .chartWrap{
   width: 100%;
-  height: clamp(220px, 42vh, 520px);
+  height: clamp(240px, 48vh, 560px);
   box-sizing: border-box;
 }
 .widget[data-widget="returns"] .chartWrap .chart--returns{
   width: 100%;
   height: 100%;
+  padding: 0;
   box-sizing: border-box;
 }
 .chartBar,
