@@ -1,0 +1,73 @@
+/**
+ * Design system — таблица (.table + обёртка .tableWrap).
+ */
+.tableWrap{
+  border-radius: var(--radius2);
+  border: 1px solid var(--cardBorder);
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg2);
+}
+html[data-theme="dark"] .tableWrap{
+  border-color: var(--cardBorder);
+  background: #1f1f21;
+}
+
+.table{
+  width: 100%;
+  border-collapse: collapse;
+}
+.table thead th{
+  text-align: left;
+  font-size: var(--fs-ui);
+  padding: 11px 14px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(60,60,67,0.14);
+  background: rgba(255,255,255,0.18);
+  font-weight: 650;
+}
+.table thead th[data-sort-field]{
+  cursor: pointer;
+  user-select: none;
+}
+.table thead th[data-sort-field]::after{
+  content: "⇅";
+  margin-left: 6px;
+  font-size: var(--fs-xs);
+  opacity: 0.34;
+}
+.table thead th[data-sort-dir="asc"]::after{
+  content: "↑";
+  opacity: 0.72;
+}
+.table thead th[data-sort-dir="desc"]::after{
+  content: "↓";
+  opacity: 0.72;
+}
+html[data-theme="dark"] .table thead th{
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: var(--cardBorder);
+}
+
+.table tbody td{
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  vertical-align: middle;
+  transition: background-color 0.14s ease;
+}
+.table tbody tr:hover td{
+  background: rgba(0, 0, 0, 0.02);
+}
+.table tbody tr:last-child td{
+  border-bottom: none;
+}
+html[data-theme="dark"] .table tbody td{
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+html[data-theme="dark"] .table tbody tr:hover td{
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tableEmptyCell{
+  padding: 0 !important;
+}

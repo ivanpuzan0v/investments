@@ -1,0 +1,111 @@
+/**
+ * Design system — карточка (.card) и шапка виджета (.widget).
+ */
+.card{
+  border: 1px solid var(--cardBorder);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.widget{
+  padding: 22px 22px 20px;
+  --widget-pad-x: 22px;
+}
+
+.widget__header{
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.widget__header > div:first-child{
+  min-width: 0;
+  text-align: left;
+}
+.widget__title{
+  font-size: var(--fs-widget-title);
+  font-weight: 600;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+  color: var(--text);
+  text-align: left;
+}
+.widget__hint{
+  margin-top: 8px;
+  font-size: var(--fs-widget-hint);
+  font-weight: 400;
+  line-height: 1.43;
+  color: var(--text-subhead);
+  letter-spacing: -0.012em;
+  max-width: 40rem;
+  text-align: left;
+}
+.widget__headerRight{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  padding-inline-end: 6px;
+  box-sizing: border-box;
+}
+.widget__headerRight .taxControl{
+  max-width: 100%;
+}
+.widget__headerRight--stackedSelects{
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--cardBorder);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+}
+.widget__headerRight--stackedSelects .taxControl{
+  width: 100%;
+  justify-content: space-between;
+  gap: 10px;
+}
+.widget__headerRight--stackedSelects .taxControl > span{
+  white-space: nowrap;
+}
+.widget__headerRight--stackedSelects .taxControl__input{
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+[data-widget="buy-strategy"] .buyStrategyTable__select{
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  field-sizing: fixed;
+}
+[data-widget="buy-strategy"] .buyStrategyTable__thActions{
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+[data-widget="buy-strategy"] .buyStrategyTable tbody td:last-child{
+  vertical-align: middle;
+  text-align: right;
+}
+[data-widget="buy-strategy"] .buyStrategyTable__rowActions{
+  justify-content: flex-end;
+}
+[data-widget="summary"] #summary-strategy-select{
+  min-width: 180px;
+}
+[data-widget="plan"] #buy-strategy-header-select{
+  min-width: 180px;
+}
+.widget__footerActions{
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-start;
+}

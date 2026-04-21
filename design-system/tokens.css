@@ -1,0 +1,75 @@
+/**
+ * Design system — токены (цвета, типографика, радиусы, тени).
+ * Подключается первым; остальные слои DS опираются на эти переменные.
+ */
+:root{
+  /* Палитра в духе apple.com: нейтральные серые, акцент #0071e3 */
+  --bg0: #f5f5f7;
+  --bg1: #f5f5f7;
+  --bg2: #ffffff;
+
+  --card: #ffffff;
+  --cardBorder: rgba(0, 0, 0, 0.06);
+  /** Тонкая серая линия как у топбара и полей — колонки, внутренние разделители */
+  --hairline: rgba(0, 0, 0, 0.08);
+
+  --text: #1d1d1f;
+  --muted: #86868b;
+
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  --primary: #0071e3;
+  --primary2: rgba(0, 113, 227, 0.1);
+
+  --inputBg: #f5f5f7;
+  --inputBorder: rgba(0, 0, 0, 0.08);
+
+  --radius: 20px;
+  --radius2: 12px;
+
+  --ring: rgba(0, 113, 227, 0.45);
+
+  --app-shell-header-offset: 0px;
+  /** Масштаб основных кнопок (размер и типографика). */
+  --ui-tap-scale: 1.1;
+
+  --font-heading: 1.3125rem;
+  --font-large: 1.0625rem;
+  --font-medium: 0.875rem;
+  --font-small: 0.75rem;
+
+  /* Backward-compatible aliases to keep existing selectors readable */
+  --fs-title: var(--font-heading);
+  --fs-subtitle: var(--font-large);
+  --fs-widget-title: var(--font-heading);
+  --fs-widget-hint: var(--font-medium);
+  --fs-ui: var(--font-medium);
+  --fs-body: var(--font-medium);
+  --fs-small: var(--font-small);
+  --fs-xs: var(--font-small);
+  --fs-stat: var(--font-large);
+  --text-subhead: #6e6e73;
+}
+
+html[data-theme="dark"]{
+  --bg0: #1f1f21;
+  --bg1: #1f1f21;
+  --bg2: #1f1f21;
+
+  --card: #1f1f21;
+  --cardBorder: rgba(255, 255, 255, 0.12);
+  --hairline: rgba(255, 255, 255, 0.08);
+  /** Разделители в боковых колонках стратегии (горизонтальные полосы и линия ресайзера). */
+  --strategy-sidebar-sep: #37373b;
+
+  --text: #f5f5f7;
+  --muted: #a1a1a6;
+  --text-subhead: #98989d;
+
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.45), 0 12px 40px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+
+  --inputBg: rgba(120, 120, 128, 0.2);
+  --inputBorder: rgba(255, 255, 255, 0.12);
+}

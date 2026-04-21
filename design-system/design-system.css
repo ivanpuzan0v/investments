@@ -1,0 +1,10 @@
+/**
+ * Design system — единая точка входа для слоёв DS.
+ * Порядок: токены → база → компоненты.
+ */
+@import url("./tokens.css");
+@import url("./foundation.css");
+@import url("./components/tables.css");
+@import url("./components/widget-card.css");
+@import url("./components/row-actions.css");
+@import url("./components/icon-button.css");

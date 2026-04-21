@@ -1,0 +1,9 @@
+/**
+ * Design system — горизонтальный ряд иконок-действий в строке таблицы.
+ */
+.buyRowActions{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
