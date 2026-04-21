@@ -1,0 +1,143 @@
+/**
+ * Design system — кнопки
+ * Все кнопки: capsule (999px), min-height ~36px, горизонтальные отступы.
+ * Варианты: primary | secondary | destructive
+ * Устаревшие алиасы: .btn--ghost → secondary, .btn--danger → destructive
+ */
+
+.btn{
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: none;
+  font-size: calc(var(--font-small) * var(--ui-tap-scale) * 0.9);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.12s ease,
+    opacity 0.18s ease;
+}
+
+.btn:active:not(:disabled){
+  transform: scale(0.99);
+}
+.btn:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- Primary: синий фон, белый текст (по умолчанию для .btn без модификатора) --- */
+.btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi),
+.btn.btn--primary{
+  background: var(--primary);
+  color: #ffffff;
+}
+.btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi):hover,
+.btn.btn--primary:hover{
+  background: #0077ed;
+  color: #ffffff;
+}
+.btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi):active,
+.btn.btn--primary:active{
+  background: #006edb;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi),
+html[data-theme="dark"] .btn.btn--primary{
+  background: #0a84ff;
+  color: #ffffff;
+}
+html[data-theme="dark"] .btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi):hover,
+html[data-theme="dark"] .btn.btn--primary:hover{
+  background: #409cff;
+  color: #ffffff;
+}
+html[data-theme="dark"] .btn:not(.btn--secondary):not(.btn--destructive):not(.btn--ghost):not(.btn--autoPlanAi):active,
+html[data-theme="dark"] .btn.btn--primary:active{
+  background: #64b0ff;
+  color: #ffffff;
+}
+
+/* --- Secondary: светло-серый фон, синий текст --- */
+.btn--secondary,
+.btn--ghost{
+  background: rgba(242, 242, 247, 0.95);
+  color: var(--primary);
+}
+.btn--secondary:hover,
+.btn--ghost:hover{
+  background: color-mix(in srgb, var(--primary) 10%, rgba(242, 242, 247, 0.95));
+  color: var(--primary);
+}
+.btn--secondary:active,
+.btn--ghost:active{
+  background: color-mix(in srgb, var(--primary) 14%, rgba(242, 242, 247, 0.95));
+}
+
+html[data-theme="dark"] .btn--secondary,
+html[data-theme="dark"] .btn--ghost{
+  background: rgba(255, 255, 255, 0.08);
+  color: #2997ff;
+}
+html[data-theme="dark"] .btn--secondary:hover,
+html[data-theme="dark"] .btn--ghost:hover{
+  background: color-mix(in srgb, #2997ff 12%, rgba(255, 255, 255, 0.08));
+  color: #2997ff;
+}
+html[data-theme="dark"] .btn--secondary:active,
+html[data-theme="dark"] .btn--ghost:active{
+  background: color-mix(in srgb, #2997ff 18%, rgba(255, 255, 255, 0.08));
+}
+
+/* --- Destructive: как secondary, текст красный --- */
+.btn--destructive,
+.btn--danger{
+  background: rgba(242, 242, 247, 0.95);
+  color: #d70015;
+}
+.btn--destructive:hover,
+.btn--danger:hover{
+  background: #dedee3;
+  color: #c40012;
+}
+.btn--destructive:active,
+.btn--danger:active{
+  background: #d8d8dd;
+  color: #b80010;
+}
+
+html[data-theme="dark"] .btn--destructive,
+html[data-theme="dark"] .btn--danger{
+  background: rgba(118, 118, 128, 0.28);
+  color: #ff6961;
+}
+html[data-theme="dark"] .btn--destructive:hover,
+html[data-theme="dark"] .btn--danger:hover{
+  background: rgba(118, 118, 128, 0.38);
+  color: #ff8a82;
+}
+html[data-theme="dark"] .btn--destructive:active,
+html[data-theme="dark"] .btn--danger:active{
+  background: rgba(118, 118, 128, 0.45);
+  color: #ffb4ae;
+}
+
+.btn--destructive:disabled,
+.btn--danger:disabled{
+  opacity: 0.5;
+  cursor: not-allowed;
+}

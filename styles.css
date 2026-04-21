@@ -749,7 +749,7 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   justify-content: flex-start;
   gap: 10px;
   /* Как у .strategyTabShell__head: снизу 8px до списка */
-  padding: 10px var(--strategy-shell-pad) 8px;
+  padding: 12px var(--strategy-shell-pad) 8px;
   flex-shrink: 0;
   box-sizing: border-box;
   width: 100%;
@@ -774,11 +774,22 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   list-style: none;
   margin: 0;
   /* Как у .strategyTabShell__list: сверху 4px после заголовка */
-  padding: 4px 0 12px;
+  padding: 6px 0 12px;
 }
 .strategyTabShell__bondRow{
+  position: relative;
   display: block;
   margin: 0;
+}
+.strategyTabShell__bondRow:not(:last-child)::after{
+  content: "";
+  position: absolute;
+  left: var(--strategy-shell-pad);
+  right: var(--strategy-shell-pad);
+  bottom: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--hairline) 75%, transparent);
+  pointer-events: none;
 }
 .strategyTabShell__bondOpenBtn{
   width: 100%;
@@ -787,7 +798,7 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px var(--strategy-shell-pad);
+  padding: 16px var(--strategy-shell-pad);
   border-radius: 0;
   border: none;
   background: transparent;
@@ -816,12 +827,12 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
   word-break: break-word;
 }
 .strategyTabShell__bondMeta{
-  margin-top: 5px;
+  margin-top: 6px;
   min-width: 0;
 }
 /* Как в «Планах»: buyChip; внутри сумма купона (bold) · «до ГГГГ» (regular). */
 .strategyTabShell__bondChips{
-  margin-top: 0;
+  margin-top: 1px;
 }
 .strategyTabShell__bondNomCoupChip{
   max-width: 100%;
@@ -853,6 +864,7 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
   flex-shrink: 0;
   text-align: right;
   max-width: 48%;
+  padding-top: 1px;
 }
 .strategyTabShell__bondPayoutFreq{
   font-size: var(--fs-small);
@@ -954,36 +966,28 @@ html[data-theme="dark"] .strategyPlansPane{
   gap: 10px;
   flex-shrink: 0;
   min-width: 0;
-  width: auto;
-  align-self: flex-start;
+  width: 100%;
+  align-self: stretch;
   margin-top: 0;
+  justify-content: space-between;
+}
+.strategyPlansPane__toolbarPrimary{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .strategyPlansPane__toolbar .btnAiGradientWrap,
 .strategyPlansPane__toolbar .btn{
   flex: 0 0 auto;
   width: auto;
 }
-.strategyPlansPane__addBuy{
-  flex-shrink: 0;
-  align-self: auto;
-  margin-top: 0;
-  padding-inline: 16px;
-  border-radius: 12px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  border: 1px solid color-mix(in srgb, var(--cardBorder) 90%, var(--primary) 8%);
-  background: color-mix(in srgb, var(--bg2) 92%, var(--primary) 4%);
+.strategyPlansPane__toolbar .strategyPlansPane__toolbarClear{
+  margin-left: auto;
 }
-.strategyPlansPane__addBuy:hover{
-  background: color-mix(in srgb, var(--bg2) 88%, var(--primary) 10%);
-}
-html[data-theme="dark"] .strategyPlansPane__addBuy{
-    border-color: rgba(255, 255, 255, 0.12);
-    background: rgba(58, 58, 60, 0.45);
-  }
-html[data-theme="dark"] .strategyPlansPane__addBuy:hover{
-    background: rgba(72, 72, 74, 0.55);
-  }
 .strategyPlansPane__tableWrap.tableWrap{
   flex: 0 1 auto;
   min-height: 0;
@@ -1116,8 +1120,8 @@ html[data-theme="dark"] .strategyDynamics{
 }
 .strategyDynamics__titleRow{
   flex-shrink: 0;
-  padding: 18px var(--strategy-shell-pad) 14px;
-  border-bottom: 0.5px solid var(--hairline);
+  padding: 14px var(--strategy-shell-pad) 20px;
+  border-bottom: none;
 }
 .strategyDynamics__title{
   margin: 0;
@@ -1153,7 +1157,7 @@ html[data-theme="dark"] .strategyDynamics{
 .strategyTabShell__pane--charts .card.widget[data-widget="returns"] .chartLegend{
   flex-shrink: 0;
   margin: 0 0 6px;
-  padding: 10px 0 0;
+  padding: 4px 0 0;
 }
 .strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
   flex: 0 1 auto;
@@ -1163,9 +1167,9 @@ html[data-theme="dark"] .strategyDynamics{
   margin-right: calc(-1 * var(--_returns-chart-bleed));
   width: calc(100% + 2 * var(--_returns-chart-bleed));
   max-width: none;
-  height: clamp(300px, 52vh, 640px);
-  max-height: min(640px, 62vh);
-  min-height: 260px;
+  height: clamp(220px, 42vh, 520px);
+  max-height: min(520px, 52vh);
+  min-height: 200px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1178,6 +1182,63 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .widget[data-widget="ret
 .strategyTabShell__pane--charts .widget[data-widget="returns"] .chart--returns{
   padding: 0;
 }
+
+.strategyTabShell__pane--charts .strategyChartsStatTitleRow{
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+.strategyTabShell__pane--charts .strategyChartsStatTitle{
+  margin: 0;
+  font-size: 1.3125rem;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* Под графиком выплат: коллекция компактных показателей */
+.strategyTabShell__pane--charts .strategyChartsStatGrid{
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 0;
+  padding: 0 0 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.strategyTabShell__pane--charts .strategyChartsStatCard{
+  border: 1px solid var(--cardBorder);
+  background: var(--card);
+  border-radius: var(--radius2);
+  padding: 12px 14px 13px;
+  min-width: 0;
+}
+html[data-theme="dark"] .strategyTabShell__pane--charts .strategyChartsStatCard{
+  background: rgba(44, 44, 46, 0.45);
+}
+.strategyTabShell__pane--charts .strategyChartsStatCard__label{
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.strategyTabShell__pane--charts .strategyChartsStatCard__hint{
+  margin: 4px 0 0;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--muted);
+}
+.strategyTabShell__pane--charts .strategyChartsStatCard__value{
+  margin-top: 8px;
+  font-size: var(--fs-stat);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Портфель (вкладка стратегии): параметры, статистика и график — без лишних карточек; год в сайдбаре */
 .strategyPortfolio{
   flex: 0 0 auto;
@@ -1272,12 +1333,6 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioPf.portfoli
   letter-spacing: -0.03em;
   line-height: 1.12;
   color: var(--text);
-}
-.strategyPortfolioHoldings__addBtn{
-  min-height: 32px;
-  padding: 7px 12px;
-  font-size: 0.8125rem;
-  border-radius: 10px;
 }
 .strategyPortfolioHoldings__hint{
   margin: 0 0 12px;
@@ -1435,22 +1490,6 @@ html[data-theme="dark"] .strategyTabShell__settingsPane::before{
   max-width: 100%;
   min-width: 0;
 }
-.strategyTabShell__settingsReset{
-  align-self: stretch;
-  width: 100%;
-  background: #f2f2f7 !important;
-  color: #007aff !important;
-}
-.strategyTabShell__settingsReset:hover{
-  background: #eaeaef !important;
-}
-html[data-theme="dark"] .strategyTabShell__settingsReset{
-  background: rgba(118, 118, 128, 0.28) !important;
-  color: #64a8ff !important;
-}
-html[data-theme="dark"] .strategyTabShell__settingsReset:hover{
-  background: rgba(118, 118, 128, 0.38) !important;
-}
 .strategyTabShell__head--compact{
   padding-bottom: 4px;
 }
@@ -1497,36 +1536,6 @@ html[data-theme="dark"] .strategyTabShell__settingsReset:hover{
   padding-left: 0;
   padding-right: 0;
 }
-.strategyTabShell__addBtn{
-  appearance: none;
-  width: auto;
-  min-height: calc(28px * var(--ui-tap-scale));
-  padding: calc(5px * var(--ui-tap-scale)) calc(12px * var(--ui-tap-scale));
-  border-radius: 999px;
-  border: none;
-  background: rgba(242, 242, 247, 0.95);
-  color: var(--primary);
-  font-size: calc(var(--font-small) * var(--ui-tap-scale));
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.strategyTabShell__addBtn:hover{
-  background: color-mix(in srgb, var(--primary) 10%, rgba(242, 242, 247, 0.95));
-}
-html[data-theme="dark"] .strategyTabShell__addBtn{
-    background: rgba(255, 255, 255, 0.08);
-    color: #2997ff;
-  }
-html[data-theme="dark"] .strategyTabShell__addBtn:hover{
-    background: color-mix(in srgb, #2997ff 12%, rgba(255, 255, 255, 0.08));
-  }
 .strategyTabShell__list{
   list-style: none;
   margin: 0;
@@ -1780,7 +1789,7 @@ html[data-theme="dark"] .strategyTabShell__displayNavRow.is-active:hover{
   display: inline-flex;
   width: auto;
   margin: 0;
-  padding-inline: calc(16px * var(--ui-tap-scale));
+  padding-inline: calc(16px * var(--ui-tap-scale) * 0.9);
   border-radius: 999px;
   border: none;
   background: #ffffff;
@@ -1996,52 +2005,16 @@ html[data-theme="dark"] .strategyPlansPane__table.strategyTabShell__table tbody 
 [data-widget="plan"] #buy-strategy-header-select{
   min-width: 180px;
 }
-.btn.btn--danger{
-  background: rgba(255, 59, 48, 0.1);
-  color: #ff3b30;
-}
-.btn.btn--danger:hover{
-  background: rgba(255, 59, 48, 0.18);
-}
-.btn.btn--danger:disabled{
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-html[data-theme="dark"] .btn.btn--danger{
-  background: rgba(255, 69, 58, 0.18);
-  color: #ff6961;
-}
-html[data-theme="dark"] .btn.btn--danger:hover{
-  background: rgba(255, 69, 58, 0.28);
-}
 .widget__footerActions{
   margin-top: 14px;
   display: flex;
   justify-content: flex-start;
 }
 
-.btn{
-  appearance: none;
-  border: none;
-  background: var(--primary);
-  color: #ffffff;
-  padding: calc(7px * var(--ui-tap-scale)) calc(16px * var(--ui-tap-scale));
-  border-radius: 980px;
-  font-size: calc(var(--font-small) * var(--ui-tap-scale));
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  cursor: pointer;
-  transition: background 0.18s ease, transform 0.12s ease, opacity 0.18s ease;
-}
-.btn:hover{
-  background: #0077ed;
-}
-.btn:active{
-  transform: scale(0.99);
-  background: #006edb;
-}
 .btn:focus:not(:focus-visible),
 .btn--ghost:focus:not(:focus-visible),
+.btn--secondary:focus:not(:focus-visible),
+.btn--destructive:focus:not(:focus-visible),
 .dateBtn:focus:not(:focus-visible),
 .monthBtn:focus:not(:focus-visible),
 .iconBtn:focus:not(:focus-visible),
@@ -2049,36 +2022,6 @@ html[data-theme="dark"] .btn.btn--danger:hover{
   outline: none;
   box-shadow: none;
 }
-
-.btn--ghost{
-  background: transparent;
-  color: var(--primary);
-}
-.btn--ghost:hover{
-  background: rgba(0, 113, 227, 0.08);
-}
-html[data-theme="dark"] .btn:not(.btn--ghost):not(.btn--danger):not(.btn--autoPlanAi){
-  background: #0a84ff;
-  color: #ffffff;
-}
-
-html[data-theme="dark"] .btn:not(.btn--ghost):not(.btn--danger):not(.btn--autoPlanAi):hover{
-  background: #409cff;
-}
-
-html[data-theme="dark"] .btn:not(.btn--ghost):not(.btn--danger):not(.btn--autoPlanAi):active{
-  background: #64b0ff;
-}
-
-html[data-theme="dark"] .btn--ghost{
-  background: transparent;
-  color: #2997ff;
-}
-
-html[data-theme="dark"] .btn--ghost:hover{
-  background: rgba(41, 151, 255, 0.14);
-}
-
 
 .tableWrap{
   border-radius: var(--radius2);
@@ -2722,10 +2665,10 @@ html[data-theme="dark"] .chartWrap{
   color: var(--text);
 }
 
-/* График выплат: ширина виджета и высота по окну — больше площади для столбцов и сетки. */
+/* График выплат: высота согласована с блоком в .strategyTabShell__pane--charts (ниже — узкие clamp). */
 .widget[data-widget="returns"] .chartWrap{
   width: 100%;
-  height: clamp(280px, 58vh, 780px);
+  height: clamp(220px, 42vh, 520px);
   box-sizing: border-box;
 }
 .widget[data-widget="returns"] .chartWrap .chart--returns{
@@ -3801,14 +3744,14 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__body .autoPlanWidget__s
   flex: 0 0 auto;
   width: auto;
   min-width: min(220px, 100%);
-  min-height: 40px;
+  min-height: 36px;
   margin-top: 0;
   margin-bottom: 0;
   align-self: center;
-  padding-left: 18px;
-  padding-right: 18px;
+  padding-left: 16px;
+  padding-right: 16px;
   border-radius: 999px;
-  font-size: 0.875rem;
+  font-size: calc(0.875rem * 0.9);
   font-weight: 600;
 }
 @media (max-width: 560px){
@@ -4073,8 +4016,8 @@ html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:fo
 .sheetModal__ghostBtn{
   width: 100%;
   justify-content: center;
-  min-height: 44px;
-  border-radius: 12px;
+  min-height: 36px;
+  border-radius: 999px;
 }
 
 .modal--sheet .sheetModal__footer,
@@ -4092,7 +4035,7 @@ html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:fo
   justify-content: flex-start;
 }
 .modal--sheet .btn{
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * 0.9);
 }
 .modal--sheet .sheetModal__footer .sheetModal__save,
 .modal--sheet .bondModal__footer .bondModal__save,
@@ -4100,10 +4043,10 @@ html[data-theme="dark"] .modal--sheet .bondModal__field .floatingField__input:fo
   margin-left: 0;
   order: 2;
   width: 100%;
-  min-height: 42px;
-  padding: 9px 20px;
+  min-height: 38px;
+  padding: 8px 18px;
   border-radius: 999px;
-  font-size: 0.9375rem;
+  font-size: calc(0.9375rem * 0.9);
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -4117,38 +4060,17 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__footer .autoPlanModal__
   color: rgba(235, 235, 245, 0.72);
 }
 .modal--sheet .sheetModal__footer .sheetModal__delete,
-.modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete,
+.modal--sheet .sheetModal__footer > .btn.btn--destructive.sheetModal__delete,
 .modal--bond .bondModal__footer #bond-modal-delete,
 .modal--bond .bondModal__footer .bondModal__delete{
   order: 1;
   width: 100%;
   align-self: center;
   border-radius: 999px;
-  background: #f7f7fa !important;
-  color: #ff3b30;
-  font-weight: 500;
-  font-size: 0.9375rem;
-  padding: 9px 20px;
-  min-height: 42px;
-}
-.modal--sheet .sheetModal__footer .sheetModal__delete:hover,
-.modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete:hover,
-.modal--bond .bondModal__footer #bond-modal-delete:hover,
-.modal--bond .bondModal__footer .bondModal__delete:hover{
-  background: rgba(255, 59, 48, 0.1) !important;
-}
-html[data-theme="dark"] .modal--sheet .sheetModal__footer .sheetModal__delete,
-html[data-theme="dark"] .modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete,
-html[data-theme="dark"] .modal--bond .bondModal__footer #bond-modal-delete,
-html[data-theme="dark"] .modal--bond .bondModal__footer .bondModal__delete{
-  background: rgba(118, 118, 128, 0.18) !important;
-  color: #ff6961;
-}
-html[data-theme="dark"] .modal--sheet .sheetModal__footer .sheetModal__delete:hover,
-html[data-theme="dark"] .modal--sheet .sheetModal__footer > .btn.btn--danger.sheetModal__delete:hover,
-html[data-theme="dark"] .modal--bond .bondModal__footer #bond-modal-delete:hover,
-html[data-theme="dark"] .modal--bond .bondModal__footer .bondModal__delete:hover{
-  background: rgba(255, 69, 58, 0.15) !important;
+  font-weight: 600;
+  font-size: calc(0.9375rem * 0.9);
+  padding: 8px 18px;
+  min-height: 38px;
 }
 
 .modal--sheet.modal--bond{
@@ -4336,8 +4258,8 @@ html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn.is-active{
 .strategyActionsModal__btn{
   width: 100%;
   justify-content: center;
-  min-height: 48px;
-  border-radius: 12px;
+  min-height: 43px;
+  border-radius: 999px;
 }
 
 @media (max-width: 1024px){
@@ -4377,9 +4299,10 @@ html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn.is-active{
   }
 
   .btn,
+  .btn--secondary,
   .btn--ghost,
   .dateBtn{
-    min-height: 40px;
+    min-height: 36px;
   }
 
   .table{
@@ -4437,6 +4360,7 @@ html[data-theme="dark"] .modal--bond .bondModal__monthGrid .monthBtn.is-active{
   }
 
   .modal__footer .btn,
+  .modal__footer .btn--secondary,
   .modal__footer .btn--ghost{
     width: 100%;
   }

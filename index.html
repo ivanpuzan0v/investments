@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Планирование инвестиций</title>
-    <link rel="stylesheet" href="./styles.css?v=107" />
+    <link rel="stylesheet" href="./styles.css?v=113" />
+    <link rel="stylesheet" href="./buttons.css?v=2" />
     <script>
       (function () {
         try {
@@ -53,7 +54,7 @@
             </table>
           </div>
           <div class="widget__footerActions">
-          <button id="add-asset-row" class="btn" type="button">Добавить</button>
+          <button id="add-asset-row" class="btn btn--primary" type="button">Добавить</button>
           </div>
         </div>
         </aside>
@@ -94,7 +95,7 @@
             </table>
           </div>
           <div class="widget__footerActions">
-            <button id="add-txn-row" class="btn" type="button">Добавить строку</button>
+            <button id="add-txn-row" class="btn btn--primary" type="button">Добавить строку</button>
           </div>
         </div>
 
@@ -283,7 +284,7 @@
             </table>
           </div>
           <div class="widget__footerActions">
-            <button id="add-holding-row" class="btn" type="button">Добавить</button>
+            <button id="add-holding-row" class="btn btn--primary" type="button">Добавить</button>
           </div>
         </div>
 
@@ -373,7 +374,7 @@
             </table>
           </div>
           <div class="widget__footerActions">
-            <button id="buy-strategy-new-btn" class="btn" type="button">Создать</button>
+            <button id="buy-strategy-new-btn" class="btn btn--secondary" type="button">Создать</button>
           </div>
         </div>
         </aside>
@@ -386,7 +387,7 @@
             <div class="strategyTabShell__strategiesPane">
               <div class="strategyTabShell__head">
                 <div class="widget__title strategyTabShell__title">Стратегия</div>
-                <button id="strategy-tab-new-strategy" class="strategyTabShell__addBtn" type="button" title="Новая стратегия" aria-label="Новая стратегия">
+                <button id="strategy-tab-new-strategy" class="btn btn--secondary strategyTabShell__addBtn" type="button" title="Новая стратегия" aria-label="Новая стратегия">
                   Создать
                 </button>
               </div>
@@ -395,7 +396,7 @@
             <div class="strategyTabShell__bondsPane" aria-label="Облигации для портфеля">
               <div class="strategyTabShell__bondsHead">
                 <div class="widget__title strategyTabShell__title strategyTabShell__title--bonds">Облигации</div>
-                <button id="strategy-tab-new-bond" class="strategyTabShell__addBtn" type="button" title="Добавить облигацию" aria-label="Добавить облигацию">
+                <button id="strategy-tab-new-bond" class="btn btn--secondary strategyTabShell__addBtn" type="button" title="Добавить облигацию" aria-label="Добавить облигацию">
                   Добавить
                 </button>
               </div>
@@ -427,17 +428,27 @@
                   <h2 class="strategyPlansPane__title">Планы</h2>
                 </div>
                 <div class="strategyPlansPane__toolbar" role="toolbar" aria-label="Действия с планом покупок">
-                  <div class="btnAiGradientWrap" title="Автопланирование">
-                    <button
-                      id="strategy-tab-auto-plan-btn"
-                      type="button"
-                      class="btn btn--autoPlanAi"
-                      aria-label="Открыть автопланирование"
-                    >
-                      Автопланирование
-                    </button>
+                  <div class="strategyPlansPane__toolbarPrimary">
+                    <div class="btnAiGradientWrap" title="Автопланирование">
+                      <button
+                        id="strategy-tab-auto-plan-btn"
+                        type="button"
+                        class="btn btn--autoPlanAi"
+                        aria-label="Открыть автопланирование"
+                      >
+                        Автопланирование
+                      </button>
+                    </div>
+                    <button id="strategy-tab-add-buy" type="button" class="btn btn--primary">Добавить покупку</button>
                   </div>
-                  <button id="strategy-tab-add-buy" type="button" class="btn strategyPlansPane__addBuy">Добавить покупку</button>
+                  <button
+                    id="strategy-tab-clear-plan"
+                    type="button"
+                    class="btn btn--destructive strategyPlansPane__toolbarClear"
+                    title="Удалить все запланированные покупки в выбранной стратегии"
+                  >
+                    Сбросить
+                  </button>
                 </div>
               </header>
               <div
@@ -450,21 +461,19 @@
               </div>
               <div class="tableWrap strategyTabShell__tableWrap strategyPlansPane__tableWrap" data-strategy-plans-table>
                 <table class="table strategyTabShell__table strategyPlansPane__table">
-                  <thead>
-                    <tr>
-                      <th class="strategyPlansPane__colDate">Дата</th>
-                      <th class="strategyPlansPane__colItems">Состав</th>
-                      <th class="strategyPlansPane__colSum">Сумма</th>
-                      <th class="strategyPlansPane__colActions" aria-label="Действия"></th>
-                    </tr>
-                  </thead>
+                  <colgroup>
+                    <col class="strategyPlansPane__colDate" />
+                    <col class="strategyPlansPane__colItems" />
+                    <col class="strategyPlansPane__colSum" />
+                    <col class="strategyPlansPane__colActions" />
+                  </colgroup>
                   <tbody id="strategy-tab-buys-tbody"></tbody>
                 </table>
               </div>
             </div>
             <div id="strategy-pane-charts" class="strategyTabShell__pane strategyTabShell__pane--charts strategyDynamics" hidden aria-label="Статистика">
               <div class="strategyDynamics__titleRow" id="strategy-charts-mainhead">
-                <h2 class="strategyDynamics__title">Статистика</h2>
+                <h2 class="strategyDynamics__title">График выплат</h2>
               </div>
               <div class="card widget widget--wide" data-widget="summary" hidden>
                 <div class="widget__header">
@@ -543,6 +552,16 @@
                   <svg id="returns-chart" viewBox="0 0 520 640" class="chart chart--returns" aria-hidden="true">
                     <g id="chart-content"></g>
                   </svg>
+                </div>
+                <div class="strategyChartsStatTitleRow">
+                  <h3 class="strategyChartsStatTitle">Статистика</h3>
+                </div>
+                <div class="strategyChartsStatGrid" aria-label="Показатели статистики">
+                  <div class="strategyChartsStatCard">
+                    <div class="strategyChartsStatCard__label">Выплачено купонами</div>
+                    <p id="strategy-stat-coupons-paid-hint" class="strategyChartsStatCard__hint"></p>
+                    <div id="strategy-stat-coupons-paid-total" class="strategyChartsStatCard__value">0,00 ₽</div>
+                  </div>
                 </div>
               </div>
               <div
@@ -627,7 +646,7 @@
                 <div class="portfolioControls__group portfolioControls__group--currentPf portfolioCurrentHoldings">
                   <div class="strategyPortfolioHoldings__head">
                     <div class="portfolioControls__groupTitle strategyPortfolioHoldings__title">Текущий портфель</div>
-                    <button type="button" id="add-portfolio-holding-row" class="btn strategyPortfolioHoldings__addBtn">Добавить</button>
+                    <button type="button" id="add-portfolio-holding-row" class="btn btn--primary strategyPortfolioHoldings__addBtn">Добавить</button>
                   </div>
                   <div class="tableWrap portfolioHoldingsTableWrap" role="region" aria-label="Текущий портфель">
                     <table class="table portfolioHoldingsTable">
@@ -754,9 +773,6 @@
                     <option value="dark">Тёмная</option>
                   </select>
                 </label>
-                <button id="reset-all" class="btn btn--ghost strategyTabShell__settingsReset" type="button" title="Стереть все локальные данные">
-                  Стереть все данные
-                </button>
               </div>
             </div>
           </aside>
@@ -938,8 +954,8 @@
         <input id="bond-modal-endDate" type="hidden" value="" />
 
         <div class="modal__footer modal__footer--bond bondModal__footer sheetModal__footer">
-          <button id="bond-modal-delete" class="btn btn--danger bondModal__delete" type="button" hidden>Удалить облигацию</button>
-          <button id="bond-modal-save" class="btn bondModal__save" type="button">Сохранить</button>
+          <button id="bond-modal-delete" class="btn btn--destructive bondModal__delete" type="button" hidden>Удалить облигацию</button>
+          <button id="bond-modal-save" class="btn btn--primary bondModal__save" type="button">Сохранить</button>
         </div>
       </div>
     </div>
@@ -966,14 +982,14 @@
             <div class="sheetModal__group sheetModal__group--buyItems">
               <div id="buy-items" class="buyItems"></div>
               <div class="sheetModal__groupFooter">
-                <button id="buy-add-item" class="btn btn--ghost sheetModal__ghostBtn" type="button">Добавить облигацию</button>
+                <button id="buy-add-item" class="btn btn--secondary sheetModal__ghostBtn" type="button">Добавить облигацию</button>
               </div>
             </div>
           </section>
         </div>
 
         <div class="modal__footer sheetModal__footer">
-          <button id="buy-save" class="btn sheetModal__save" type="button">Сохранить</button>
+          <button id="buy-save" class="btn btn--primary sheetModal__save" type="button">Сохранить</button>
         </div>
       </div>
     </div>
@@ -998,8 +1014,8 @@
           </section>
         </div>
         <div class="modal__footer sheetModal__footer">
-          <button id="strategy-delete" class="btn btn--danger sheetModal__delete" type="button" hidden>Удалить стратегию</button>
-          <button id="strategy-save" class="btn sheetModal__save" type="button">Сохранить</button>
+          <button id="strategy-delete" class="btn btn--destructive sheetModal__delete" type="button" hidden>Удалить стратегию</button>
+          <button id="strategy-save" class="btn btn--primary sheetModal__save" type="button">Сохранить</button>
         </div>
       </div>
     </div>
@@ -1012,8 +1028,8 @@
         </div>
         <div class="sheetModal__body sheetModal__body--actions">
           <div class="strategyActionsModal__actions">
-            <button id="strategy-actions-rename" class="btn strategyActionsModal__btn" type="button">Переименовать</button>
-            <button id="strategy-actions-delete" class="btn btn--danger strategyActionsModal__btn" type="button">Удалить стратегию</button>
+            <button id="strategy-actions-rename" class="btn btn--secondary strategyActionsModal__btn" type="button">Переименовать</button>
+            <button id="strategy-actions-delete" class="btn btn--destructive strategyActionsModal__btn" type="button">Удалить стратегию</button>
           </div>
         </div>
       </div>
@@ -1027,7 +1043,7 @@
         </div>
         <div id="auto-plan-modal-body" class="autoPlanModal__body sheetModal__body sheetModal__body--autoPlan"></div>
         <div class="sheetModal__footer autoPlanModal__footer">
-          <button id="auto-plan-generate-btn" class="btn sheetModal__save autoPlanModal__generateBtn" type="button">Сгенерировать план</button>
+          <button id="auto-plan-generate-btn" class="btn btn--primary sheetModal__save autoPlanModal__generateBtn" type="button">Сгенерировать план</button>
         </div>
       </div>
     </div>
@@ -1048,12 +1064,12 @@
           </p>
         </div>
         <div class="sheetModal__footer autoPlanConflictModal__footer">
-          <button id="auto-plan-conflict-keep" class="btn btn--ghost autoPlanConflictModal__keep" type="button">Оставить существующие</button>
-          <button id="auto-plan-conflict-overwrite" class="btn sheetModal__save autoPlanConflictModal__overwrite" type="button">Перезаписать</button>
+          <button id="auto-plan-conflict-keep" class="btn btn--secondary autoPlanConflictModal__keep" type="button">Оставить существующие</button>
+          <button id="auto-plan-conflict-overwrite" class="btn btn--primary sheetModal__save autoPlanConflictModal__overwrite" type="button">Перезаписать</button>
         </div>
       </div>
     </div>
 
-    <script src="./app.js?v=23"></script>
+    <script src="./app.js?v=26"></script>
   </body>
 </html>

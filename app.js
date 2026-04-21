@@ -56,7 +56,6 @@ const buyStrategyNewBtn = document.getElementById("buy-strategy-new-btn");
 const buyStrategyEditBtn = document.getElementById("buy-strategy-edit-btn");
 const buyStrategyDuplicateBtn = document.getElementById("buy-strategy-duplicate-btn");
 const buyStrategyDeleteBtn = document.getElementById("buy-strategy-delete-btn");
-const resetAllBtn = document.getElementById("reset-all");
 const chartContent = document.getElementById("chart-content");
 const returnsChartSvg = document.getElementById("returns-chart");
 const chartLegend = document.getElementById("chart-legend");
@@ -138,6 +137,7 @@ const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
 const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-strategy");
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
 const strategyTabAddBuyBtn = document.getElementById("strategy-tab-add-buy");
+const strategyTabClearPlanBtn = document.getElementById("strategy-tab-clear-plan");
 const strategyTabAutoPlanBtn = document.getElementById("strategy-tab-auto-plan-btn");
 const strategyTabShell = document.querySelector(".strategyTabShell");
 const autoPlanModalOverlay = document.getElementById("auto-plan-modal-overlay");
@@ -857,6 +857,20 @@ function switchActiveBuyStrategy(nextIdRaw) {
   renderAll();
 }
 
+/** Удаляет только строки плана покупок текущей выбранной стратегии (не трогает облигации, портфель и другие стратегии). */
+function clearActiveStrategyPlannedBuys() {
+  const planned = readSanitizedBuysFromTable();
+  if (!planned.length) return;
+  const current = buyStrategies.find((s) => s.id === activeBuyStrategyId);
+  const label = current?.name ? `«${String(current.name)}»` : "выбранной стратегии";
+  const ok = window.confirm(
+    `Удалить все запланированные покупки в стратегии ${label}? Облигации и другие стратегии не изменятся.`
+  );
+  if (!ok) return;
+  writeRows(buysTbody, buyTpl, defaultBuyRows());
+  persistAndRender();
+}
+
 function sortBuyRowsByDate(rows) {
   const completeRows = rows.filter(isBuyRowComplete);
   if (completeRows.length <= 1) {
@@ -1321,6 +1335,33 @@ function toNetChartData(chartData, taxRate) {
       })),
     })),
   };
+}
+
+/** Сумма купонных выплат по всему горизонту данных (как на графике «за всё время», без фильтра года). */
+function sumCouponPayoutsFromChartSeries(chartData) {
+  let sum = 0;
+  for (const series of chartData?.seriesByBond || []) {
+    for (const point of series.points || []) {
+      sum += Number(point.amount) || 0;
+    }
+  }
+  return sum;
+}
+
+/** Виджеты под графиком в «Статистике»: валовая / нетто — как переключатель «Параметры» справа. */
+function updateStrategyChartsStatWidgets(chartData) {
+  const valueEl = document.getElementById("strategy-stat-coupons-paid-total");
+  const hintEl = document.getElementById("strategy-stat-coupons-paid-hint");
+  if (!valueEl) return;
+  const taxR = getTaxRateDecimal();
+  const view = getCouponDisplayUsesNet() ? toNetChartData(chartData, taxR) : chartData;
+  const total = sumCouponPayoutsFromChartSeries(view);
+  valueEl.textContent = formatMoney(total);
+  if (hintEl) {
+    hintEl.textContent = getCouponDisplayUsesNet()
+      ? "После налога по ставке из параметров справа."
+      : "До удержания налога (валовая сумма).";
+  }
 }
 
 function setInputNumericValue(input, value, fallback = "0") {
@@ -2708,7 +2749,7 @@ function measureReturnsChartViewport() {
     hPx = r.height;
   }
   const w = Math.max(380, Math.min(2000, Math.floor(wPx > 0 ? wPx : 520)));
-  const h = Math.max(320, Math.min(920, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.32))));
+  const h = Math.max(260, Math.min(720, Math.floor(hPx > 40 ? hPx : Math.round(w * 1.2))));
   return { w, h };
 }
 
@@ -2803,6 +2844,66 @@ function chartStackTopSegmentPathD(x, yTop, w, h, rRaw) {
   return `M ${x} ${yTop + r} A ${r} ${r} 0 0 1 ${x + r} ${yTop} L ${x + w - r} ${yTop} A ${r} ${r} 0 0 1 ${x + w} ${yTop + r} L ${x + w} ${yTop + h} L ${x} ${yTop + h} Z`;
 }
 
+/** Вертикальные «ряды» подписей сумм: без сдвига по X относительно столбца; жадный выбор lane, чтобы прямоугольники не пересекались. */
+function assignCouponChartMoneyLabelLanes(metrics, pitch) {
+  const GAP = 2;
+  const MAX_LANES = 14;
+  const LABEL_TOP = 11;
+  const LABEL_BOT = 4;
+  /** @type {{ left: number; right: number; top: number; bottom: number }[]} */
+  const placed = [];
+  return metrics.map((c) => {
+    const cx = c.groupCenterX;
+    const halfW = c.estLabelW / 2 + 3;
+    const maxLaneClip = Math.max(0, Math.min(MAX_LANES, Math.floor((c.stackTopY - (8 + LABEL_TOP + 15)) / pitch)));
+    let monthTotalY = c.stackTopY - 15;
+    let bondHintY = c.stackTopY - 36;
+    let placedRect = /** @type {{ left: number; right: number; top: number; bottom: number } | null} */ (null);
+    for (let lane = 0; lane <= maxLaneClip; lane++) {
+      monthTotalY = c.stackTopY - 15 - lane * pitch;
+      bondHintY = c.stackTopY - 36 - lane * pitch;
+      const rect = {
+        left: cx - halfW,
+        right: cx + halfW,
+        top: monthTotalY - LABEL_TOP,
+        bottom: monthTotalY + LABEL_BOT,
+      };
+      let clash = false;
+      for (const p of placed) {
+        if (
+          !(
+            rect.right + GAP < p.left ||
+            rect.left - GAP > p.right ||
+            rect.bottom + GAP < p.top ||
+            rect.top - GAP > p.bottom
+          )
+        ) {
+          clash = true;
+          break;
+        }
+      }
+      if (!clash) {
+        placedRect = rect;
+        placed.push(rect);
+        break;
+      }
+    }
+    if (!placedRect) {
+      const lane = maxLaneClip;
+      monthTotalY = c.stackTopY - 15 - lane * pitch;
+      bondHintY = c.stackTopY - 36 - lane * pitch;
+      placedRect = {
+        left: cx - halfW,
+        right: cx + halfW,
+        top: monthTotalY - LABEL_TOP,
+        bottom: monthTotalY + LABEL_BOT,
+      };
+      placed.push(placedRect);
+    }
+    return { monthTotalY, bondHintY };
+  });
+}
+
 function renderChart(chartData) {
   lastCouponReturnsChartRenderedEmpty = false;
   lastCouponPayoutChartData = chartData;
@@ -2864,18 +2965,13 @@ function renderChart(chartData) {
   const left = 40;
   const right = 12;
   const nCols = visibleDates.length;
-  /** Нижний отступ: больше столбцов — больше места под подписи сумм (многоуровневый сдвиг по высоте). */
+  /** Нижний отступ: больше столбцов — больше места под подписи оси. */
   const bottom = Math.min(92, 56 + Math.min(36, Math.max(0, nCols - 4) * 2));
   const innerW = W - left - right;
   const groupWidthForLabels = nCols > 0 ? innerW / nCols : innerW;
-  /** Уже колонка → больше вертикальных «рядов» подписей (одинаковый шаг по Y). */
   const yLanePitch = 15;
-  const yLaneCount =
-    groupWidthForLabels < 28 ? 5 : groupWidthForLabels < 34 ? 4 : groupWidthForLabels < 42 ? 3 : groupWidthForLabels < 52 ? 2 : 1;
-  const labelTopReserve = yLaneCount > 1 ? (yLaneCount - 1) * yLanePitch + 8 : 0;
-  /** Запас под чередующийся подъём длинных сумм, когда рядов по Y нет (широкие колонки). */
-  const labelLongReserve = yLaneCount === 1 ? 24 : 0;
-  const top = 18 + labelTopReserve + labelLongReserve;
+  /** Верх: запас под вертикально разведённые суммы (жадный lane); без завышения — иначе пустая полоса и низкие столбцы. */
+  const top = 14 + Math.min(68, 8 + Math.max(0, nCols - 2) * 5);
   const innerH = H - top - bottom;
   const plotBottomY = top + innerH;
 
@@ -2897,6 +2993,7 @@ function renderChart(chartData) {
       returnsChartSvg.removeAttribute("data-chart-density");
       returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${emptyH}`);
     }
+    updateStrategyChartsStatWidgets(chartData);
     ensureReturnsChartResizeObserver();
     return;
   }
@@ -2920,10 +3017,8 @@ function renderChart(chartData) {
     lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
   }
 
-  /** Для решения о сдвиге суммы влево: геометрия предыдущего столбца. */
-  let prevCouponColForLabelDx = /** @type {{ x: number; barWidth: number; stackTopY: number; barTotalH: number; chartBottomY: number } | null} */ (
-    null
-  );
+  /** Метрики столбцов для жадного вертикального разведения подписей сумм (центр по X = центр столбца). */
+  const couponColMetrics = [];
 
   visibleDates.forEach((bucketKey, dateIdx) => {
     const activeBars = seriesByBond
@@ -2971,51 +3066,31 @@ function renderChart(chartData) {
     });
 
     const stackTopY = yStackBottom;
-    /** Многоуровневый сдвиг по Y только если столбец достаточно высокий — иначе подпись и так далеко от вершины, смещение лишнее. */
-    const minBarHForYLanes = 26;
-    const yLaneEffective =
-      yLaneCount > 1 && barTotalH >= minBarHForYLanes ? dateIdx % yLaneCount : 0;
-    const yTierOffset = yLaneEffective * yLanePitch;
     const moneyLabel = formatMoney(monthTotal);
     const maxMoneyChars = Math.max(
       moneyLabel.length,
-      ...activeBars.map(({ amount }) => formatMoney(amount).length)
+      ...activeBars.map(({ amount: a }) => formatMoney(a).length)
     );
     const estLabelW = maxMoneyChars * chartMoneyCharPx;
-    /** Широкие колонки, один «ряд» по Y: длинные суммы чуть выше и поочерёдно — меньше горизонтальных пересечений. */
-    const longLabelBoost =
-      yLaneCount === 1 && estLabelW > groupWidth * 0.58 ? 10 + (dateIdx % 2) * 11 : 0;
-    const bondHintY = stackTopY - 36 - yTierOffset - longLabelBoost;
-    const monthTotalY = stackTopY - 15 - yTierOffset - longLabelBoost;
-    /** Сдвиг влево только при явном риске наезда на соседа; у узкой колонки порог выше — иначе подпись зря уезжает над столбец. */
-    const overlapFrac = groupWidth < 34 ? 0.84 : 0.74;
-    const overlapRisk = estLabelW > groupWidth * overlapFrac;
-    let labelDx = overlapRisk ? -Math.min(20, Math.max(3, (estLabelW - groupWidth * 0.58) / 2)) : 0;
-    if (labelDx < 0 && prevCouponColForLabelDx) {
-      const tallLeftThreshold = Math.max(30, innerH * 0.2);
-      const leftTall = prevCouponColForLabelDx.barTotalH >= tallLeftThreshold;
-      const pad = 3;
-      const lblHalf = estLabelW / 2;
-      const cxAfter = groupCenterX + labelDx;
-      const leftEdge = cxAfter - lblHalf;
-      const leftBarRight = prevCouponColForLabelDx.x + prevCouponColForLabelDx.barWidth;
-      const labelTop = monthTotalY - 12;
-      const labelBot = monthTotalY + 5;
-      const crossesLeftBarVertically =
-        labelBot >= prevCouponColForLabelDx.stackTopY - pad && labelTop <= prevCouponColForLabelDx.chartBottomY + pad;
-      if (leftTall && crossesLeftBarVertically && leftEdge < leftBarRight + pad) {
-        labelDx = 0;
-      }
-    }
-    let sumLabelX = groupCenterX + labelDx;
-    const labelClampPad = 12;
-    const minLabelX = left + labelClampPad;
-    const maxLabelX = W - right - labelClampPad;
-    if (sumLabelX < minLabelX) sumLabelX = minLabelX;
-    if (sumLabelX > maxLabelX) sumLabelX = maxLabelX;
+    couponColMetrics.push({
+      bucketKey,
+      dateIdx,
+      groupCenterX,
+      stackTopY,
+      estLabelW,
+      monthTotal,
+    });
+  });
+
+  const moneyLabelLayouts = assignCouponChartMoneyLabelLanes(couponColMetrics, yLanePitch);
+
+  couponColMetrics.forEach((c, colIdx) => {
+    const { monthTotalY, bondHintY } = moneyLabelLayouts[colIdx];
+    const sumLabelX = c.groupCenterX;
+    const { bucketKey, groupCenterX, monthTotal } = c;
     const connectorY1 = monthTotalY + 7;
     lines.push(
-      `<line class="chartValueConnector" data-connector-month="${escapeHtml(bucketKey)}" vector-effect="non-scaling-stroke" x1="${sumLabelX}" y1="${connectorY1}" x2="${groupCenterX}" y2="${stackTopY}" />`
+      `<line class="chartValueConnector" data-connector-month="${escapeHtml(bucketKey)}" vector-effect="non-scaling-stroke" x1="${sumLabelX}" y1="${connectorY1}" x2="${groupCenterX}" y2="${c.stackTopY}" />`
     );
     seriesByBond.forEach((series, sIdx) => {
       const amt = amountByBondAndDate[sIdx].get(bucketKey) || 0;
@@ -3062,8 +3137,6 @@ function renderChart(chartData) {
         );
       }
     }
-
-    prevCouponColForLabelDx = { x, barWidth, stackTopY, barTotalH, chartBottomY: plotBottomY };
   });
 
   chartContent.innerHTML = lines.join("");
@@ -3073,6 +3146,7 @@ function renderChart(chartData) {
     returnsChartSvg.setAttribute("data-chart-density", density);
     returnsChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   }
+  updateStrategyChartsStatWidgets(chartData);
   ensureReturnsChartResizeObserver();
 }
 
@@ -3590,6 +3664,9 @@ function initStrategyTabPanel() {
   }
   if (strategyTabAddBuyBtn) {
     strategyTabAddBuyBtn.addEventListener("click", () => openBuyModal());
+  }
+  if (strategyTabClearPlanBtn) {
+    strategyTabClearPlanBtn.addEventListener("click", () => clearActiveStrategyPlannedBuys());
   }
   if (strategyTabAutoPlanBtn) {
     strategyTabAutoPlanBtn.addEventListener("click", () => openAutoPlanModal());
@@ -5219,35 +5296,6 @@ buysTbody.addEventListener("click", (e) => {
   if (!tr || tr.parentElement !== buysTbody) return;
   if (tr.hasAttribute("data-empty-state")) return;
   openBuyModalForEdit(tr);
-});
-
-resetAllBtn.addEventListener("click", () => {
-  localStorage.removeItem(BONDS_KEY);
-  localStorage.removeItem(BUYS_KEY);
-  localStorage.removeItem(BUY_STRATEGIES_KEY);
-  localStorage.removeItem(ACTIVE_BUY_STRATEGY_KEY);
-  localStorage.removeItem(HOLDINGS_KEY);
-  localStorage.removeItem(TAX_RATE_KEY);
-  localStorage.removeItem(CHART_YEAR_KEY);
-  localStorage.removeItem(SUMMARY_PIE_YEAR_KEY);
-  localStorage.removeItem(PORTFOLIO_CHART_YEAR_KEY);
-  localStorage.removeItem(PORTFOLIO_CHART_STRATEGY_KEY);
-  localStorage.removeItem(PORTFOLIO_START_DATE_KEY);
-  localStorage.removeItem(PORTFOLIO_START_VALUE_KEY);
-  localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
-  localStorage.removeItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
-  localStorage.removeItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
-  localStorage.removeItem(STRATEGY_CENTER_VIEW_KEY);
-  localStorage.removeItem(STRATEGY_LEFT_SIDEBAR_WIDTH_KEY);
-  localStorage.removeItem(STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY);
-  localStorage.removeItem(COUPON_DISPLAY_MODE_KEY);
-  localStorage.removeItem(TRADE_COMMISSION_PCT_KEY);
-  if (taxRateInput) taxRateInput.value = "13";
-  if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
-  setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
-  setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, "0");
-  if (autoPlanPriceDriftPctInput) autoPlanPriceDriftPctInput.value = "";
-  loadAll();
 });
 
 function initStrategySidebarParams() {
