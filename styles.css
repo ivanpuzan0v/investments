@@ -660,11 +660,30 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   width: 100%;
 }
 .strategyTabShell__bondsHead > .widget__title{
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
 }
 .strategyTabShell__bondsHead > .strategyTabShell__addBtn{
   margin-left: auto;
+}
+.strategyTabShell__bondsSort{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.strategyTabShell__bondsSortLabel{
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.strategyTabShell__bondsSortWrap{
+  padding: 0 var(--strategy-shell-pad) 8px;
+}
+.strategyTabShell__bondsSortSelect{
+  width: 100%;
+  min-width: 170px;
+  padding: 7px 10px;
+  font-size: var(--fs-small);
 }
 .strategyTabShell__hint--bonds{
   padding: 2px var(--strategy-shell-pad) 8px !important;
@@ -1141,6 +1160,111 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .strategyChartsStatCard{
   font-variant-numeric: tabular-nums;
 }
 
+.strategyComparisonPane{
+  flex: 0 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+}
+.strategyComparisonPane__titleRow{
+  flex-shrink: 0;
+  padding: 14px var(--strategy-shell-pad) 10px;
+}
+.strategyComparisonPane__title{
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--text);
+}
+.strategyComparisonPane__picker{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.strategyComparisonPane__pickerItem{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--hairline) 85%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg0) 50%, transparent);
+  font-size: var(--fs-xs);
+  color: var(--text);
+  user-select: none;
+}
+.strategyComparisonPane__pickerItem input{
+  margin: 0;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__widget{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0 var(--strategy-shell-pad) 14px !important;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__tableWrap{
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  margin-left: calc(-1 * var(--strategy-shell-pad));
+  margin-right: calc(-1 * var(--strategy-shell-pad));
+  width: calc(100% + 2 * var(--strategy-shell-pad));
+  max-width: none;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__table thead th{
+  font-size: inherit;
+  font-weight: inherit;
+  border-bottom: 0.5px solid var(--hairline);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__table tbody td{
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  vertical-align: top;
+  border-top: 0.5px solid var(--hairline);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__value{
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__value--max{
+  color: #1f7a36;
+  font-weight: 750;
+}
+html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__value--max{
+  color: #42c767;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bonds{
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+  color: var(--muted);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bond{
+  color: inherit;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bondSep{
+  color: color-mix(in srgb, var(--muted) 82%, transparent);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bond--diff{
+  color: color-mix(in srgb, var(--muted) 92%, transparent);
+  font-weight: 600;
+}
+html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__bond--diff{
+  color: rgba(235, 235, 245, 0.52);
+}
+
 /* Портфель (вкладка стратегии): параметры, статистика и график — без лишних карточек; год в сайдбаре */
 .strategyPortfolio{
   flex: 0 0 auto;
@@ -1543,8 +1667,9 @@ html[data-theme="dark"] .strategyTabShell__fieldset{
   --strategy-list-active-gutter: 8px;
   margin-block: 0;
   margin-inline: var(--strategy-list-active-gutter);
-  padding: 10px max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter))) 10px
+  padding: 12px max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter))) 12px
     max(0px, calc(var(--strategy-shell-pad) - var(--strategy-list-active-gutter)));
+  min-height: 44px;
   border-radius: var(--radius2);
   border: 1px solid transparent;
   background: transparent;
@@ -1554,6 +1679,9 @@ html[data-theme="dark"] .strategyTabShell__fieldset{
   transition:
     background-color 0.22s ease,
     border-color 0.22s ease;
+}
+.strategyTabShell__strategyRow{
+  position: relative;
 }
 @media (prefers-reduced-motion: reduce){
   .strategyTabShell__displayNavRow,
@@ -1610,6 +1738,12 @@ html[data-theme="dark"] .strategyTabShell__strategySelect:focus-visible{
   cursor: pointer;
   display: grid;
   place-items: center;
+}
+.strategyTabShell__strategyRow.has-actions .strategyTabShell__menuBtn{
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  transform: translateY(-50%);
 }
 .strategyTabShell__menuBtn:hover,
 .strategyTabShell__menuBtn:focus-visible{

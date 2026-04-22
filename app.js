@@ -16,6 +16,8 @@ const PORTFOLIO_START_DATE_KEY = "invest_planner_portfolio_start_date_v1";
 const PORTFOLIO_START_VALUE_KEY = "invest_planner_portfolio_start_value_v1";
 const PORTFOLIO_MONTHLY_TOPUP_KEY = "invest_planner_portfolio_monthly_topup_v1";
 const PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY = "invest_planner_portfolio_monthly_topup_end_date_v1";
+const STRATEGY_COMPARISON_SELECTED_IDS_KEY = "invest_planner_strategy_comparison_selected_ids_v1";
+const STRATEGY_BONDS_SORT_KEY = "invest_planner_strategy_bonds_sort_v1";
 const BUY_STRATEGIES_KEY = "invest_planner_buy_strategies_v1";
 const ACTIVE_BUY_STRATEGY_KEY = "invest_planner_active_buy_strategy_v1";
 /** Центр вкладки «Стратегия»: buys | charts (localStorage). */
@@ -140,6 +142,7 @@ const strategySaveBtn = document.getElementById("strategy-save");
 const strategyTabStrategyList = document.getElementById("strategy-tab-strategy-list");
 const strategyTabBuysTbody = document.getElementById("strategy-tab-buys-tbody");
 const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
+const strategyBondsSortSelect = document.getElementById("strategy-bonds-sort");
 const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-strategy");
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
 const strategyTabAddBuyBtn = document.getElementById("strategy-tab-add-buy");
@@ -160,7 +163,14 @@ let autoPlanGenerateTooltipHost = null;
 let autoPlanConflictResolve = null;
 const strategyPaneBuys = document.getElementById("strategy-pane-buys");
 const strategyPaneCharts = document.getElementById("strategy-pane-charts");
+const strategyPaneComparison = document.getElementById("strategy-pane-comparison");
 const strategyPanePortfolio = document.getElementById("strategy-pane-portfolio");
+const strategyComparisonStrategyPicker = document.getElementById("strategy-comparison-strategy-picker");
+const strategyComparisonThead = document.getElementById("strategy-comparison-thead");
+const strategyComparisonTbody = document.getElementById("strategy-comparison-tbody");
+const strategyComparisonLegend = document.getElementById("strategy-comparison-legend");
+const strategyComparisonChartSvg = document.getElementById("strategy-comparison-chart");
+const strategyComparisonChartContent = document.getElementById("strategy-comparison-chart-content");
 const strategySidebarTaxInput = document.getElementById("strategy-sidebar-tax-rate");
 const strategyCouponDisplayNetRadio = document.getElementById("strategy-coupon-display-net");
 const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon-display-gross");
@@ -380,21 +390,29 @@ function updateStrategyDisplayNavUi(mode) {
 }
 
 function setStrategyCenterView(mode) {
-  if (mode !== "buys" && mode !== "charts" && mode !== "portfolio") return;
+  if (mode !== "buys" && mode !== "charts" && mode !== "comparison" && mode !== "portfolio") return;
   localStorage.setItem(STRATEGY_CENTER_VIEW_KEY, mode);
-  if (!strategyPaneBuys || !strategyPaneCharts || !strategyPanePortfolio) return;
+  if (!strategyPaneBuys || !strategyPaneCharts || !strategyPaneComparison || !strategyPanePortfolio) return;
 
   if (mode === "charts") {
     strategyPaneBuys.hidden = true;
     strategyPaneCharts.hidden = false;
+    strategyPaneComparison.hidden = true;
+    strategyPanePortfolio.hidden = true;
+  } else if (mode === "comparison") {
+    strategyPaneBuys.hidden = true;
+    strategyPaneCharts.hidden = true;
+    strategyPaneComparison.hidden = false;
     strategyPanePortfolio.hidden = true;
   } else if (mode === "portfolio") {
     strategyPaneBuys.hidden = true;
     strategyPaneCharts.hidden = true;
+    strategyPaneComparison.hidden = true;
     strategyPanePortfolio.hidden = false;
   } else {
     strategyPaneBuys.hidden = false;
     strategyPaneCharts.hidden = true;
+    strategyPaneComparison.hidden = true;
     strategyPanePortfolio.hidden = true;
   }
   updateStrategyDisplayNavUi(mode);
@@ -407,7 +425,7 @@ function setStrategyCenterView(mode) {
 
 function applyStrategyCenterViewFromStorage() {
   const raw = localStorage.getItem(STRATEGY_CENTER_VIEW_KEY);
-  const mode = raw === "charts" || raw === "portfolio" ? raw : "buys";
+  const mode = raw === "charts" || raw === "comparison" || raw === "portfolio" ? raw : "buys";
   setStrategyCenterView(mode);
 }
 
@@ -811,6 +829,7 @@ function renderBuyStrategySelect() {
       localStorage.setItem(PORTFOLIO_CHART_STRATEGY_KEY, activeBuyStrategyId);
     }
   }
+  renderComparisonStrategyPicker();
 }
 
 function isStrategyTabPortfolioView() {
@@ -1113,6 +1132,59 @@ function ensurePortfolioChartYearOptions(points) {
   const persisted = portfolioChartYearSelect.value;
   localStorage.setItem(PORTFOLIO_CHART_YEAR_KEY, persisted);
   return persisted;
+}
+
+function ensureComparisonYear() {
+  const raw = String(
+    strategyPlansYearSelect?.value || chartYearSelect?.value || localStorage.getItem(CHART_YEAR_KEY) || PORTFOLIO_CHART_YEAR_ALL
+  ).trim();
+  return raw || PORTFOLIO_CHART_YEAR_ALL;
+}
+
+function getStrategyBondsSortMode() {
+  const fromSelect = String(strategyBondsSortSelect?.value || "").trim();
+  if (fromSelect === "maturity" || fromSelect === "name") return fromSelect;
+  const saved = String(localStorage.getItem(STRATEGY_BONDS_SORT_KEY) || "").trim();
+  if (saved === "maturity" || saved === "name") return saved;
+  return "name";
+}
+
+function getSelectedComparisonStrategyIds() {
+  const allIds = buyStrategies.map((s) => String(s.id));
+  if (!allIds.length) return [];
+  let parsed = [];
+  try {
+    parsed = JSON.parse(String(localStorage.getItem(STRATEGY_COMPARISON_SELECTED_IDS_KEY) || "[]"));
+  } catch {
+    parsed = [];
+  }
+  const selected = Array.isArray(parsed) ? parsed.map((x) => String(x || "").trim()).filter(Boolean) : [];
+  const valid = selected.filter((id) => allIds.includes(id));
+  return valid.length ? valid : allIds;
+}
+
+function persistSelectedComparisonStrategyIds(ids) {
+  const allIds = buyStrategies.map((s) => String(s.id));
+  const valid = (Array.isArray(ids) ? ids : [])
+    .map((x) => String(x || "").trim())
+    .filter((id, idx, arr) => id && allIds.includes(id) && arr.indexOf(id) === idx);
+  const toSave = valid.length ? valid : allIds;
+  localStorage.setItem(STRATEGY_COMPARISON_SELECTED_IDS_KEY, JSON.stringify(toSave));
+}
+
+function renderComparisonStrategyPicker() {
+  if (!strategyComparisonStrategyPicker) return;
+  const selected = new Set(getSelectedComparisonStrategyIds());
+  strategyComparisonStrategyPicker.innerHTML = buyStrategies
+    .map((s) => {
+      const id = String(s.id);
+      const checked = selected.has(id);
+      return `<label class="strategyComparisonPane__pickerItem">
+        <input type="checkbox" data-cmp-strategy-id="${escapeHtml(id)}" ${checked ? "checked" : ""} />
+        <span>${escapeHtml(String(s.name || id))}</span>
+      </label>`;
+    })
+    .join("");
 }
 
 function polarToCartesian(cx, cy, r, angleDeg) {
@@ -1507,6 +1579,14 @@ let lastHoveredSlice = null;
 let lastHoveredLegendItem = null;
 /** @type {SVGElement | null} */
 let lastHoveredPortfolioZone = null;
+/** @type {SVGElement | null} */
+let lastHoveredStrategyComparisonBar = null;
+/** @type {HTMLElement | null} */
+let lastHoveredStrategyComparisonLegendItem = null;
+/** @type {Map<string, Map<string, number>>} key: `${strategyId}|${bucket}` -> (bond -> amount) */
+let lastStrategyComparisonBondBreakdown = new Map();
+/** @type {Map<string, string>} */
+let lastStrategyComparisonStrategyNameById = new Map();
 
 function clearBarHover() {
   // Сбрасываем подсветку сразу у всех столбцов (для сценариев: выделение месяца/нескольких столбцов).
@@ -1566,6 +1646,26 @@ function clearPortfolioHover() {
     lastHoveredPortfolioZone = null;
   }
   hidePortfolioHoverDot();
+}
+
+function clearStrategyComparisonHover() {
+  if (lastHoveredStrategyComparisonBar) {
+    lastHoveredStrategyComparisonBar.classList.remove("strategyComparisonBar--active");
+    lastHoveredStrategyComparisonBar = null;
+  }
+  if (lastHoveredStrategyComparisonLegendItem) {
+    lastHoveredStrategyComparisonLegendItem.classList.remove("chartLegend__item--active");
+    lastHoveredStrategyComparisonLegendItem = null;
+  }
+  if (strategyComparisonChartContent) {
+    strategyComparisonChartContent.classList.remove("strategyComparisonContent--dimOthers");
+    strategyComparisonChartContent.querySelectorAll(".strategyComparisonBarValue, .strategyComparisonValueConnector").forEach((el) => {
+      if (!(el instanceof SVGElement)) return;
+      el.classList.remove("strategyComparisonValue--active");
+      el.removeAttribute("fill");
+      el.removeAttribute("stroke");
+    });
+  }
 }
 
 function clearChartTextHighlight() {
@@ -2242,6 +2342,147 @@ function onPortfolioChartPointerLeave() {
   }
 }
 
+/** @param {PointerEvent} e */
+function onStrategyComparisonPointerMove(e) {
+  const t = /** @type {EventTarget | null} */ (e.target);
+  if (!(t instanceof Element)) return;
+  const axisLabel = t.closest(".strategyComparisonAxisLabel[data-cmp-bucket]");
+  const bar = t.closest(".strategyComparisonBar");
+  if (!bar || !(bar instanceof SVGElement)) {
+    if (axisLabel instanceof SVGElement && strategyComparisonChartContent) {
+      hideChartTooltip();
+      clearStrategyComparisonHover();
+      const bucket = String(axisLabel.getAttribute("data-cmp-bucket") || "").trim();
+      const granularity = String(axisLabel.getAttribute("data-cmp-granularity") || "month").trim();
+      const periodLabel = granularity === "year" ? bucket : monthLabelFromKey(bucket);
+      const totalFromAxis = parseNumber(axisLabel.getAttribute("data-cmp-total"));
+      strategyComparisonChartContent.classList.add("strategyComparisonContent--dimOthers");
+      const activeBars = Array.from(
+        strategyComparisonChartContent.querySelectorAll(`.strategyComparisonBar[data-cmp-bucket="${bucket}"]`)
+      ).filter((el) => el instanceof SVGElement);
+      const colorByStrategy = new Map();
+      let total = Number.isFinite(totalFromAxis) ? totalFromAxis : 0;
+      if (!Number.isFinite(totalFromAxis)) total = 0;
+      activeBars.forEach((barEl) => {
+        const sid = String(barEl.getAttribute("data-cmp-strategy-id") || "").trim();
+        const val = parseNumber(barEl.getAttribute("data-cmp-value"));
+        const color = String(barEl.getAttribute("fill") || "").trim();
+        barEl.classList.add("strategyComparisonBar--active");
+        if (sid && color) colorByStrategy.set(sid, color);
+        if (!Number.isFinite(totalFromAxis)) total += Number.isFinite(val) ? val : 0;
+      });
+      strategyComparisonChartContent.querySelectorAll(".strategyComparisonBarValue, .strategyComparisonValueConnector").forEach((el) => {
+        if (!(el instanceof SVGElement)) return;
+        const sid = String(el.getAttribute("data-cmp-strategy-id") || "").trim();
+        const b = String(el.getAttribute("data-cmp-bucket") || "").trim();
+        if (b !== bucket) return;
+        el.classList.add("strategyComparisonValue--active");
+        const c = colorByStrategy.get(sid) || "";
+        if (c) {
+          if (el.classList.contains("strategyComparisonBarValue")) el.setAttribute("fill", c);
+          if (el.classList.contains("strategyComparisonValueConnector")) el.setAttribute("stroke", c);
+        }
+      });
+      const strategyLines = activeBars
+        .map((barEl) => {
+          const sid = String(barEl.getAttribute("data-cmp-strategy-id") || "").trim();
+          const val = parseNumber(barEl.getAttribute("data-cmp-value"));
+          if (!sid || !Number.isFinite(val)) return "";
+          const name = lastStrategyComparisonStrategyNameById.get(sid) || sid;
+          return `${escapeHtml(name)}: ${escapeHtml(formatMoney(val))}`;
+        })
+        .filter(Boolean);
+      showChartTooltip(
+        `${escapeHtml(String(periodLabel))} • ${escapeHtml(formatMoney(total))}`,
+        strategyLines.length ? strategyLines.join("<br/>") : "—",
+        e.clientX,
+        e.clientY
+      );
+      return;
+    }
+    hideChartTooltip();
+    clearStrategyComparisonHover();
+    return;
+  }
+  if (lastHoveredStrategyComparisonBar !== bar) {
+    clearStrategyComparisonHover();
+    lastHoveredStrategyComparisonBar = bar;
+    bar.classList.add("strategyComparisonBar--active");
+  }
+
+  const strategyId = String(bar.getAttribute("data-cmp-strategy-id") || "").trim();
+  const bucket = String(bar.getAttribute("data-cmp-bucket") || "").trim();
+  const value = parseNumber(bar.getAttribute("data-cmp-value"));
+  const activeColor = String(bar.getAttribute("fill") || "").trim();
+  const granularity = String(bar.getAttribute("data-cmp-granularity") || "month").trim();
+  const strategyName = lastStrategyComparisonStrategyNameById.get(strategyId) || strategyId || "Стратегия";
+  const periodLabel = granularity === "year" ? bucket : monthLabelFromKey(bucket);
+  const breakdownKey = `${strategyId}|${bucket}`;
+  const bondMap = lastStrategyComparisonBondBreakdown.get(breakdownKey) || new Map();
+  const bondLines = Array.from(bondMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([bond, amt]) => `${escapeHtml(bond)}: ${escapeHtml(formatMoney(amt))}`);
+
+  showChartTooltip(
+    `${escapeHtml(strategyName)} · ${escapeHtml(String(periodLabel))}`,
+    `Выплаты: ${escapeHtml(formatMoney(value))}${bondLines.length ? `<br/>${bondLines.join("<br/>")}` : "<br/>—"}`,
+    e.clientX,
+    e.clientY
+  );
+  if (strategyComparisonChartContent) {
+    strategyComparisonChartContent.classList.add("strategyComparisonContent--dimOthers");
+    strategyComparisonChartContent.querySelectorAll(".strategyComparisonBarValue, .strategyComparisonValueConnector").forEach((el) => {
+      if (!(el instanceof SVGElement)) return;
+      const sid = String(el.getAttribute("data-cmp-strategy-id") || "").trim();
+      const b = String(el.getAttribute("data-cmp-bucket") || "").trim();
+      if (sid === strategyId && b === bucket) {
+        el.classList.add("strategyComparisonValue--active");
+        if (activeColor) {
+          if (el.classList.contains("strategyComparisonBarValue")) el.setAttribute("fill", activeColor);
+          if (el.classList.contains("strategyComparisonValueConnector")) el.setAttribute("stroke", activeColor);
+        }
+      }
+    });
+  }
+}
+
+function onStrategyComparisonPointerLeave() {
+  if (lastHoveredStrategyComparisonLegendItem) return;
+  hideChartTooltip();
+  clearStrategyComparisonHover();
+}
+
+function setComparisonLegendFilterStrategy(strategyId, legendItem = null) {
+  const sid = String(strategyId || "").trim();
+  clearStrategyComparisonHover();
+  if (!sid || !strategyComparisonChartContent) return;
+  strategyComparisonChartContent.classList.add("strategyComparisonContent--dimOthers");
+  let strategyColor = "";
+  strategyComparisonChartContent.querySelectorAll(".strategyComparisonBar").forEach((el) => {
+    if (!(el instanceof SVGElement)) return;
+    const elSid = String(el.getAttribute("data-cmp-strategy-id") || "").trim();
+    if (elSid === sid) {
+      el.classList.add("strategyComparisonBar--active");
+      if (!strategyColor) strategyColor = String(el.getAttribute("fill") || "").trim();
+    }
+  });
+  strategyComparisonChartContent.querySelectorAll(".strategyComparisonBarValue, .strategyComparisonValueConnector").forEach((el) => {
+    if (!(el instanceof SVGElement)) return;
+    const elSid = String(el.getAttribute("data-cmp-strategy-id") || "").trim();
+    if (elSid === sid) {
+      el.classList.add("strategyComparisonValue--active");
+      if (strategyColor) {
+        if (el.classList.contains("strategyComparisonBarValue")) el.setAttribute("fill", strategyColor);
+        if (el.classList.contains("strategyComparisonValueConnector")) el.setAttribute("stroke", strategyColor);
+      }
+    }
+  });
+  if (legendItem) {
+    legendItem.classList.add("chartLegend__item--active");
+    lastHoveredStrategyComparisonLegendItem = legendItem;
+  }
+}
+
 function bindChartTooltips() {
   if (returnsChartSvg && !returnsChartSvg.dataset.tooltipBound) {
     returnsChartSvg.dataset.tooltipBound = "1";
@@ -2252,6 +2493,35 @@ function bindChartTooltips() {
     portfolioChartSvg.dataset.tooltipBound = "1";
     portfolioChartSvg.addEventListener("pointermove", onPortfolioChartPointerMove);
     portfolioChartSvg.addEventListener("pointerleave", onPortfolioChartPointerLeave);
+  }
+  if (strategyComparisonChartSvg && !strategyComparisonChartSvg.dataset.tooltipBound) {
+    strategyComparisonChartSvg.dataset.tooltipBound = "1";
+    strategyComparisonChartSvg.addEventListener("pointermove", onStrategyComparisonPointerMove);
+    strategyComparisonChartSvg.addEventListener("pointerleave", onStrategyComparisonPointerLeave);
+  }
+  if (strategyComparisonLegend && !strategyComparisonLegend.dataset.tooltipBound) {
+    strategyComparisonLegend.dataset.tooltipBound = "1";
+    strategyComparisonLegend.addEventListener("pointermove", (e) => {
+      const t = /** @type {EventTarget | null} */ (e.target);
+      if (!(t instanceof Element)) return;
+      const item = t.closest(".chartLegend__item");
+      if (!item || !(item instanceof HTMLElement)) {
+        hideChartTooltip();
+        clearStrategyComparisonHover();
+        return;
+      }
+      const sid = String(item.getAttribute("data-cmp-legend-strategy-id") || "").trim();
+      if (!sid) {
+        hideChartTooltip();
+        clearStrategyComparisonHover();
+        return;
+      }
+      setComparisonLegendFilterStrategy(sid, item);
+    });
+    strategyComparisonLegend.addEventListener("pointerleave", () => {
+      hideChartTooltip();
+      clearStrategyComparisonHover();
+    });
   }
   if (chartLegend && !chartLegend.dataset.tooltipBound) {
     chartLegend.dataset.tooltipBound = "1";
@@ -3548,6 +3818,112 @@ function renderPortfolioChart(chartData) {
   portfolioChartContent.innerHTML = lines.join("");
 }
 
+function renderStrategyComparisonChart(bonds, holdings) {
+  if (!strategyComparisonThead || !strategyComparisonTbody) return;
+  renderComparisonStrategyPicker();
+  const selectedIds = new Set(getSelectedComparisonStrategyIds());
+  const strategies = buyStrategies.map((s) => ({ ...s }));
+  const selectedYear = ensureComparisonYear();
+  const isAllTime = selectedYear === PORTFOLIO_CHART_YEAR_ALL;
+  const taxRate = getTaxRateDecimal();
+  const useNet = getCouponDisplayUsesNet();
+  const byStrategy = strategies.map((strategy) => {
+    const buys = sortBuyRowsByDate((buyRowsByStrategyId.get(strategy.id) || []).filter(isBuyRowComplete)).rows;
+    const payoutGross = buildPayoutSeries(bonds, buys, holdings);
+    const payout = useNet ? toNetChartData(payoutGross, taxRate) : payoutGross;
+    const monthTotals = new Map();
+    const monthBonds = new Map();
+    for (const series of payout.seriesByBond || []) {
+      for (const p of series.points || []) {
+        if (!(Number(p.amount) > 0)) continue;
+        const year = getYearFromMonthKey(p.monthKey);
+        if (!year) continue;
+        if (!isAllTime && year !== selectedYear) continue;
+        const bucketKey = isAllTime ? year : p.monthKey;
+        const amount = Number(p.amount) || 0;
+        monthTotals.set(bucketKey, (monthTotals.get(bucketKey) || 0) + amount);
+        const bondName = String(series.bond || series.matchBond || "").trim();
+        if (bondName) {
+          if (!monthBonds.has(bucketKey)) monthBonds.set(bucketKey, new Set());
+          monthBonds.get(bucketKey).add(bondName);
+        }
+      }
+    }
+    return { strategy, monthTotals, monthBonds };
+  });
+
+  const bucketSet = new Set();
+  byStrategy.forEach(({ monthTotals }) => monthTotals.forEach((_v, mk) => bucketSet.add(mk)));
+  const buckets = Array.from(bucketSet).sort();
+
+  const strategyCols = byStrategy
+    .filter(({ strategy }) => selectedIds.has(String(strategy.id)))
+    .filter(({ monthTotals }) => Array.from(monthTotals.values()).some((v) => v > 0));
+  const periodHead = isAllTime ? "Год" : "Месяц";
+  strategyComparisonThead.innerHTML = `<tr>
+    <th scope="col" style="width: 140px;">${periodHead}</th>
+    ${strategyCols.map(({ strategy }) => `<th scope="col">${escapeHtml(String(strategy.name || "Стратегия"))}</th>`).join("")}
+  </tr>`;
+
+  if (!buckets.length || !strategyCols.length) {
+    renderTableEmptyState(
+      strategyComparisonTbody,
+      Math.max(2, strategyCols.length + 1),
+      isAllTime ? "Нет данных для сравнения" : "За выбранный год нет выплат для сравнения",
+      "Добавьте покупки в разные стратегии, чтобы увидеть сравнение выплат в таблице."
+    );
+    return;
+  }
+
+  strategyComparisonTbody.innerHTML = buckets
+    .map((bucket) => {
+      const periodText = isAllTime ? bucket : formatMonthKeyRuLong(bucket);
+      const rowValues = strategyCols.map(({ monthTotals }) => monthTotals.get(bucket) || 0);
+      const maxVal = rowValues.length ? Math.max(...rowValues) : 0;
+      const maxCount = rowValues.filter((v) => v === maxVal && v > 0).length;
+      const activeStrategyCount = rowValues.filter((v) => v > 0).length;
+      const bondPresenceCount = new Map();
+      strategyCols.forEach(({ monthTotals, monthBonds }) => {
+        const v = monthTotals.get(bucket) || 0;
+        if (!(v > 0)) return;
+        const bonds = Array.from(monthBonds.get(bucket) || []);
+        bonds.forEach((bond) => {
+          bondPresenceCount.set(bond, (bondPresenceCount.get(bond) || 0) + 1);
+        });
+      });
+      const cells = strategyCols
+        .map(({ monthTotals, monthBonds }) => {
+          const val = monthTotals.get(bucket) || 0;
+          if (!(val > 0)) return `<td>—</td>`;
+          const bonds = Array.from(monthBonds.get(bucket) || []).sort((a, b) =>
+            a.localeCompare(b, "ru", { numeric: true, sensitivity: "base" })
+          );
+          const bondsHtml = bonds.length
+            ? bonds
+                .map((bond) => {
+                  const count = bondPresenceCount.get(bond) || 0;
+                  const isDifferent = activeStrategyCount > 1 && count < activeStrategyCount;
+                  return `<span class="strategyComparisonPane__bond${isDifferent ? " strategyComparisonPane__bond--diff" : ""}">${escapeHtml(
+                    bond
+                  )}</span>`;
+                })
+                .join('<span class="strategyComparisonPane__bondSep">, </span>')
+            : "—";
+          const maxClass = val === maxVal && maxVal > 0 && maxCount === 1 ? " strategyComparisonPane__value--max" : "";
+          return `<td>
+            <div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(val))}</div>
+            <div class="strategyComparisonPane__bonds">${bondsHtml}</div>
+          </td>`;
+        })
+        .join("");
+      return `<tr>
+        <td>${escapeHtml(periodText)}</td>
+        ${cells}
+      </tr>`;
+    })
+    .join("");
+}
+
 function setPortfolioMoneyInputValue(input, value) {
   if (!input) return;
   const numeric = parseNumber(value);
@@ -3635,6 +4011,7 @@ function syncStrategyTabStrategyListRowsIfPossible(fp) {
     const hasMenu = Boolean(li.querySelector('[data-strategy-action="open-menu"]'));
     if (wantsMenu !== hasMenu) return false;
     li.classList.toggle("is-active", s.id === activeBuyStrategyId);
+    li.classList.toggle("has-actions", wantsMenu);
     const nameEl = li.querySelector(".strategyTabShell__strategyName");
     if (nameEl) nameEl.textContent = s.name;
   }
@@ -3654,7 +4031,7 @@ function renderStrategyTab() {
         const actions = isDefault
           ? ""
           : `<button type="button" class="strategyTabShell__menuBtn" data-strategy-action="open-menu" data-strategy-id="${idEsc}" title="Редактировать стратегию" aria-label="Редактировать стратегию">⋮</button>`;
-        return `<li class="strategyTabShell__strategyRow${isActive ? " is-active" : ""}" data-strategy-id="${idEsc}">
+        return `<li class="strategyTabShell__strategyRow${isDefault ? "" : " has-actions"}${isActive ? " is-active" : ""}" data-strategy-id="${idEsc}">
         <button type="button" class="strategyTabShell__strategySelect">
           <span class="strategyTabShell__strategyName">${escapeHtml(String(s.name))}</span>
         </button>
@@ -3721,7 +4098,16 @@ function renderStrategyTab() {
   }
 
   const rawBondRows = readRowsSkippingPlaceholder(bondsTbody);
-  const bonds = sanitizeBondRows(rawBondRows);
+  const bondsSort = getStrategyBondsSortMode();
+  const bonds = sanitizeBondRows(rawBondRows).sort((a, b) => {
+    if (bondsSort === "maturity") {
+      const aEnd = normalizeYMD(String(a.endDate || "").trim()) || "9999-12-31";
+      const bEnd = normalizeYMD(String(b.endDate || "").trim()) || "9999-12-31";
+      const byDate = aEnd.localeCompare(bEnd);
+      if (byDate !== 0) return byDate;
+    }
+    return String(a.bond || "").localeCompare(String(b.bond || ""), "ru", { numeric: true, sensitivity: "base" });
+  });
   const hasBondTableData = bondTableHasRealRows();
   const bondsEmptyEl = document.getElementById("strategy-bonds-empty");
   if (!hasBondTableData) {
@@ -3810,7 +4196,7 @@ function initStrategyTabPanel() {
       const btn = e.target.closest("[data-strategy-display]");
       if (!btn) return;
       const mode = btn.getAttribute("data-strategy-display");
-      if (mode !== "buys" && mode !== "charts" && mode !== "portfolio") return;
+      if (mode !== "buys" && mode !== "charts" && mode !== "comparison" && mode !== "portfolio") return;
       setStrategyCenterView(mode);
     });
   }
@@ -3973,6 +4359,7 @@ function renderAll() {
   const payoutSeries = buildPayoutSeries(bonds, buys, holdings);
   const payoutSeriesPortfolio = buildPayoutSeries(bonds, portfolioBuys, holdings);
   renderPortfolioChart(payoutSeriesPortfolio);
+  renderStrategyComparisonChart(bonds, holdings);
   renderChart(payoutSeries);
   renderSummary(payoutSeries, buys, holdings);
   refreshAutoPlanBondPicker();
@@ -5087,6 +5474,7 @@ function loadAll() {
     const portfolioStartValueRaw = localStorage.getItem(PORTFOLIO_START_VALUE_KEY);
     const portfolioMonthlyTopupRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
     const portfolioMonthlyTopupEndDateRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
+    const strategyBondsSortRaw = String(localStorage.getItem(STRATEGY_BONDS_SORT_KEY) || "").trim();
     const buyStrategiesRaw = localStorage.getItem(BUY_STRATEGIES_KEY);
     const activeBuyStrategyRaw = localStorage.getItem(ACTIVE_BUY_STRATEGY_KEY);
     const bonds = bondsRaw ? sanitizeBondRows(JSON.parse(bondsRaw)) : defaultBondRows();
@@ -5142,6 +5530,9 @@ function loadAll() {
     if (portfolioMonthlyTopupEndDateInput) {
       portfolioMonthlyTopupEndDateInput.value = normalizeYMD(portfolioMonthlyTopupEndDateRaw || "") || "";
     }
+    if (strategyBondsSortSelect) {
+      strategyBondsSortSelect.value = strategyBondsSortRaw === "maturity" ? "maturity" : "name";
+    }
     try {
       const driftRaw = localStorage.getItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
       if (autoPlanPriceDriftPctInput && driftRaw !== null && driftRaw !== undefined) {
@@ -5162,6 +5553,7 @@ function loadAll() {
     loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
     if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
+    if (strategyBondsSortSelect) strategyBondsSortSelect.value = "name";
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
     setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, "0");
     if (autoPlanPriceDriftPctInput) autoPlanPriceDriftPctInput.value = "";
@@ -5593,6 +5985,13 @@ if (portfolioChartStrategySelect) {
     renderAll();
   });
 }
+if (strategyBondsSortSelect) {
+  strategyBondsSortSelect.addEventListener("change", () => {
+    const mode = getStrategyBondsSortMode();
+    localStorage.setItem(STRATEGY_BONDS_SORT_KEY, mode);
+    renderAll();
+  });
+}
 
 if (portfolioParamsOpenBtn) {
   portfolioParamsOpenBtn.addEventListener("click", () => openPortfolioParamsModal());
@@ -5609,6 +6008,21 @@ if (portfolioParamsModalSave) {
 if (portfolioParamsModalOverlay) {
   portfolioParamsModalOverlay.addEventListener("click", (e) => {
     if (e.target === portfolioParamsModalOverlay) cancelPortfolioParamsModal();
+  });
+}
+if (strategyComparisonStrategyPicker) {
+  strategyComparisonStrategyPicker.addEventListener("change", (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || t.type !== "checkbox") return;
+    const checkboxes = Array.from(
+      strategyComparisonStrategyPicker.querySelectorAll('input[type="checkbox"][data-cmp-strategy-id]')
+    );
+    const selected = checkboxes
+      .filter((el) => el instanceof HTMLInputElement && el.checked)
+      .map((el) => String(el.getAttribute("data-cmp-strategy-id") || "").trim())
+      .filter(Boolean);
+    persistSelectedComparisonStrategyIds(selected);
+    renderAll();
   });
 }
 

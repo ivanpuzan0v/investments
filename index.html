@@ -400,6 +400,12 @@
                   Добавить
                 </button>
               </div>
+              <div class="strategyTabShell__bondsSortWrap">
+                <select id="strategy-bonds-sort" class="input strategyTabShell__bondsSortSelect" aria-label="Сортировка облигаций">
+                  <option value="name">По названию</option>
+                  <option value="maturity">По дате погашения</option>
+                </select>
+              </div>
               <div
                 id="strategy-bonds-empty"
                 class="featureEmptyState strategyTabShell__featureEmpty strategyTabShell__featureEmpty--bonds"
@@ -573,6 +579,25 @@
                 <div class="featureEmptyState__subtitle">Укажите облигации и покупки чтобы увидеть выплаты по месяцам.</div>
               </div>
             </div>
+            <div
+              id="strategy-pane-comparison"
+              class="strategyTabShell__pane strategyTabShell__pane--comparison strategyComparisonPane"
+              hidden
+              aria-label="Сравнение стратегий"
+            >
+              <div class="strategyComparisonPane__titleRow">
+                <h2 class="strategyComparisonPane__title">Сравнение стратегий</h2>
+                <div id="strategy-comparison-strategy-picker" class="strategyComparisonPane__picker" aria-label="Стратегии для сравнения"></div>
+              </div>
+              <div class="card widget widget--wide strategyComparisonPane__widget">
+                <div class="tableWrap strategyTabShell__tableWrap strategyPlansPane__tableWrap strategyComparisonPane__tableWrap" role="region" aria-label="Таблица сравнения выплат стратегий">
+                  <table class="table strategyTabShell__table strategyPlansPane__table strategyComparisonPane__table">
+                    <thead id="strategy-comparison-thead"></thead>
+                    <tbody id="strategy-comparison-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
             <div id="strategy-pane-portfolio" class="strategyTabShell__pane strategyTabShell__pane--portfolio strategyPortfolio" hidden aria-label="Портфель">
               <div class="strategyPortfolio__titleRow" id="strategy-portfolio-mainhead">
                 <h2 class="strategyPortfolio__title">Портфель</h2>
@@ -699,13 +724,16 @@
               </div>
               <ul id="strategy-tab-display-list" class="strategyTabShell__list" role="list">
                 <li class="strategyTabShell__displayNavRow is-active">
-                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="buys">Планы</button>
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="buys">📋 Планы</button>
                 </li>
                 <li class="strategyTabShell__displayNavRow">
-                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="charts">Статистика</button>
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="portfolio">💼 Портфель</button>
                 </li>
                 <li class="strategyTabShell__displayNavRow">
-                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="portfolio">Портфель</button>
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="comparison">⚖️ Сравнение</button>
+                </li>
+                <li class="strategyTabShell__displayNavRow">
+                  <button type="button" class="strategyTabShell__strategySelect" data-strategy-display="charts">📈 Статистика</button>
                 </li>
               </ul>
             </div>
