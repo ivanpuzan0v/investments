@@ -188,8 +188,9 @@ test("renderPortfolioChart aggregates start, topups, coupons and end value", asy
   try {
     document.getElementById("portfolio-start-date").value = "2026-01-05";
     document.getElementById("portfolio-start-value").value = "100";
-    document.getElementById("portfolio-monthly-topup").value = "50";
-    document.getElementById("portfolio-monthly-topup-end-date").value = "";
+    window.renderPortfolioTopupPeriodsEditor([
+      { startYmd: "2026-01-01", endYmd: "2026-03-31", amount: 50 },
+    ]);
     document.getElementById("portfolio-chart-year").value = "__all__";
 
     const chartData = {
@@ -213,6 +214,49 @@ test("renderPortfolioChart aggregates start, topups, coupons and end value", asy
     assert.equal(parseRuMoney(document.getElementById("portfolio-coupon-total").textContent), 60);
     assert.equal(parseRuMoney(document.getElementById("portfolio-topup-total").textContent), 150);
     assert.equal(parseRuMoney(document.getElementById("portfolio-end-total").textContent), 310);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("portfolio chart applies different topup amounts by periods", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    document.getElementById("portfolio-start-date").value = "2026-01-05";
+    document.getElementById("portfolio-start-value").value = "100";
+    window.renderPortfolioTopupPeriodsEditor([
+      { startYmd: "2026-01-01", endYmd: "2026-01-31", amount: 40 },
+      { startYmd: "2026-02-01", endYmd: "2026-03-31", amount: 70 },
+    ]);
+    document.getElementById("portfolio-chart-year").value = "__all__";
+
+    const chartData = {
+      allDates: ["2026-01", "2026-02", "2026-03"],
+      seriesByBond: [
+        {
+          bond: "AAA",
+          matchBond: "AAA",
+          points: [
+            { monthKey: "2026-01", amount: 10 },
+            { monthKey: "2026-02", amount: 20 },
+            { monthKey: "2026-03", amount: 30 },
+          ],
+        },
+      ],
+    };
+
+    window.renderPortfolioChart(chartData);
+
+    assert.equal(parseRuMoney(document.getElementById("portfolio-start-total").textContent), 100);
+    assert.equal(parseRuMoney(document.getElementById("portfolio-coupon-total").textContent), 60);
+    assert.equal(parseRuMoney(document.getElementById("portfolio-topup-total").textContent), 180);
+    assert.equal(parseRuMoney(document.getElementById("portfolio-end-total").textContent), 340);
+
+    const hoverZones = Array.from(document.querySelectorAll("#portfolio-chart-content .portfolioHoverZone"));
+    const byMonth = new Map(hoverZones.map((z) => [z.getAttribute("data-portfolio-month"), Number(z.getAttribute("data-portfolio-topup"))]));
+    assert.equal(byMonth.get("2026-01"), 40);
+    assert.equal(byMonth.get("2026-02"), 70);
+    assert.equal(byMonth.get("2026-03"), 70);
   } finally {
     dom.window.close();
   }

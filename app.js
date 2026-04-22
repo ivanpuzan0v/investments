@@ -16,6 +16,7 @@ const PORTFOLIO_START_DATE_KEY = "invest_planner_portfolio_start_date_v1";
 const PORTFOLIO_START_VALUE_KEY = "invest_planner_portfolio_start_value_v1";
 const PORTFOLIO_MONTHLY_TOPUP_KEY = "invest_planner_portfolio_monthly_topup_v1";
 const PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY = "invest_planner_portfolio_monthly_topup_end_date_v1";
+const PORTFOLIO_SCENARIOS_BY_STRATEGY_KEY = "invest_planner_portfolio_scenarios_by_strategy_v1";
 const STRATEGY_COMPARISON_SELECTED_IDS_KEY = "invest_planner_strategy_comparison_selected_ids_v1";
 const STRATEGY_BONDS_SORT_KEY = "invest_planner_strategy_bonds_sort_v1";
 const BUY_STRATEGIES_KEY = "invest_planner_buy_strategies_v1";
@@ -68,18 +69,23 @@ const portfolioChartSvg = document.getElementById("portfolio-chart");
 const portfolioChartContent = document.getElementById("portfolio-chart-content");
 const portfolioStartDateInput = document.getElementById("portfolio-start-date");
 const portfolioStartValueInput = document.getElementById("portfolio-start-value");
-const portfolioMonthlyTopupInput = document.getElementById("portfolio-monthly-topup");
 const portfolioStartTotalEl = document.getElementById("portfolio-start-total");
 const portfolioCouponTotalEl = document.getElementById("portfolio-coupon-total");
 const portfolioTopupTotalEl = document.getElementById("portfolio-topup-total");
 const portfolioEndTotalEl = document.getElementById("portfolio-end-total");
-const portfolioMonthlyTopupEndDateInput = document.getElementById("portfolio-monthly-topup-end-date");
+const portfolioTopupPeriodsList = document.getElementById("portfolio-topup-periods-list");
+const portfolioTopupAddPeriodBtn = document.getElementById("portfolio-topup-add-period");
 const portfolioScenarioSummaryEl = document.getElementById("portfolio-scenario-summary");
+const portfolioHoldingsChipsEl = document.getElementById("portfolio-holdings-chips");
 const portfolioParamsOpenBtn = document.getElementById("portfolio-params-open-btn");
 const portfolioParamsModalOverlay = document.getElementById("portfolio-params-modal-overlay");
 const portfolioParamsModalClose = document.getElementById("portfolio-params-modal-close");
 const portfolioParamsModalCancel = document.getElementById("portfolio-params-modal-cancel");
 const portfolioParamsModalSave = document.getElementById("portfolio-params-modal-save");
+const portfolioHoldingsOpenBtn = document.getElementById("portfolio-holdings-open-btn");
+const portfolioHoldingsModalOverlay = document.getElementById("portfolio-holdings-modal-overlay");
+const portfolioHoldingsModalClose = document.getElementById("portfolio-holdings-modal-close");
+const portfolioHoldingsModalDone = document.getElementById("portfolio-holdings-modal-done");
 const summaryTbody = document.getElementById("summary-tbody");
 const totalGrossEl = document.getElementById("total-gross");
 const totalTaxEl = document.getElementById("total-tax");
@@ -2806,31 +2812,116 @@ function getGrossCouponTotalForMonth(seriesByBond, monthKey) {
   return sum;
 }
 
+/** @type {Record<string, { startYmd: string; startValue: number; topupPeriods: Array<{ startYmd: string; endYmd: string; amount: number }> }>} */
+let portfolioScenariosByStrategyId = {};
+
+function normalizePortfolioTopupPeriods(rows) {
+  return (rows || [])
+    .map((row) => {
+      const startYmd = normalizeYMD(row?.startYmd || "");
+      const endYmd = normalizeYMD(row?.endYmd || "");
+      const amountRaw = parseNumber(row?.amount);
+      const amount = Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : 0;
+      return { startYmd, endYmd, amount };
+    })
+    .filter((row) => row.startYmd && row.endYmd && compareYmd(row.startYmd, row.endYmd) <= 0 && row.amount > 0);
+}
+
+function normalizePortfolioScenario(raw) {
+  const startYmd = normalizeYMD(raw?.startYmd || "") || getTodayYMD();
+  const startValueRaw = parseNumber(raw?.startValue);
+  const startValue = Number.isFinite(startValueRaw) && startValueRaw >= 0 ? startValueRaw : 0;
+  const topupPeriods = normalizePortfolioTopupPeriods(raw?.topupPeriods || []);
+  return { startYmd, startValue, topupPeriods };
+}
+
+function getPortfolioScenarioStrategyId() {
+  if (isStrategyTabPortfolioView()) return activeBuyStrategyId;
+  const id = String(portfolioChartStrategySelect?.value || "").trim();
+  if (buyStrategies.some((s) => s.id === id)) return id;
+  return activeBuyStrategyId;
+}
+
+function getPortfolioScenarioForStrategy(strategyId) {
+  const id = String(strategyId || "").trim();
+  if (!id) return normalizePortfolioScenario({});
+  return normalizePortfolioScenario(portfolioScenariosByStrategyId[id] || {});
+}
+
+function createPortfolioTopupPeriodRowHtml(period) {
+  const start = normalizeYMD(period?.startYmd || "") || "";
+  const end = normalizeYMD(period?.endYmd || "") || "";
+  const amount = Number.isFinite(parseNumber(period?.amount)) && parseNumber(period?.amount) > 0 ? String(parseNumber(period.amount)) : "";
+  return `<div class="portfolioTopupPeriodRow" data-portfolio-topup-row>
+    <label class="floatingField floatingField--portfolio portfolioParamsModal__field" aria-label="Сумма пополнения">
+      <input class="input input--num taxControl__input floatingField__input" type="number" min="0" step="0.01" value="${escapeHtml(
+        amount
+      )}" placeholder=" " data-field="amount" />
+      <span class="floatingField__label">Сумма в месяц</span>
+    </label>
+    <label class="floatingField floatingField--portfolio portfolioParamsModal__field" aria-label="Дата начала периода">
+      <input class="input taxControl__input floatingField__input" type="date" value="${escapeHtml(start)}" placeholder=" " data-field="startDate" />
+      <span class="floatingField__label">С</span>
+    </label>
+    <label class="floatingField floatingField--portfolio portfolioParamsModal__field" aria-label="Дата окончания периода">
+      <input class="input taxControl__input floatingField__input" type="date" value="${escapeHtml(end)}" placeholder=" " data-field="endDate" />
+      <span class="floatingField__label">По</span>
+    </label>
+    <button type="button" class="iconBtn portfolioTopupPeriodRow__remove" data-action="remove-period" aria-label="Удалить период">✕</button>
+  </div>`;
+}
+
+function renderPortfolioTopupPeriodsEditor(periods) {
+  if (!portfolioTopupPeriodsList) return;
+  const safePeriods = normalizePortfolioTopupPeriods(periods);
+  const rows = safePeriods.length ? safePeriods : [{ startYmd: "", endYmd: "", amount: 0 }];
+  portfolioTopupPeriodsList.innerHTML = rows.map((row) => createPortfolioTopupPeriodRowHtml(row)).join("");
+}
+
+function readPortfolioTopupPeriodsFromEditor() {
+  if (!portfolioTopupPeriodsList) return [];
+  const rows = Array.from(portfolioTopupPeriodsList.querySelectorAll("[data-portfolio-topup-row]")).map((row) => {
+    const amountEl = row.querySelector('[data-field="amount"]');
+    const startEl = row.querySelector('[data-field="startDate"]');
+    const endEl = row.querySelector('[data-field="endDate"]');
+    return {
+      amount: amountEl instanceof HTMLInputElement ? amountEl.value : "",
+      startYmd: startEl instanceof HTMLInputElement ? startEl.value : "",
+      endYmd: endEl instanceof HTMLInputElement ? endEl.value : "",
+    };
+  });
+  return normalizePortfolioTopupPeriods(rows);
+}
+
+function applyPortfolioScenarioToInputs(scenario) {
+  const safe = normalizePortfolioScenario(scenario);
+  if (portfolioStartDateInput) portfolioStartDateInput.value = safe.startYmd;
+  setPortfolioMoneyInputValue(portfolioStartValueInput, String(safe.startValue));
+  renderPortfolioTopupPeriodsEditor(safe.topupPeriods);
+}
+
 /**
  * Параметры сценария «стоимость портфеля» из полей ввода (модальное окно).
- * @returns {{ startYmd: string; startValue: number; monthlyTopup: number; monthlyTopupEndYmd: string }}
+ * @returns {{ startYmd: string; startValue: number; topupPeriods: Array<{ startYmd: string; endYmd: string; amount: number }> }}
  */
 function readPortfolioScenarioFromInputs() {
   const startYmd = normalizeYMD(portfolioStartDateInput?.value || "") || getTodayYMD();
   const startValueRaw = parseNumber(portfolioStartValueInput?.value || "");
   const startValue = Number.isFinite(startValueRaw) && startValueRaw >= 0 ? startValueRaw : 0;
-  const monthlyTopupRaw = parseNumber(portfolioMonthlyTopupInput?.value || "");
-  const monthlyTopup = Number.isFinite(monthlyTopupRaw) && monthlyTopupRaw >= 0 ? monthlyTopupRaw : 0;
-  const monthlyTopupEndYmd = normalizeYMD(portfolioMonthlyTopupEndDateInput?.value || "") || "";
-  return { startYmd, startValue, monthlyTopup, monthlyTopupEndYmd };
+  const topupPeriods = readPortfolioTopupPeriodsFromEditor();
+  return { startYmd, startValue, topupPeriods };
 }
 
 /**
  * Помесячная динамика стоимости: старт + на каждый месяц горизонта (до последнего месяца с купонами или +11 мес.)
  * прибавляются gross-купоны по `seriesByBond` и ежемесячное пополнение, если месяц не позже даты окончания пополнений.
  * @param {{ allDates?: string[]; seriesByBond?: unknown[] }} chartData
- * @param {{ startYmd: string; startValue: number; monthlyTopup: number; monthlyTopupEndYmd: string }} scenario
+ * @param {{ startYmd: string; startValue: number; topupPeriods: Array<{ startYmd: string; endYmd: string; amount: number }> }} scenario
  */
 function computePortfolioValueTimeline(chartData, scenario) {
   const seriesByBond = chartData?.seriesByBond || [];
   const allDates = chartData?.allDates || [];
   const startMonthKey = toMonthKeyFromYMD(scenario.startYmd);
-  const monthlyTopupEndTs = scenario.monthlyTopupEndYmd ? ymdToUTCms(scenario.monthlyTopupEndYmd) : null;
   const defaultEndMonthKey = addMonthsToMonthKey(startMonthKey, 11);
   const lastCouponMonthKey = allDates.length ? allDates[allDates.length - 1] : "";
   const lastMonthKey =
@@ -2838,10 +2929,17 @@ function computePortfolioValueTimeline(chartData, scenario) {
       ? lastCouponMonthKey
       : defaultEndMonthKey;
   const monthRange = buildMonthRange(startMonthKey, lastMonthKey);
+  const topupPeriods = normalizePortfolioTopupPeriods(scenario.topupPeriods || []);
   let cumulative = scenario.startValue;
   const allPoints = monthRange.map((monthKey) => {
-    const topupForMonth =
-      !monthlyTopupEndTs || monthKeyToUTCms(monthKey) <= monthlyTopupEndTs ? scenario.monthlyTopup : 0;
+    const monthTs = monthKeyToUTCms(monthKey);
+    const topupForMonth = topupPeriods.reduce((sum, row) => {
+      const startTs = monthKeyToUTCms(toMonthKeyFromYMD(row.startYmd));
+      const endTs = monthKeyToUTCms(toMonthKeyFromYMD(row.endYmd));
+      if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) return sum;
+      if (monthTs >= startTs && monthTs <= endTs) return sum + row.amount;
+      return sum;
+    }, 0);
     const couponForMonth = getGrossCouponTotalForMonth(seriesByBond, monthKey);
     cumulative += topupForMonth + couponForMonth;
     return { monthKey, value: cumulative, topup: topupForMonth, coupon: couponForMonth };
@@ -2849,57 +2947,89 @@ function computePortfolioValueTimeline(chartData, scenario) {
   return { allPoints, lastMonthKey, startMonthKey, monthRange };
 }
 
-function portfolioScenarioSummaryText(scenario) {
-  const { startYmd, startValue, monthlyTopup, monthlyTopupEndYmd } = scenario;
-  const endPhrase = monthlyTopupEndYmd
-    ? `пополнения до ${formatDateRu(monthlyTopupEndYmd)}`
-    : "пополнения без даты окончания";
-  return `${formatMoney(startValue)} с ${formatDateRu(startYmd)} · ${formatMoney(monthlyTopup)}/мес · ${endPhrase}`;
+function getPortfolioScenarioTopupSummary(periods) {
+  const safe = normalizePortfolioTopupPeriods(periods);
+  if (!safe.length) return { monthlyAmountText: "0.00 ₽", periodCountText: "Нет периодов" };
+  const maxMonthly = safe.reduce((max, row) => Math.max(max, row.amount), 0);
+  return {
+    monthlyAmountText: formatMoney(maxMonthly),
+    periodCountText: `${safe.length} ${safe.length === 1 ? "период" : safe.length <= 4 ? "периода" : "периодов"}`,
+  };
 }
 
 function updatePortfolioScenarioSummaryEl() {
   if (!portfolioScenarioSummaryEl) return;
-  portfolioScenarioSummaryEl.textContent = portfolioScenarioSummaryText(readPortfolioScenarioFromInputs());
+  const scenario = getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId());
+  const topupSummary = getPortfolioScenarioTopupSummary(scenario.topupPeriods);
+  portfolioScenarioSummaryEl.innerHTML = `
+    <div class="portfolioScenarioGrid__item">
+      <div class="portfolioScenarioGrid__label">Начальная стоимость</div>
+      <div class="portfolioScenarioGrid__value">${formatMoney(scenario.startValue)}</div>
+    </div>
+    <div class="portfolioScenarioGrid__item">
+      <div class="portfolioScenarioGrid__label">Дата старта</div>
+      <div class="portfolioScenarioGrid__value">${formatDateRu(scenario.startYmd)}</div>
+    </div>
+    <div class="portfolioScenarioGrid__item">
+      <div class="portfolioScenarioGrid__label">Пополнение в месяц (макс.)</div>
+      <div class="portfolioScenarioGrid__value">${topupSummary.monthlyAmountText}</div>
+    </div>
+    <div class="portfolioScenarioGrid__item">
+      <div class="portfolioScenarioGrid__label">Периоды пополнений</div>
+      <div class="portfolioScenarioGrid__value">${topupSummary.periodCountText}</div>
+    </div>
+  `;
 }
 
 /** Снимок полей модалки «Параметры портфеля» для отмены без сохранения. */
 let portfolioParamsModalSnapshot = null;
 
+function openPortfolioHoldingsModal() {
+  if (!portfolioHoldingsModalOverlay) return;
+  mirrorHoldingsMainToPortfolio();
+  portfolioHoldingsModalOverlay.removeAttribute("hidden");
+  portfolioHoldingsModalOverlay.classList.add("is-open");
+  requestAnimationFrame(() => {
+    const firstBond = portfolioHoldingsTbody?.querySelector('select[data-field="bond"]');
+    const addBtn = addPortfolioHoldingBtn;
+    if (firstBond instanceof HTMLElement) firstBond.focus();
+    else addBtn?.focus();
+  });
+}
+
+function closePortfolioHoldingsModal() {
+  portfolioHoldingsModalOverlay?.classList.remove("is-open");
+  portfolioHoldingsModalOverlay?.setAttribute("hidden", "");
+}
+
 function capturePortfolioParamsSnapshot() {
   return {
     startDate: portfolioStartDateInput?.value || "",
     startValue: portfolioStartValueInput?.value || "",
-    monthlyTopup: portfolioMonthlyTopupInput?.value || "",
-    topupEnd: portfolioMonthlyTopupEndDateInput?.value || "",
+    topupPeriods: readPortfolioTopupPeriodsFromEditor(),
   };
 }
 
 function applyPortfolioParamsSnapshot(snap) {
   if (!snap) return;
   if (portfolioStartDateInput) portfolioStartDateInput.value = snap.startDate;
-  if (portfolioStartValueInput) portfolioStartValueInput.value = snap.startValue;
-  if (portfolioMonthlyTopupInput) portfolioMonthlyTopupInput.value = snap.monthlyTopup;
-  if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = snap.topupEnd;
+  setPortfolioMoneyInputValue(portfolioStartValueInput, String(parseNumber(snap.startValue) || 0));
+  renderPortfolioTopupPeriodsEditor(snap.topupPeriods || []);
 }
 
 function persistPortfolioParamsFromInputs() {
-  if (portfolioStartDateInput) {
-    localStorage.setItem(PORTFOLIO_START_DATE_KEY, normalizeYMD(portfolioStartDateInput.value || "") || "");
-  }
-  localStorage.setItem(PORTFOLIO_START_VALUE_KEY, String(parseNumber(portfolioStartValueInput?.value) || 0));
-  localStorage.setItem(PORTFOLIO_MONTHLY_TOPUP_KEY, String(parseNumber(portfolioMonthlyTopupInput?.value) || 0));
-  if (portfolioMonthlyTopupEndDateInput) {
-    localStorage.setItem(
-      PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY,
-      normalizeYMD(portfolioMonthlyTopupEndDateInput.value || "") || ""
-    );
-  }
+  const strategyId = getPortfolioScenarioStrategyId();
+  if (!strategyId) return;
+  portfolioScenariosByStrategyId[strategyId] = normalizePortfolioScenario(readPortfolioScenarioFromInputs());
+  localStorage.setItem(PORTFOLIO_SCENARIOS_BY_STRATEGY_KEY, JSON.stringify(portfolioScenariosByStrategyId));
 }
 
 function openPortfolioParamsModal() {
   if (!portfolioParamsModalOverlay) return;
+  applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId()));
   portfolioParamsModalSnapshot = capturePortfolioParamsSnapshot();
   portfolioParamsModalOverlay.removeAttribute("hidden");
+  portfolioParamsModalOverlay.classList.add("is-open");
   requestAnimationFrame(() => {
     portfolioStartValueInput?.focus();
   });
@@ -2907,19 +3037,47 @@ function openPortfolioParamsModal() {
 
 function closePortfolioParamsModalAfterSave() {
   portfolioParamsModalSnapshot = null;
+  portfolioParamsModalOverlay?.classList.remove("is-open");
   portfolioParamsModalOverlay?.setAttribute("hidden", "");
 }
 
 function cancelPortfolioParamsModal() {
   if (portfolioParamsModalSnapshot) applyPortfolioParamsSnapshot(portfolioParamsModalSnapshot);
   portfolioParamsModalSnapshot = null;
+  portfolioParamsModalOverlay?.classList.remove("is-open");
   portfolioParamsModalOverlay?.setAttribute("hidden", "");
 }
 
 function savePortfolioParamsModal() {
   persistPortfolioParamsFromInputs();
+  updatePortfolioScenarioSummaryEl();
   closePortfolioParamsModalAfterSave();
   renderAll();
+}
+
+function renderPortfolioHoldingsChips(rows) {
+  if (!portfolioHoldingsChipsEl) return;
+  portfolioHoldingsChipsEl.textContent = "";
+  const items = parseHoldingItems(rows || []);
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "portfolioHoldingsPreview__empty";
+    empty.textContent = "Состав пока не задан.";
+    portfolioHoldingsChipsEl.appendChild(empty);
+    return;
+  }
+  items.forEach((item) => {
+    const chip = document.createElement("span");
+    chip.className = "portfolioHoldingChip";
+    const name = document.createElement("span");
+    name.className = "portfolioHoldingChip__bond";
+    name.textContent = item.bond;
+    const qty = document.createElement("span");
+    qty.className = "portfolioHoldingChip__qty";
+    qty.textContent = `${formatQuantityRu(item.quantity)} шт.`;
+    chip.append(name, qty);
+    portfolioHoldingsChipsEl.appendChild(chip);
+  });
 }
 
 function getTodayYMD() {
@@ -3357,8 +3515,8 @@ function renderChart(chartData) {
     });
   }
   const { w: W, h: H } = measureReturnsChartViewport();
-  const left = 40;
-  const right = 12;
+  const left = 16;
+  const right = 16;
   const nCols = visibleDates.length;
   /** Низ: под ось (годы — одна строка; месяцы — две строки у plotBottomY+14/+28) + запас при узких столбцах. */
   const axisFootroom = isCouponChartAllTime ? 26 : 40;
@@ -3740,9 +3898,9 @@ function renderPortfolioChart(chartData) {
 
   const { w: W, h: H } = measurePortfolioChartViewport();
   if (portfolioChartSvg) portfolioChartSvg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  /** Поля viewBox: минимально достаточно под formatPortfolioAxisValue; шире область линии/заливки к краям SVG. */
-  const left = 64;
-  const right = 8;
+  /** Симметричные боковые поля графика в портфеле. */
+  const left = 16;
+  const right = 16;
   const top = 24;
   const bottom = 50;
   const innerW = W - left - right;
@@ -3758,11 +3916,7 @@ function renderPortfolioChart(chartData) {
   const lines = [];
   for (let i = 0; i <= 4; i += 1) {
     const y = top + (innerH / 4) * i;
-    const value = safeMaxY - ((safeMaxY - safeMinY) / 4) * i;
     lines.push(`<path d="M ${left} ${y} H ${W - right}" stroke="rgba(60,60,67,0.2)" stroke-width="1"></path>`);
-    lines.push(
-      `<text x="${left - 4}" y="${y + 4}" text-anchor="end" fill="currentColor" opacity="0.58" font-size="10.5">${formatPortfolioAxisValue(value)}</text>`
-    );
   }
   lines.push(`<line class="portfolioHoverLine" x1="${left}" y1="${top + innerH}" x2="${left}" y2="${top + innerH}" stroke="#007AFF" stroke-width="1" opacity="0"></line>`);
 
@@ -4351,6 +4505,9 @@ function initStrategyShellResize() {
 function renderAll() {
   flushHoldingsFromPortfolioWidgetIfNeeded();
   syncHoldingsBondSelects();
+  if (!portfolioParamsModalOverlay || portfolioParamsModalOverlay.hidden) {
+    applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId()));
+  }
   const layoutSnap = captureVisibleWidgetLayout();
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const buys = sortBuyRowsByDate(readRows(buysTbody)).rows.filter(isBuyRowComplete);
@@ -4361,6 +4518,7 @@ function renderAll() {
   renderPortfolioChart(payoutSeriesPortfolio);
   renderStrategyComparisonChart(bonds, holdings);
   renderChart(payoutSeries);
+  renderPortfolioHoldingsChips(holdings);
   renderSummary(payoutSeries, buys, holdings);
   refreshAutoPlanBondPicker();
   renderStrategyTab();
@@ -5474,6 +5632,7 @@ function loadAll() {
     const portfolioStartValueRaw = localStorage.getItem(PORTFOLIO_START_VALUE_KEY);
     const portfolioMonthlyTopupRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_KEY);
     const portfolioMonthlyTopupEndDateRaw = localStorage.getItem(PORTFOLIO_MONTHLY_TOPUP_END_DATE_KEY);
+    const portfolioScenariosRaw = localStorage.getItem(PORTFOLIO_SCENARIOS_BY_STRATEGY_KEY);
     const strategyBondsSortRaw = String(localStorage.getItem(STRATEGY_BONDS_SORT_KEY) || "").trim();
     const buyStrategiesRaw = localStorage.getItem(BUY_STRATEGIES_KEY);
     const activeBuyStrategyRaw = localStorage.getItem(ACTIVE_BUY_STRATEGY_KEY);
@@ -5524,12 +5683,31 @@ function loadAll() {
     renderBuyStrategySelect();
     if (taxRateInput && taxRaw !== null) taxRateInput.value = String(parseNumber(taxRaw) || 13);
     loadStrategySidebarParamsFromStorage();
-    if (portfolioStartDateInput) portfolioStartDateInput.value = normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD();
-    setPortfolioMoneyInputValue(portfolioStartValueInput, String(parseNumber(portfolioStartValueRaw) || 0));
-    setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, String(parseNumber(portfolioMonthlyTopupRaw) || 0));
-    if (portfolioMonthlyTopupEndDateInput) {
-      portfolioMonthlyTopupEndDateInput.value = normalizeYMD(portfolioMonthlyTopupEndDateRaw || "") || "";
+    const legacyScenario = normalizePortfolioScenario({
+      startYmd: normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD(),
+      startValue: parseNumber(portfolioStartValueRaw) || 0,
+      topupPeriods:
+        parseNumber(portfolioMonthlyTopupRaw) > 0
+          ? [
+              {
+                startYmd: normalizeYMD(portfolioStartDateRaw || "") || getTodayYMD(),
+                endYmd: normalizeYMD(portfolioMonthlyTopupEndDateRaw || "") || "9999-12-31",
+                amount: parseNumber(portfolioMonthlyTopupRaw) || 0,
+              },
+            ]
+          : [],
+    });
+    try {
+      const parsed = portfolioScenariosRaw ? JSON.parse(portfolioScenariosRaw) : {};
+      portfolioScenariosByStrategyId = parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      portfolioScenariosByStrategyId = {};
     }
+    buyStrategies.forEach((s) => {
+      if (!portfolioScenariosByStrategyId[s.id]) portfolioScenariosByStrategyId[s.id] = legacyScenario;
+      else portfolioScenariosByStrategyId[s.id] = normalizePortfolioScenario(portfolioScenariosByStrategyId[s.id]);
+    });
+    applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId()));
     if (strategyBondsSortSelect) {
       strategyBondsSortSelect.value = strategyBondsSortRaw === "maturity" ? "maturity" : "name";
     }
@@ -5552,10 +5730,16 @@ function loadAll() {
     if (taxRateInput) taxRateInput.value = "13";
     loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
-    if (portfolioMonthlyTopupEndDateInput) portfolioMonthlyTopupEndDateInput.value = "";
     if (strategyBondsSortSelect) strategyBondsSortSelect.value = "name";
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
-    setPortfolioMoneyInputValue(portfolioMonthlyTopupInput, "0");
+    portfolioScenariosByStrategyId = {
+      [DEFAULT_BUY_STRATEGY_ID]: normalizePortfolioScenario({
+        startYmd: getTodayYMD(),
+        startValue: 0,
+        topupPeriods: [],
+      }),
+    };
+    applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(DEFAULT_BUY_STRATEGY_ID));
     if (autoPlanPriceDriftPctInput) autoPlanPriceDriftPctInput.value = "";
   }
   syncStaticTableEmptyStates();
@@ -6008,6 +6192,43 @@ if (portfolioParamsModalSave) {
 if (portfolioParamsModalOverlay) {
   portfolioParamsModalOverlay.addEventListener("click", (e) => {
     if (e.target === portfolioParamsModalOverlay) cancelPortfolioParamsModal();
+  });
+}
+if (portfolioTopupAddPeriodBtn) {
+  portfolioTopupAddPeriodBtn.addEventListener("click", () => {
+    if (!portfolioTopupPeriodsList) return;
+    portfolioTopupPeriodsList.insertAdjacentHTML(
+      "beforeend",
+      createPortfolioTopupPeriodRowHtml({ startYmd: "", endYmd: "", amount: 0 })
+    );
+  });
+}
+if (portfolioTopupPeriodsList) {
+  portfolioTopupPeriodsList.addEventListener("click", (e) => {
+    const btn = e.target.closest('[data-action="remove-period"]');
+    if (!btn) return;
+    const row = btn.closest("[data-portfolio-topup-row]");
+    if (row) row.remove();
+    if (!portfolioTopupPeriodsList.querySelector("[data-portfolio-topup-row]")) {
+      portfolioTopupPeriodsList.insertAdjacentHTML(
+        "beforeend",
+        createPortfolioTopupPeriodRowHtml({ startYmd: "", endYmd: "", amount: 0 })
+      );
+    }
+  });
+}
+if (portfolioHoldingsOpenBtn) {
+  portfolioHoldingsOpenBtn.addEventListener("click", () => openPortfolioHoldingsModal());
+}
+if (portfolioHoldingsModalClose) {
+  portfolioHoldingsModalClose.addEventListener("click", () => closePortfolioHoldingsModal());
+}
+if (portfolioHoldingsModalDone) {
+  portfolioHoldingsModalDone.addEventListener("click", () => closePortfolioHoldingsModal());
+}
+if (portfolioHoldingsModalOverlay) {
+  portfolioHoldingsModalOverlay.addEventListener("click", (e) => {
+    if (e.target === portfolioHoldingsModalOverlay) closePortfolioHoldingsModal();
   });
 }
 if (strategyComparisonStrategyPicker) {
@@ -7366,6 +7587,11 @@ if (autoPlanConflictModalOverlay) {
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (portfolioHoldingsModalOverlay && !portfolioHoldingsModalOverlay.hidden) {
+    closePortfolioHoldingsModal();
+    e.preventDefault();
+    return;
+  }
   if (portfolioParamsModalOverlay && !portfolioParamsModalOverlay.hidden) {
     cancelPortfolioParamsModal();
     e.preventDefault();

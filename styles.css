@@ -1069,7 +1069,7 @@ html[data-theme="dark"] .strategyDynamics{
   display: flex;
   flex-direction: column;
   margin: 0;
-  padding: 0 var(--strategy-shell-pad) !important;
+  padding: 0 16px !important;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -1083,10 +1083,9 @@ html[data-theme="dark"] .strategyDynamics{
 .strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
   flex: 0 1 auto;
   align-self: stretch;
-  --_returns-chart-bleed: var(--strategy-shell-pad);
-  margin-left: calc(-1 * var(--_returns-chart-bleed));
-  margin-right: calc(-1 * var(--_returns-chart-bleed));
-  width: calc(100% + 2 * var(--_returns-chart-bleed));
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
   max-width: none;
   height: clamp(240px, 48vh, 560px);
   max-height: min(560px, 58vh);
@@ -1277,8 +1276,8 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
 }
 .strategyPortfolio__titleRow{
   flex-shrink: 0;
-  padding: 18px var(--strategy-shell-pad) 14px;
-  border-bottom: 0.5px solid var(--hairline);
+  padding: 14px var(--strategy-shell-pad) 10px;
+  border-bottom: none;
 }
 .strategyPortfolio__title{
   margin: 0;
@@ -1329,25 +1328,22 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
   padding: 14px 16px 16px !important;
   border-radius: 16px !important;
   background: var(--card) !important;
-  border: none !important;
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.05),
-    0 2px 10px rgba(0, 0, 0, 0.04);
+  border: 1px solid color-mix(in srgb, var(--hairline) 82%, transparent) !important;
+  box-shadow: none;
 }
 html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioAboveChart > .portfolioSetupWidget{
-    box-shadow:
-      0 0 0 0.5px rgba(255, 255, 255, 0.08),
-      0 4px 16px rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: none;
   }
 .strategyTabShell__pane--portfolio .portfolioSetupWidget__header{
   flex-shrink: 0;
-  margin: 0 0 12px;
-  padding: 0 0 12px;
-  border-bottom: 0.5px solid var(--hairline);
+  margin: 0 0 10px;
+  padding: 0;
+  border-bottom: none;
 }
 .strategyTabShell__pane--portfolio .portfolioSetupWidget__header--holdings{
-  margin-bottom: 10px;
-  padding-bottom: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 0;
 }
 .strategyTabShell__pane--portfolio .portfolioSetupWidget__header .widget__title{
   font-size: 1.0625rem;
@@ -1356,19 +1352,100 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioAboveChart 
 }
 .strategyTabShell__pane--portfolio .portfolioSetupWidget__hint{
   margin: 6px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
 }
 .strategyTabShell__pane--portfolio .portfolioSetupWidget__summary{
   margin: 10px 0 0;
   font-size: var(--fs-small);
   line-height: 1.45;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
   letter-spacing: -0.015em;
 }
-.strategyTabShell__pane--portfolio .portfolioSetupWidget .portfolioHoldingsTableWrap{
-  margin: 0;
-  border-radius: var(--radius2);
-  overflow: hidden;
+.strategyTabShell__pane--portfolio .portfolioSetupWidget__actionBtn{
+  width: 100%;
+  margin-top: 8px;
+}
+.strategyTabShell__pane--portfolio .portfolioSetupWidget[data-widget="portfolio-holdings"] .portfolioSetupWidget__actionBtn{
+  margin-top: auto;
+}
+.strategyTabShell__pane--portfolio .portfolioSetupWidget[data-widget="portfolio-start"] .portfolioSetupWidget__header > div{
+  width: 100%;
+}
+.strategyTabShell__pane--portfolio .portfolioScenarioGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+.strategyTabShell__pane--portfolio .portfolioScenarioGrid__item{
+  min-width: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg0) 60%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--hairline) 75%, transparent);
+}
+.strategyTabShell__pane--portfolio .portfolioScenarioGrid__label{
+  font-size: 0.69rem;
+  line-height: 1.25;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.strategyTabShell__pane--portfolio .portfolioScenarioGrid__value{
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: var(--text);
+  font-weight: 640;
+}
+@media (max-width: 720px){
+  .strategyTabShell__pane--portfolio .portfolioScenarioGrid{
+    grid-template-columns: 1fr;
+  }
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingsPreview{
+  margin-top: 2px;
+  min-height: 58px;
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingsPreview__chips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingsPreview__empty{
+  font-size: var(--fs-small);
+  color: var(--muted);
+  line-height: 1.35;
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingChip{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: color-mix(in srgb, var(--bg0) 65%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--hairline) 70%, transparent);
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingChip__bond{
+  font-size: 0.76rem;
+  font-weight: 670;
+  letter-spacing: -0.01em;
+}
+.strategyTabShell__pane--portfolio .portfolioHoldingChip__qty{
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.portfolioHoldingsModal__body{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.portfolioHoldingsModal__actions{
+  display: flex;
+  justify-content: flex-start;
+}
+.portfolioHoldingsModal__footer{
+  justify-content: flex-end;
 }
 .strategyTabShell__pane--portfolio .card.widget[data-widget="portfolio-value"]{
   flex: 0 1 auto;
@@ -1376,7 +1453,7 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioAboveChart 
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 6px calc(var(--strategy-shell-pad) + 4px) 20px !important;
+  padding: 6px 16px 20px !important;
 }
 #tab-panel-portfolio .card.widget[data-widget="portfolio-value"]{
   display: flex;
@@ -1385,9 +1462,9 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioAboveChart 
 }
 #tab-panel-portfolio .card.widget[data-widget="portfolio-value"] .portfolioChartWrap.chartWrap{
   align-self: stretch;
-  margin-left: calc(-1 * var(--widget-pad-x));
-  margin-right: calc(-1 * var(--widget-pad-x));
-  width: calc(100% + 2 * var(--widget-pad-x));
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
   max-width: none;
   border: none;
   border-radius: 0;
@@ -1421,10 +1498,9 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioTotals--she
   min-height: 220px;
   height: clamp(220px, 34vh, 420px);
   max-height: min(420px, 50vh);
-  --_pf-chart-pad: calc(var(--strategy-shell-pad) + 4px);
-  margin-left: calc(-1 * var(--_pf-chart-pad));
-  margin-right: calc(-1 * var(--_pf-chart-pad));
-  width: calc(100% + 2 * var(--_pf-chart-pad));
+  margin-left: 0;
+  margin-right: 0;
+  width: 100%;
   max-width: none;
   border: none;
   border-radius: 0;
@@ -3898,26 +3974,110 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__footer .autoPlanModal__
   width: min(560px, calc(100vw - 28px));
 }
 .modal--sheet.modal--portfolioParams{
-  width: min(520px, calc(100vw - 28px));
+  width: min(960px, calc(100vw - 24px));
+  max-height: min(92vh, 960px);
 }
 .portfolioParamsModal__body{
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.portfolioParamsModal__intro{
-  margin: 0 0 10px;
-  font-size: var(--fs-small);
-  line-height: 1.45;
-  color: var(--text-subhead);
-}
 .portfolioParamsModal__group{
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 .portfolioParamsModal__field{
   width: 100%;
+}
+.modal--portfolioParams .portfolioParamsModal__field .floatingField__input{
+  min-height: 44px;
+  width: 100%;
+  padding-top: 22px;
+  padding-bottom: 10px;
+}
+.modal--portfolioParams .portfolioParamsModal__field .floatingField__input[type="date"]{
+  min-width: 180px;
+}
+.modal--portfolioParams .portfolioParamsModal__field .floatingField__input[type="date"]::-webkit-datetime-edit,
+.modal--portfolioParams .portfolioParamsModal__field .floatingField__input[type="date"]::-webkit-datetime-edit-fields-wrapper{
+  width: 100%;
+}
+.modal--portfolioParams .sheetModal__section{
+  border: none;
+  background: var(--sheetCard);
+  border-radius: 16px;
+  padding: 16px 16px 14px;
+}
+.modal--portfolioParams .sheetModal__section[aria-labelledby="portfolio-params-section-start"]{
+  max-width: 720px;
+}
+html[data-theme="dark"] .modal--portfolioParams .sheetModal__section{
+  box-shadow: none;
+}
+.modal--portfolioParams .sheetModal__section .sheetModal__sectionLabel{
+  margin-bottom: 6px;
+}
+.modal--portfolioParams .sheetModal__group{
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  gap: 8px;
+}
+.modal--portfolioParams #portfolio-params-section-start + .sheetModal__group{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.modal--portfolioParams #portfolio-params-section-start + .sheetModal__group .portfolioParamsModal__field.floatingField--portfolio{
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+.modal--portfolioParams #portfolio-params-section-start + .sheetModal__group .portfolioParamsModal__field.floatingField--portfolio .floatingField__input{
+  width: 100%;
+  padding-top: 22px;
+  padding-bottom: 10px;
+}
+@media (max-width: 760px){
+  .modal--portfolioParams #portfolio-params-section-start + .sheetModal__group{
+    grid-template-columns: 1fr;
+  }
+}
+.portfolioTopupsEditor__list{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.portfolioTopupPeriodRow{
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+.portfolioTopupPeriodRow .portfolioParamsModal__field .floatingField__input{
+  min-width: 0;
+  width: 100%;
+  min-height: 0;
+  padding-top: 22px;
+  padding-bottom: 10px;
+}
+.portfolioTopupPeriodRow__remove{
+  width: 32px;
+  height: 32px;
+}
+.portfolioTopupsEditor__actions{
+  display: flex;
+  justify-content: flex-start;
+}
+@media (max-width: 760px){
+  .portfolioTopupPeriodRow{
+    grid-template-columns: 1fr;
+  }
+  .portfolioTopupPeriodRow__remove{
+    justify-self: flex-end;
+  }
 }
 .portfolioParamsModal__footer{
   display: flex;
