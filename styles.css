@@ -1752,18 +1752,10 @@ html[data-theme="dark"] .strategyTabShell__fieldset{
   box-sizing: border-box;
   font-size: var(--fs-small);
   line-height: 1.35;
-  transition:
-    background-color 0.22s ease,
-    border-color 0.22s ease;
+  transition: none;
 }
 .strategyTabShell__strategyRow{
   position: relative;
-}
-@media (prefers-reduced-motion: reduce){
-  .strategyTabShell__displayNavRow,
-  .strategyTabShell__strategyRow{
-    transition: none;
-  }
 }
 .strategyTabShell__strategySelect{
   flex: 1;

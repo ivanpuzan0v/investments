@@ -395,8 +395,22 @@ function updateStrategyDisplayNavUi(mode) {
   });
 }
 
+function getCurrentStrategyCenterView() {
+  if (!strategyPaneBuys || !strategyPaneCharts || !strategyPaneComparison || !strategyPanePortfolio) return "buys";
+  if (!strategyPaneCharts.hidden) return "charts";
+  if (!strategyPaneComparison.hidden) return "comparison";
+  if (!strategyPanePortfolio.hidden) return "portfolio";
+  return "buys";
+}
+
 function setStrategyCenterView(mode) {
   if (mode !== "buys" && mode !== "charts" && mode !== "comparison" && mode !== "portfolio") return;
+  const currentMode = getCurrentStrategyCenterView();
+  if (mode === currentMode) {
+    updateStrategyDisplayNavUi(mode);
+    localStorage.setItem(STRATEGY_CENTER_VIEW_KEY, mode);
+    return;
+  }
   localStorage.setItem(STRATEGY_CENTER_VIEW_KEY, mode);
   if (!strategyPaneBuys || !strategyPaneCharts || !strategyPaneComparison || !strategyPanePortfolio) return;
 
@@ -423,7 +437,7 @@ function setStrategyCenterView(mode) {
   }
   updateStrategyDisplayNavUi(mode);
   try {
-    renderAll();
+    renderAll({ animateWidgets: false });
   } catch {
     /* ignore */
   }
@@ -885,7 +899,7 @@ function switchActiveBuyStrategy(nextIdRaw) {
   renderBuyStrategySelect();
   persistBuyStrategiesState();
   invalidateBuyPlanLedgerCache();
-  renderAll();
+  renderAll({ animateWidgets: false });
 }
 
 /** Удаляет только строки плана покупок текущей выбранной стратегии (не трогает облигации, портфель и другие стратегии). */
@@ -3050,6 +3064,7 @@ function cancelPortfolioParamsModal() {
 
 function savePortfolioParamsModal() {
   persistPortfolioParamsFromInputs();
+  lastAppliedPortfolioScenarioFingerprint = "";
   updatePortfolioScenarioSummaryEl();
   closePortfolioParamsModalAfterSave();
   renderAll();
@@ -3237,6 +3252,7 @@ let lastCouponReturnsChartRenderedEmpty = false;
 
 /** Совпадает с веткой «пустой SVG» в renderPortfolioChart. */
 let lastPortfolioChartRenderedEmpty = false;
+let lastAppliedPortfolioScenarioFingerprint = "";
 
 function syncStrategyDynamicsEmptyState() {
   const emptyEl = document.getElementById("strategy-charts-empty");
@@ -4502,30 +4518,48 @@ function initStrategyShellResize() {
   window.addEventListener("resize", onResizeViewport);
 }
 
-function renderAll() {
+function getPortfolioScenarioFingerprint(strategyId, scenario) {
+  return `${strategyId}::${JSON.stringify(normalizePortfolioScenario(scenario || {}))}`;
+}
+
+function renderAll(options = {}) {
+  const { animateWidgets = false } = options;
   flushHoldingsFromPortfolioWidgetIfNeeded();
   syncHoldingsBondSelects();
   if (!portfolioParamsModalOverlay || portfolioParamsModalOverlay.hidden) {
-    applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId()));
+    const scenarioId = getPortfolioScenarioStrategyId();
+    const scenario = getPortfolioScenarioForStrategy(scenarioId);
+    const fp = getPortfolioScenarioFingerprint(scenarioId, scenario);
+    if (fp !== lastAppliedPortfolioScenarioFingerprint) {
+      applyPortfolioScenarioToInputs(scenario);
+      lastAppliedPortfolioScenarioFingerprint = fp;
+    }
   }
-  const layoutSnap = captureVisibleWidgetLayout();
+  const layoutSnap = animateWidgets ? captureVisibleWidgetLayout() : null;
+  const isChartsVisible = Boolean(strategyPaneCharts && !strategyPaneCharts.hidden);
+  const isComparisonVisible = Boolean(strategyPaneComparison && !strategyPaneComparison.hidden);
+  const isPortfolioVisible = Boolean(strategyPanePortfolio && !strategyPanePortfolio.hidden);
+  const isBuysVisible = Boolean(strategyPaneBuys && !strategyPaneBuys.hidden);
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const buys = sortBuyRowsByDate(readRows(buysTbody)).rows.filter(isBuyRowComplete);
-  const portfolioBuys = getBuysForPortfolioChart();
   const holdings = sanitizeHoldingRows(readRows(holdingsTbody));
-  const payoutSeries = buildPayoutSeries(bonds, buys, holdings);
-  const payoutSeriesPortfolio = buildPayoutSeries(bonds, portfolioBuys, holdings);
-  renderPortfolioChart(payoutSeriesPortfolio);
-  renderStrategyComparisonChart(bonds, holdings);
-  renderChart(payoutSeries);
+  const needsPayoutSeries = isChartsVisible || isComparisonVisible || !strategyTabShell || isBuysVisible;
+  const payoutSeries = needsPayoutSeries ? buildPayoutSeries(bonds, buys, holdings) : null;
+  if (isPortfolioVisible) {
+    const portfolioBuys = getBuysForPortfolioChart();
+    const payoutSeriesPortfolio = buildPayoutSeries(bonds, portfolioBuys, holdings);
+    renderPortfolioChart(payoutSeriesPortfolio);
+  }
+  if (isComparisonVisible) renderStrategyComparisonChart(bonds, holdings);
+  if (isChartsVisible && payoutSeries) renderChart(payoutSeries);
   renderPortfolioHoldingsChips(holdings);
-  renderSummary(payoutSeries, buys, holdings);
-  refreshAutoPlanBondPicker();
+  if (payoutSeries) renderSummary(payoutSeries, buys, holdings);
+  if (isBuysVisible) refreshAutoPlanBondPicker();
   renderStrategyTab();
   syncStrategyDynamicsEmptyState();
   syncStrategyPortfolioEmptyState();
   enforceStrategyEmptyBlocksMatchData();
-  animateVisibleWidgetLayout(layoutSnap);
+  if (animateWidgets && layoutSnap) animateVisibleWidgetLayout(layoutSnap);
 }
 
 /** Гарантирует скрытие пустых блоков при наличии данных (на случай рассинхрона с DOM). */
