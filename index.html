@@ -577,32 +577,61 @@
               <div class="strategyPortfolio__titleRow" id="strategy-portfolio-mainhead">
                 <h2 class="strategyPortfolio__title">Портфель</h2>
               </div>
-              <div class="card widget widget--wide portfolioPf portfolioControls--sheet" data-widget="portfolio-controls">
-                <div class="portfolioControls__group portfolioControls__group--pair">
-                  <div class="portfolioControls__groupTitle">Старт</div>
-                  <label class="floatingField floatingField--portfolio" for="portfolio-start-value">
-                    <input id="portfolio-start-value" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                    <span class="floatingField__label">Стартовая стоимость</span>
-                  </label>
-                  <label class="floatingField floatingField--portfolio" for="portfolio-start-date">
-                    <input id="portfolio-start-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
-                    <span class="floatingField__label">Дата старта</span>
-                  </label>
+              <div class="portfolioAboveChart">
+                <div
+                  class="card widget portfolioSetupWidget"
+                  data-widget="portfolio-start"
+                  aria-label="Стартовые параметры портфеля"
+                >
+                  <div class="widget__header portfolioSetupWidget__header">
+                    <div>
+                      <div class="widget__title">Стартовые параметры</div>
+                      <p class="widget__hint portfolioSetupWidget__hint">
+                        С какой суммы и с какой даты считается стоимость; ежемесячные пополнения до выбранной даты или без
+                        ограничения.
+                      </p>
+                      <p id="portfolio-scenario-summary" class="portfolioSetupWidget__summary"></p>
+                    </div>
+                    <div class="widget__headerRight">
+                      <button id="portfolio-params-open-btn" type="button" class="btn btn--secondary">
+                        Параметры расчёта
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="portfolioControls__group portfolioControls__group--pair">
-                  <div class="portfolioControls__groupTitle">Пополнения</div>
-                  <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup">
-                    <input id="portfolio-monthly-topup" class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="number" min="0" step="0.01" value="0" placeholder=" " />
-                    <span class="floatingField__label">Ежемесячное пополнение</span>
-                  </label>
-                  <label class="floatingField floatingField--portfolio" for="portfolio-monthly-topup-end-date">
-                    <input id="portfolio-monthly-topup-end-date" class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input" type="date" placeholder=" " />
-                    <span class="floatingField__label">До (включительно)</span>
-                  </label>
+                <div
+                  class="card widget portfolioSetupWidget"
+                  data-widget="portfolio-holdings"
+                  aria-label="Текущий портфель"
+                >
+                  <div class="widget__header portfolioSetupWidget__header portfolioSetupWidget__header--holdings">
+                    <div>
+                      <div class="widget__title">Текущий портфель</div>
+                      <p class="widget__hint portfolioSetupWidget__hint">
+                        Какие облигации уже есть — учитываются в выплатах вместе с планом покупок выбранной стратегии.
+                      </p>
+                    </div>
+                    <div class="widget__headerRight">
+                      <button type="button" id="add-portfolio-holding-row" class="btn btn--primary">Добавить</button>
+                    </div>
+                  </div>
+                  <div class="tableWrap portfolioHoldingsTableWrap" role="region" aria-label="Таблица текущего портфеля">
+                    <table class="table portfolioHoldingsTable">
+                      <thead>
+                        <tr>
+                          <th scope="col">Облигация</th>
+                          <th scope="col" style="width: 120px;">Количество</th>
+                          <th scope="col" style="width: 44px;"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="portfolio-holdings-tbody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-              <div class="card widget widget--wide" data-widget="portfolio-value">
+
+              <div class="card widget widget--wide portfolioPf" data-widget="portfolio-value">
                 <select
                   id="portfolio-chart-strategy-select"
                   class="input taxControl__input portfolioChartStrategySelect portfolioChartSelect--detached"
@@ -641,25 +670,6 @@
                   <svg id="portfolio-chart" viewBox="0 0 900 360" class="chart" aria-hidden="true">
                     <g id="portfolio-chart-content"></g>
                   </svg>
-                </div>
-
-                <div class="portfolioControls__group portfolioControls__group--currentPf portfolioCurrentHoldings">
-                  <div class="strategyPortfolioHoldings__head">
-                    <div class="portfolioControls__groupTitle strategyPortfolioHoldings__title">Текущий портфель</div>
-                    <button type="button" id="add-portfolio-holding-row" class="btn btn--primary strategyPortfolioHoldings__addBtn">Добавить</button>
-                  </div>
-                  <div class="tableWrap portfolioHoldingsTableWrap" role="region" aria-label="Текущий портфель">
-                    <table class="table portfolioHoldingsTable">
-                      <thead>
-                        <tr>
-                          <th scope="col">Облигация</th>
-                          <th scope="col" style="width: 120px;">Количество</th>
-                          <th scope="col" style="width: 44px;"></th>
-                        </tr>
-                      </thead>
-                      <tbody id="portfolio-holdings-tbody"></tbody>
-                    </table>
-                  </div>
                 </div>
               </div>
               <div
@@ -1066,6 +1076,89 @@
         <div class="sheetModal__footer autoPlanConflictModal__footer">
           <button id="auto-plan-conflict-keep" class="btn btn--secondary autoPlanConflictModal__keep" type="button">Оставить существующие</button>
           <button id="auto-plan-conflict-overwrite" class="btn btn--primary sheetModal__save autoPlanConflictModal__overwrite" type="button">Перезаписать</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="portfolio-params-modal-overlay" class="modalOverlay" hidden>
+      <div
+        class="modal modal--sheet modal--portfolioParams"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="portfolio-params-modal-title"
+      >
+        <div class="modal__header">
+          <div class="modal__title" id="portfolio-params-modal-title">Параметры расчёта стоимости</div>
+          <button
+            id="portfolio-params-modal-close"
+            class="iconBtn modal__closeBtn"
+            type="button"
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="sheetModal__body portfolioParamsModal__body">
+          <p class="portfolioParamsModal__intro">
+            Модель: от стартовой суммы на дату старта помесячно прибавляются купоны по плану выбранной стратегии и
+            ежемесячное пополнение (если задан срок — до этой даты включительно).
+          </p>
+          <section class="sheetModal__section" aria-labelledby="portfolio-params-section-start">
+            <h2 class="sheetModal__sectionLabel" id="portfolio-params-section-start">Старт</h2>
+            <div class="sheetModal__group portfolioParamsModal__group">
+              <label class="floatingField floatingField--portfolio portfolioParamsModal__field" for="portfolio-start-value">
+                <input
+                  id="portfolio-start-value"
+                  class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="0"
+                  placeholder=" "
+                />
+                <span class="floatingField__label">Стартовая стоимость</span>
+              </label>
+              <label class="floatingField floatingField--portfolio portfolioParamsModal__field" for="portfolio-start-date">
+                <input
+                  id="portfolio-start-date"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                />
+                <span class="floatingField__label">Дата старта</span>
+              </label>
+            </div>
+          </section>
+          <section class="sheetModal__section" aria-labelledby="portfolio-params-section-topup">
+            <h2 class="sheetModal__sectionLabel" id="portfolio-params-section-topup">Пополнения</h2>
+            <div class="sheetModal__group portfolioParamsModal__group">
+              <label class="floatingField floatingField--portfolio portfolioParamsModal__field" for="portfolio-monthly-topup">
+                <input
+                  id="portfolio-monthly-topup"
+                  class="input input--num taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value="0"
+                  placeholder=" "
+                />
+                <span class="floatingField__label">Ежемесячное пополнение</span>
+              </label>
+              <label class="floatingField floatingField--portfolio portfolioParamsModal__field" for="portfolio-monthly-topup-end-date">
+                <input
+                  id="portfolio-monthly-topup-end-date"
+                  class="input taxControl__input portfolioControl__input portfolioControl__input--wide floatingField__input"
+                  type="date"
+                  placeholder=" "
+                />
+                <span class="floatingField__label">Пополнения до (включительно)</span>
+              </label>
+            </div>
+          </section>
+        </div>
+        <div class="sheetModal__footer portfolioParamsModal__footer">
+          <button id="portfolio-params-modal-cancel" type="button" class="btn btn--secondary">Отмена</button>
+          <button id="portfolio-params-modal-save" type="button" class="btn btn--primary sheetModal__save">Сохранить</button>
         </div>
       </div>
     </div>
