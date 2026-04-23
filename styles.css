@@ -996,13 +996,7 @@ html[data-theme="dark"] .strategyPlansPane__table thead th{
 .strategyPlansPane__empty.featureEmptyState{
   margin: 0 0 16px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--bg2) 65%, transparent);
-  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06);
 }
-html[data-theme="dark"] .strategyPlansPane__empty.featureEmptyState{
-    background: rgba(44, 44, 46, 0.35);
-    box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
-  }
 .strategyTabShell__paramHint--afterYear{
   margin: -2px 0 10px;
 }
@@ -1525,7 +1519,7 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .card.widget[data-wid
 .strategyTabShell__pane--portfolio .strategyTabShell__featureEmpty--portfolio{
   flex: 0 1 auto;
   min-height: 200px;
-  margin: 0 var(--strategy-shell-pad) 12px;
+  margin: 10px var(--strategy-shell-pad) 20px;
   border-radius: 16px;
 }
 .strategyTabShell__aside--right{
@@ -2057,17 +2051,19 @@ html[data-theme="dark"] .emptyState--card{
   }
 
 .featureEmptyState{
+  --empty-bg: rgb(244, 244, 246);
+  --empty-ring: rgba(0, 0, 0, 0.07);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 36px 22px;
+  padding: 44px 30px;
   border-radius: 16px;
-  background: #e4e4ea;
+  background: var(--empty-bg);
   border: none;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 0 0 1px var(--empty-ring);
 }
 .featureEmptyState[hidden]{
   display: none !important;
@@ -2088,9 +2084,11 @@ html[data-theme="dark"] .emptyState--card{
   color: var(--text-subhead);
 }
 html[data-theme="dark"] .featureEmptyState{
-  background: rgba(58, 58, 62, 0.92);
+  --empty-bg: rgba(58, 58, 62, 0.86);
+  --empty-ring: rgba(255, 255, 255, 0.1);
+  background: var(--empty-bg);
   border: none;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--empty-ring);
 }
 html[data-theme="dark"] .featureEmptyState__subtitle{
   color: rgba(235, 235, 245, 0.78);
@@ -2111,16 +2109,16 @@ html[data-theme="dark"] .featureEmptyState__subtitle{
 .strategyTabShell__featureEmpty--plans{
   flex: 1;
   min-height: 220px;
-  margin: 0 0 16px;
+  margin: 10px 0 22px;
 }
 .strategyTabShell__featureEmpty--bonds{
-  margin: 6px var(--strategy-shell-pad) 12px;
+  margin: 12px var(--strategy-shell-pad) 20px;
   min-height: 148px;
 }
 .strategyTabShell__pane--charts .strategyTabShell__featureEmpty--charts{
   flex: 1 1 0;
   min-height: 200px;
-  margin: 0 var(--strategy-shell-pad) 12px;
+  margin: 10px var(--strategy-shell-pad) 20px;
   border-radius: 16px;
 }
 
