@@ -1338,6 +1338,24 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .strategyChartsStatCard{
   font-weight: 600;
   line-height: 1.3;
 }
+.strategyTabShell__pane--comparison .strategyComparisonPane__delta{
+  margin-top: 1px;
+  font-size: var(--fs-xs);
+  line-height: 1.25;
+  color: var(--muted);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__delta--pos{
+  color: #1f7a36;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__delta--neg{
+  color: #c0392b;
+}
+html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__delta--pos{
+  color: #42c767;
+}
+html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__delta--neg{
+  color: #ff8c8c;
+}
 .strategyTabShell__pane--comparison .strategyComparisonPane__value--max{
   color: #1f7a36;
   font-weight: 750;
@@ -1346,7 +1364,7 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
   color: #42c767;
 }
 .strategyTabShell__pane--comparison .strategyComparisonPane__bonds{
-  margin-top: 4px;
+  margin-top: 8px;
   font-size: var(--fs-xs);
   line-height: 1.35;
   color: var(--muted);
@@ -1388,6 +1406,11 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
 }
 html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__bond--diff{
   color: rgba(235, 235, 245, 0.52);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__totalRow td{
+  background: color-mix(in srgb, var(--panel) 76%, transparent);
+  border-top: 1px solid var(--hairline);
+  font-weight: 600;
 }
 
 /* Портфель (вкладка стратегии): параметры, статистика и график — без лишних карточек; год в сайдбаре */

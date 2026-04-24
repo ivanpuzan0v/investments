@@ -4322,6 +4322,7 @@ function renderStrategyComparisonChart(bonds, holdings) {
     .filter(({ strategy }) => selectedIds.has(String(strategy.id)))
     .filter(({ monthTotals }) => Array.from(monthTotals.values()).some((v) => v > 0));
   const currentStrategyId = String(activeBuyStrategyId || "").trim();
+  const activeCol = strategyCols.find(({ strategy }) => String(strategy.id) === currentStrategyId) || null;
   const periodHead = isAllTime ? "Год" : "Месяц";
   strategyComparisonThead.innerHTML = `<tr>
     <th scope="col" style="width: 140px;">${periodHead}</th>
@@ -4345,7 +4346,7 @@ function renderStrategyComparisonChart(bonds, holdings) {
     return;
   }
 
-  strategyComparisonTbody.innerHTML = buckets
+  const bodyRowsHtml = buckets
     .map((bucket) => {
       const periodText = isAllTime ? bucket : formatMonthKeyRuLong(bucket);
       const rowValues = strategyCols.map(({ monthTotals }) => monthTotals.get(bucket) || 0);
@@ -4365,6 +4366,9 @@ function renderStrategyComparisonChart(bonds, holdings) {
         .map(({ strategy, monthTotals, monthBondAmounts, monthBondQty }) => {
           const val = monthTotals.get(bucket) || 0;
           if (!(val > 0)) return `<td>—</td>`;
+          const baseVal = activeCol ? activeCol.monthTotals.get(bucket) || 0 : 0;
+          const isCurrent = String(strategy.id) === currentStrategyId;
+          const delta = isCurrent ? 0 : val - baseVal;
           const bonds = Array.from((monthBondAmounts.get(bucket) || new Map()).entries())
             .map(([bondKey, entry]) => {
               const qty = Math.max(0, Math.round((monthBondQty.get(bucket) || new Map()).get(bondKey) || 0));
@@ -4389,8 +4393,14 @@ function renderStrategyComparisonChart(bonds, holdings) {
               `</div>`
             : "—";
           const maxClass = val === maxVal && maxVal > 0 && maxCount === 1 ? " strategyComparisonPane__value--max" : "";
+          const deltaHtml = !activeCol || isCurrent
+            ? ""
+            : `<div class="strategyComparisonPane__delta${delta > 0 ? " strategyComparisonPane__delta--pos" : delta < 0 ? " strategyComparisonPane__delta--neg" : ""}">
+              ${delta === 0 ? "0 ₽" : `${delta > 0 ? "+" : "−"}${escapeHtml(formatMoney(Math.abs(delta)))}`}
+            </div>`;
           return `<td>
             <div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(val))}</div>
+            ${deltaHtml}
             <div class="strategyComparisonPane__bonds">${bondsHtml}</div>
           </td>`;
         })
@@ -4401,6 +4411,20 @@ function renderStrategyComparisonChart(bonds, holdings) {
       </tr>`;
     })
     .join("");
+  const totalsByStrategy = strategyCols.map(({ monthTotals }) =>
+    buckets.reduce((sum, bucket) => sum + (monthTotals.get(bucket) || 0), 0)
+  );
+  const maxTotal = totalsByStrategy.length ? Math.max(...totalsByStrategy) : 0;
+  const totalRowHtml = `<tr class="strategyComparisonPane__totalRow">
+    <td>${isAllTime ? "Итого за период" : "Итого за год"}</td>
+    ${totalsByStrategy
+      .map((total) => {
+        const maxClass = total === maxTotal && maxTotal > 0 ? " strategyComparisonPane__value--max" : "";
+        return `<td><div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(total))}</div></td>`;
+      })
+      .join("")}
+  </tr>`;
+  strategyComparisonTbody.innerHTML = `${bodyRowsHtml}${totalRowHtml}`;
 }
 
 function clearComparisonBondChipLinkedHover() {
