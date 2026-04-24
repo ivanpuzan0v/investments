@@ -923,7 +923,12 @@
                 <div class="bondModal__field bondModal__colorField" aria-label="Цвет облигации">
                   <div class="bondModal__colorLabel">Цвет на графиках</div>
                   <input id="bond-modal-color" type="hidden" value="" />
-                  <div id="bond-modal-color-palette" class="bondColorPalette" role="listbox" aria-label="Палитра цвета облигации"></div>
+                  <div class="bondColorRow">
+                    <div id="bond-modal-used-colors" class="bondColorPalette bondColorPalette--used" role="listbox" aria-label="Используемые цвета облигаций"></div>
+                  </div>
+                  <div id="bond-modal-color-picker-popover" class="bondColorPickerPopover" hidden>
+                    <input id="bond-modal-native-color" class="bondColorPickerPopover__input" type="color" value="#76b041" aria-label="Выбор произвольного цвета" />
+                  </div>
                 </div>
 
                 <label class="floatingField bondModal__field" for="bond-modal-coupon">

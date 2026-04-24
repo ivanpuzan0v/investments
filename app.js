@@ -120,7 +120,11 @@ const bondModalClose = document.getElementById("bond-modal-close");
 const bondModalTitle = document.getElementById("bond-modal-title");
 const bondModalNameInput = document.getElementById("bond-modal-name");
 const bondModalColorSelect = document.getElementById("bond-modal-color");
-const bondModalColorPalette = document.getElementById("bond-modal-color-palette");
+const bondModalUsedColors = document.getElementById("bond-modal-used-colors");
+const bondModalColorPickerPopover = document.getElementById("bond-modal-color-picker-popover");
+const bondModalNativeColorInput = document.getElementById("bond-modal-native-color");
+const DEFAULT_CUSTOM_BOND_COLOR = "#d1d1d6ff";
+let bondModalCustomAddColor = "";
 const bondModalCouponInput = document.getElementById("bond-modal-coupon");
 const bondModalBondPriceInput = document.getElementById("bond-modal-bond-price");
 const bondModalNominalInput = document.getElementById("bond-modal-nominal");
@@ -1130,15 +1134,52 @@ function populateBondColorOptions() {
   const current = normalizeBondColor(bondModalColorSelect.value);
   const selected = current || keys[0] || "";
   const byKey = getSeriesPaletteByKey();
+  const usedKeys = getUsedBondColorKeys();
+  const customColor = normalizeHexColorToken(bondModalCustomAddColor) || DEFAULT_CUSTOM_BOND_COLOR;
+  const selectedIsCustom = selected.startsWith("#") && selected === customColor;
   bondModalColorSelect.value = selected;
-  if (!bondModalColorPalette) return;
-  bondModalColorPalette.innerHTML = keys
-    .map((key) => {
-      const active = key === selected;
-      const color = byKey.get(key) || "#76b041ff";
-      return `<button type="button" class="bondColorPalette__swatch${active ? " is-active" : ""}" role="option" aria-selected="${active ? "true" : "false"}" data-bond-color="${escapeHtml(key)}" style="--swatch:${escapeHtml(color)}" title="${escapeHtml(color.toUpperCase())}"></button>`;
-    })
-    .join("");
+  if (bondModalNativeColorInput) {
+    bondModalNativeColorInput.value = toColorInputHex(customColor);
+  }
+  if (bondModalUsedColors) {
+    bondModalUsedColors.innerHTML = usedKeys
+      .map((key) => {
+        const active = key === selected;
+        const color = resolveBondColorHex(key, byKey);
+        return `<button type="button" class="bondColorPalette__swatch${active ? " is-active" : ""}" role="option" aria-selected="${active ? "true" : "false"}" data-bond-color="${escapeHtml(key)}" style="--swatch:${escapeHtml(color)}" title="${escapeHtml(color.toUpperCase())}"></button>`;
+      })
+      .join("");
+    bondModalUsedColors.insertAdjacentHTML(
+      "beforeend",
+      `<button type="button" class="bondColorPalette__swatch bondColorPalette__swatch--add${selectedIsCustom ? " is-active" : ""}${bondModalCustomAddColor ? "" : " is-default"}" role="button" aria-label="Добавить цвет" data-action="add-custom-color" style="--swatch:${escapeHtml(customColor)}"><span class="bondColorPalette__addBadge">+</span></button>`
+    );
+  }
+}
+
+function getUsedBondColorKeys() {
+  const rows = sanitizeBondRows(readRows(bondsTbody));
+  if (!rows.length) return [];
+  const byKey = getSeriesPaletteByKey();
+  const reverse = new Map();
+  byKey.forEach((color, key) => {
+    reverse.set(normalizeHexColorToken(color), key);
+  });
+  const fallbackByBond = getBondColorByBondKeyMap(getBondPaletteOptions());
+  const ordered = [];
+  const seen = new Set();
+  rows.forEach((row) => {
+    const explicit = normalizeBondColor(row.bondColor);
+    let key = explicit;
+    if (!key) {
+      const bondKey = normalizeBondKey(row.bond);
+      const fallbackColor = normalizeHexColorToken(fallbackByBond.get(bondKey));
+      key = fallbackColor ? reverse.get(fallbackColor) || "" : "";
+    }
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    ordered.push(key);
+  });
+  return ordered;
 }
 
 function normalizeBondColor(rawColor) {
@@ -1154,7 +1195,20 @@ function normalizeBondColor(rawColor) {
     const darkHex = normalizeHexColorToken(STATISTICS_SERIES_PALETTE_DARK_FALLBACK[i]);
     if (normalizedHex === lightHex || normalizedHex === darkHex) return STATISTICS_SERIES_PALETTE_KEYS[i];
   }
-  return "";
+  return normalizedHex;
+}
+
+function resolveBondColorHex(colorToken, byKeyRaw) {
+  const byKey = byKeyRaw || getSeriesPaletteByKey();
+  const normalized = normalizeBondColor(colorToken);
+  if (!normalized) return "#76b041ff";
+  if (normalized.startsWith("#")) return normalized;
+  return byKey.get(normalized) || "#76b041ff";
+}
+
+function toColorInputHex(rawColor) {
+  const normalized = normalizeHexColorToken(rawColor) || "#76b041ff";
+  return `#${normalized.slice(1, 7)}`;
 }
 
 function getBondColorByBondKeyMap(paletteRaw) {
@@ -1177,7 +1231,7 @@ function getBondColorByBondKeyMap(paletteRaw) {
     const bond = normalizeBondKey(row.bond);
     if (!bond) return;
     const explicitKey = normalizeBondColor(row.bondColor);
-    const explicitColor = explicitKey ? paletteByKey.get(explicitKey) : "";
+    const explicitColor = explicitKey ? resolveBondColorHex(explicitKey, paletteByKey) : "";
     map.set(
       bond,
       explicitColor ||
@@ -1547,10 +1601,10 @@ function onYearPieYearSegmentClick(e) {
 function renderChartLegend(seriesByBond, seriesColors) {
   if (!chartLegend) return;
   // Тот же sIdx, что у столбцов в renderChart, а не порядковый номер среди «видимых» серий.
-  const chunks = seriesByBond
+  const visibleSeries = seriesByBond
     .map((series, sIdx) => {
       const visible = (series.points || []).some((point) => Number(point.amount) > 0);
-      if (!visible) return "";
+      if (!visible) return null;
       const color = seriesColors[sIdx] || seriesColors[0] || "#0071e3";
       const safeBond = String(series.bond || `Bond ${sIdx + 1}`)
         .replaceAll("&", "&amp;")
@@ -1569,14 +1623,19 @@ function renderChartLegend(seriesByBond, seriesColors) {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
       const total = (series.points || []).reduce((sum, point) => sum + (Number(point.amount) || 0), 0);
-      return `<span class="chartLegend__item" data-legend-bond="${safeMatchBond}" data-legend-color="${safeColor}">
+      return {
+        bondSort: String(series.bond || "").trim(),
+        html: `<span class="chartLegend__item" data-legend-bond="${safeMatchBond}" data-legend-color="${safeColor}">
         <span class="chartLegend__dot" style="background:${color}"></span>
         <span class="chartLegend__bond">${safeBond}</span>
         <span class="chartLegend__sep" aria-hidden="true">·</span>
         <span class="chartLegend__sum">${formatMoney(total)}</span>
-      </span>`;
+      </span>`,
+      };
     })
-    .filter((html) => html.length > 0);
+    .filter(Boolean)
+    .sort((a, b) => a.bondSort.localeCompare(b.bondSort, "ru", { sensitivity: "base", numeric: true }));
+  const chunks = visibleSeries.map((entry) => entry.html);
   if (!chunks.length) {
     chartLegend.innerHTML = "";
     return;
@@ -1909,11 +1968,16 @@ function clearChartTextHighlight() {
   });
 }
 
+function getHoverContrastTextColor() {
+  const theme = document.documentElement.getAttribute("data-theme");
+  return theme === "dark" ? "#ffffff" : "#000000";
+}
+
 function applyChartTextHighlight(matchBond, color, monthKey = "", valueMode = "series") {
   const bond = String(matchBond || "").trim().toUpperCase();
-  const activeColor = String(color || "").trim();
+  const activeColor = getHoverContrastTextColor();
   clearChartTextHighlight();
-  if (!bond || !activeColor) return;
+  if (!bond) return;
 
   const activeMonths = new Set();
   document.querySelectorAll(".chartValueLabel").forEach((el) => {
@@ -1959,7 +2023,7 @@ function applyCouponBarSegmentLabelHover(monthKey, amount, fillColor) {
     `.chartValueLabel[data-label-month="${monthKey}"]:not(.chartBondMonthHint)`
   );
   if (!(tot instanceof SVGTextElement)) return;
-  const fill = String(fillColor || "").trim();
+  const fill = getHoverContrastTextColor();
   tot.classList.add("chartText--active", "chartValueLabel--active");
   tot.setAttribute("fill", fill || tot.getAttribute("data-default-fill") || "currentColor");
   tot.setAttribute("opacity", "0.98");
@@ -7210,6 +7274,7 @@ function fillBondModalFormFromRow(tr) {
     const preferred = normalizeBondColor(colorHidden?.value || "");
     const fallback = getBondColorByBondKeyMap(getBondPaletteOptions()).get(normalizeBondKey(bondInput.value || ""));
     bondModalColorSelect.value = preferred || fallback || getBondPaletteOptions()[0] || "";
+    bondModalCustomAddColor = preferred.startsWith("#") ? preferred : "";
     populateBondColorOptions();
   }
 
@@ -7245,6 +7310,7 @@ function openBondModalNew() {
   if (bondModalStartDateInput) bondModalStartDateInput.value = "";
   if (bondModalEndDateInput) bondModalEndDateInput.value = "";
   if (bondModalColorSelect) bondModalColorSelect.value = getBondPaletteOptions()[0] || "";
+  bondModalCustomAddColor = "";
   populateBondColorOptions();
   initBondMonthPickerState();
   setBondModalOpen(true);
@@ -7303,10 +7369,26 @@ if (bondModalMonthsToggleBtn) {
   });
 }
 
-if (bondModalColorPalette) {
-  bondModalColorPalette.addEventListener("click", (e) => {
+if (bondModalUsedColors) {
+  bondModalUsedColors.addEventListener("click", (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
+    const addBtn = t.closest('[data-action="add-custom-color"]');
+    if (addBtn instanceof HTMLButtonElement && bondModalNativeColorInput && bondModalColorPickerPopover) {
+      const colorField = bondModalUsedColors.closest(".bondModal__colorField");
+      if (colorField instanceof HTMLElement) {
+        const fieldRect = colorField.getBoundingClientRect();
+        const btnRect = addBtn.getBoundingClientRect();
+        const left = Math.max(8, Math.min(btnRect.left - fieldRect.left, fieldRect.width - 72));
+        const top = btnRect.bottom - fieldRect.top + 8;
+        bondModalColorPickerPopover.style.left = `${left}px`;
+        bondModalColorPickerPopover.style.top = `${top}px`;
+      }
+      bondModalNativeColorInput.value = toColorInputHex(bondModalColorSelect?.value || "");
+      bondModalColorPickerPopover.removeAttribute("hidden");
+      queueMicrotask(() => bondModalNativeColorInput.focus());
+      return;
+    }
     const btn = t.closest("[data-bond-color]");
     if (!(btn instanceof HTMLButtonElement) || !bondModalColorSelect) return;
     const color = normalizeBondColor(btn.getAttribute("data-bond-color") || "");
@@ -7315,6 +7397,26 @@ if (bondModalColorPalette) {
     populateBondColorOptions();
   });
 }
+
+if (bondModalNativeColorInput) {
+  bondModalNativeColorInput.addEventListener("input", () => {
+    if (!bondModalColorSelect) return;
+    const color = normalizeBondColor(bondModalNativeColorInput.value || "");
+    if (!color) return;
+    bondModalCustomAddColor = color.startsWith("#") ? color : "";
+    bondModalColorSelect.value = color;
+    populateBondColorOptions();
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (!bondModalColorPickerPopover) return;
+  if (bondModalColorPickerPopover.hasAttribute("hidden")) return;
+  const t = e.target;
+  if (!(t instanceof Element)) return;
+  if (t.closest("#bond-modal-color-picker-popover") || t.closest('[data-action="add-custom-color"]')) return;
+  bondModalColorPickerPopover.setAttribute("hidden", "");
+});
 
 // select[multiple] больше не используется; синхронизация идёт через клики по чипам.
 
