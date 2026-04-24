@@ -27,8 +27,13 @@ const STRATEGY_LEFT_SIDEBAR_WIDTH_KEY = "invest_planner_strategy_left_sidebar_wi
 const STRATEGY_RIGHT_SIDEBAR_WIDTH_KEY = "invest_planner_strategy_right_sidebar_width_v1";
 /** localStorage: «light» | «dark» | «system» (по умолчанию — как в ОС). */
 const THEME_PREF_KEY = "invest_planner_theme_v1";
+const THEME_PREF_SYSTEM = "system";
+const THEME_PREF_LIGHT = "light";
+const THEME_PREF_DARK = "dark";
 /** Ожидаемое удорожание чистой цены в автоплане, % в месяц (составная модель). */
 const AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY = "invest_planner_auto_plan_price_drift_pct_v1";
+const BONDS_SORT_MODE_NAME = "name";
+const BONDS_SORT_MODE_MATURITY = "maturity";
 
 const bondsTbody = document.getElementById("assets-tbody");
 const buysTbody = document.getElementById("txns-tbody");
@@ -121,7 +126,6 @@ const bondModalBondPriceInput = document.getElementById("bond-modal-bond-price")
 const bondModalNominalInput = document.getElementById("bond-modal-nominal");
 const bondModalOpenMonthPickerBtn = document.getElementById("bond-modal-open-month-picker");
 const bondModalPayoutMonthsInput = document.getElementById("bond-modal-payoutMonths");
-const bondModalPayoutMonthsSelect = document.getElementById("bond-modal-payoutMonths-select");
 const bondModalMonthsToggleBtn = document.getElementById("bond-modal-months-toggle-btn");
 const bondModalStartDateVisibleInput = document.getElementById("bond-modal-start-date");
 const bondModalEndDateVisibleInput = document.getElementById("bond-modal-end-date");
@@ -151,7 +155,6 @@ const strategySaveBtn = document.getElementById("strategy-save");
 const strategyTabStrategyList = document.getElementById("strategy-tab-strategy-list");
 const strategyTabBuysTbody = document.getElementById("strategy-tab-buys-tbody");
 const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
-const strategyBondsSortSelect = document.getElementById("strategy-bonds-sort");
 const strategyBondsSortButtons = Array.from(document.querySelectorAll(".strategyTabShell__bondsSortBtn[data-bonds-sort-mode]"));
 const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-strategy");
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
@@ -187,7 +190,6 @@ const strategyCouponDisplayNetRadio = document.getElementById("strategy-coupon-d
 const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon-display-gross");
 const strategySidebarCommissionInput = document.getElementById("strategy-sidebar-commission-pct");
 const strategyPlansYearSelect = document.getElementById("strategy-plans-year");
-const themeSelect = document.getElementById("theme-select");
 const themePickerButtons = Array.from(document.querySelectorAll(".themePicker__btn[data-theme-pref]"));
 
 const DATE_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -233,11 +235,11 @@ let lastSummaryPieChartData = null;
 function getThemePreference() {
   try {
     const v = localStorage.getItem(THEME_PREF_KEY);
-    if (v === "light" || v === "dark" || v === "system") return v;
+    if (v === THEME_PREF_LIGHT || v === THEME_PREF_DARK || v === THEME_PREF_SYSTEM) return v;
   } catch {
     /* ignore */
   }
-  return "system";
+  return THEME_PREF_SYSTEM;
 }
 
 function systemPrefersDark() {
@@ -246,9 +248,9 @@ function systemPrefersDark() {
 
 /** @returns {"light"|"dark"} */
 function effectiveThemeFromPreference(pref) {
-  if (pref === "dark") return "dark";
-  if (pref === "light") return "light";
-  return systemPrefersDark() ? "dark" : "light";
+  if (pref === THEME_PREF_DARK) return THEME_PREF_DARK;
+  if (pref === THEME_PREF_LIGHT) return THEME_PREF_LIGHT;
+  return systemPrefersDark() ? THEME_PREF_DARK : THEME_PREF_LIGHT;
 }
 
 function applyDocumentTheme(effective) {
@@ -266,14 +268,13 @@ function syncAppShellHeaderOffset() {
 
 function initThemeUi() {
   const applyThemePreference = (next) => {
-    if (next !== "light" && next !== "dark" && next !== "system") return;
+    if (next !== THEME_PREF_LIGHT && next !== THEME_PREF_DARK && next !== THEME_PREF_SYSTEM) return;
     try {
       localStorage.setItem(THEME_PREF_KEY, next);
     } catch {
       /* ignore */
     }
     applyDocumentTheme(effectiveThemeFromPreference(next));
-    if (themeSelect) themeSelect.value = next;
     themePickerButtons.forEach((btn) => {
       const active = btn.getAttribute("data-theme-pref") === next;
       btn.classList.toggle("is-active", active);
@@ -285,13 +286,6 @@ function initThemeUi() {
   const pref = getThemePreference();
   applyDocumentTheme(effectiveThemeFromPreference(pref));
   syncAppShellHeaderOffset();
-  if (themeSelect) {
-    themeSelect.value = pref;
-    themeSelect.addEventListener("change", () => {
-      const next = String(themeSelect.value || "").trim();
-      applyThemePreference(next);
-    });
-  }
   themePickerButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       applyThemePreference(String(btn.getAttribute("data-theme-pref") || "").trim());
@@ -305,8 +299,8 @@ function initThemeUi() {
   if (window.matchMedia) {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onSchemeChange = () => {
-      if (getThemePreference() !== "system") return;
-      applyDocumentTheme(effectiveThemeFromPreference("system"));
+      if (getThemePreference() !== THEME_PREF_SYSTEM) return;
+      applyDocumentTheme(effectiveThemeFromPreference(THEME_PREF_SYSTEM));
       syncAppShellHeaderOffset();
     };
     mq.addEventListener("change", onSchemeChange);
@@ -1357,22 +1351,19 @@ function ensureComparisonYear() {
 function getStrategyBondsSortMode() {
   const activeBtn = strategyBondsSortButtons.find((btn) => btn.classList.contains("is-active"));
   const fromButtons = String(activeBtn?.getAttribute("data-bonds-sort-mode") || "").trim();
-  if (fromButtons === "maturity" || fromButtons === "name") return fromButtons;
-  const fromSelect = String(strategyBondsSortSelect?.value || "").trim();
-  if (fromSelect === "maturity" || fromSelect === "name") return fromSelect;
+  if (fromButtons === BONDS_SORT_MODE_MATURITY || fromButtons === BONDS_SORT_MODE_NAME) return fromButtons;
   const saved = String(localStorage.getItem(STRATEGY_BONDS_SORT_KEY) || "").trim();
-  if (saved === "maturity" || saved === "name") return saved;
-  return "name";
+  if (saved === BONDS_SORT_MODE_MATURITY || saved === BONDS_SORT_MODE_NAME) return saved;
+  return BONDS_SORT_MODE_NAME;
 }
 
 function setStrategyBondsSortModeUi(modeRaw) {
-  const mode = modeRaw === "maturity" ? "maturity" : "name";
+  const mode = modeRaw === BONDS_SORT_MODE_MATURITY ? BONDS_SORT_MODE_MATURITY : BONDS_SORT_MODE_NAME;
   strategyBondsSortButtons.forEach((btn) => {
     const active = btn.getAttribute("data-bonds-sort-mode") === mode;
     btn.classList.toggle("is-active", active);
     btn.setAttribute("aria-pressed", active ? "true" : "false");
   });
-  if (strategyBondsSortSelect) strategyBondsSortSelect.value = mode;
 }
 
 function getSelectedComparisonStrategyIds() {
@@ -4383,10 +4374,12 @@ function renderStrategyComparisonChart(bonds, holdings) {
           const bondsHtml = bonds.length
             ? `<div class="buyChips strategyComparisonPane__chips">` +
               bonds
-                .map(({ bond, qty }) => {
+                .map(({ bondKey, bond, qty }) => {
                   const count = bondPresenceCount.get(bond) || 0;
                   const isDifferent = activeStrategyCount > 1 && count < activeStrategyCount;
-                  return `<span class="buyChip strategyComparisonPane__bondChip${isDifferent ? " strategyComparisonPane__bond--diff" : ""}">
+                  return `<span class="buyChip strategyComparisonPane__bondChip${isDifferent ? " strategyComparisonPane__bond--diff" : ""}" data-cmp-bond="${escapeHtml(
+                    bondKey
+                  )}">
                     <span class="buyChip__name">${escapeHtml(bond)}</span>
                     <span class="buyChip__sep">•</span>
                     <span class="buyChip__detail">${escapeHtml(formatQuantityRu(qty))}</span>
@@ -4408,6 +4401,25 @@ function renderStrategyComparisonChart(bonds, holdings) {
       </tr>`;
     })
     .join("");
+}
+
+function clearComparisonBondChipLinkedHover() {
+  if (!strategyComparisonTbody) return;
+  strategyComparisonTbody
+    .querySelectorAll(".strategyComparisonPane__bondChip.strategyComparisonPane__bondChip--linkedHover")
+    .forEach((el) => el.classList.remove("strategyComparisonPane__bondChip--linkedHover"));
+}
+
+function syncComparisonBondChipLinkedHover(targetChip) {
+  clearComparisonBondChipLinkedHover();
+  if (!(targetChip instanceof Element)) return;
+  const tr = targetChip.closest("tr");
+  if (!tr) return;
+  const bondKey = String(targetChip.getAttribute("data-cmp-bond") || "").trim();
+  if (!bondKey) return;
+  tr.querySelectorAll(`.strategyComparisonPane__bondChip[data-cmp-bond="${CSS.escape(bondKey)}"]`).forEach((el) => {
+    el.classList.add("strategyComparisonPane__bondChip--linkedHover");
+  });
 }
 
 function setPortfolioMoneyInputValue(input, value) {
@@ -4593,7 +4605,7 @@ function renderStrategyTab() {
   const rawBondRows = readRowsSkippingPlaceholder(bondsTbody);
   const bondsSort = getStrategyBondsSortMode();
   const bonds = sanitizeBondRows(rawBondRows).sort((a, b) => {
-    if (bondsSort === "maturity") {
+    if (bondsSort === BONDS_SORT_MODE_MATURITY) {
       const aEnd = normalizeYMD(String(a.endDate || "").trim()) || "9999-12-31";
       const bEnd = normalizeYMD(String(b.endDate || "").trim()) || "9999-12-31";
       const byDate = aEnd.localeCompare(bEnd);
@@ -6097,7 +6109,7 @@ function loadAll() {
     if (taxRateInput) taxRateInput.value = "13";
     loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
-    setStrategyBondsSortModeUi("name");
+    setStrategyBondsSortModeUi(BONDS_SORT_MODE_NAME);
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
     portfolioScenariosByStrategyId = {
       [DEFAULT_BUY_STRATEGY_ID]: normalizePortfolioScenario({
@@ -6536,19 +6548,11 @@ if (portfolioChartStrategySelect) {
     renderAll();
   });
 }
-if (strategyBondsSortSelect) {
-  strategyBondsSortSelect.addEventListener("change", () => {
-    const mode = getStrategyBondsSortMode();
-    localStorage.setItem(STRATEGY_BONDS_SORT_KEY, mode);
-    setStrategyBondsSortModeUi(mode);
-    renderAll();
-  });
-}
 if (strategyBondsSortButtons.length) {
   strategyBondsSortButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const mode = String(btn.getAttribute("data-bonds-sort-mode") || "").trim();
-      if (mode !== "name" && mode !== "maturity") return;
+      if (mode !== BONDS_SORT_MODE_NAME && mode !== BONDS_SORT_MODE_MATURITY) return;
       localStorage.setItem(STRATEGY_BONDS_SORT_KEY, mode);
       setStrategyBondsSortModeUi(mode);
       renderAll();
@@ -6622,6 +6626,21 @@ if (strategyComparisonStrategyPicker) {
       .filter(Boolean);
     persistSelectedComparisonStrategyIds(selected);
     renderAll();
+  });
+}
+if (strategyComparisonTbody && !strategyComparisonTbody.dataset.linkedHoverInit) {
+  strategyComparisonTbody.dataset.linkedHoverInit = "1";
+  strategyComparisonTbody.addEventListener("mouseover", (e) => {
+    const chip = e.target.closest(".strategyComparisonPane__bondChip[data-cmp-bond]");
+    if (!chip) return;
+    syncComparisonBondChipLinkedHover(chip);
+  });
+  strategyComparisonTbody.addEventListener("mouseout", (e) => {
+    const chip = e.target.closest(".strategyComparisonPane__bondChip[data-cmp-bond]");
+    if (!chip) return;
+    const rel = e.relatedTarget;
+    if (rel instanceof Element && chip.contains(rel)) return;
+    clearComparisonBondChipLinkedHover();
   });
 }
 
@@ -7047,11 +7066,6 @@ function setBondModalOpen(open) {
   else closeModalOverlay(bondModalOverlay);
 }
 
-function syncBondModalMonthSummary() {
-  // Не используется: месяц-выбор теперь сделан через multi-select.
-  return;
-}
-
 function initBondMonthPickerState() {
   if (!bondModalPayoutMonthsInput) return;
 
@@ -7070,17 +7084,6 @@ function initBondMonthPickerState() {
   applyMonthsToRow(); // фиксируем нормализованное значение в hidden
 }
 
-function syncBondModalPayoutMonthsInputFromSelect() {
-  if (!bondModalPayoutMonthsInput || !bondModalPayoutMonthsSelect) return;
-
-  const months = Array.from(bondModalPayoutMonthsSelect.selectedOptions)
-    .map((o) => Number(o.value))
-    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 12);
-
-  const uniqueSorted = Array.from(new Set(months)).sort((a, b) => a - b);
-  bondModalPayoutMonthsInput.value = uniqueSorted.join(",");
-}
-
 function openBondMonthPicker() {
   if (!bondModalPayoutMonthsInput || !bondMonthPickerPanel) return;
 
@@ -7094,7 +7097,6 @@ function openBondMonthPicker() {
   // На всякий случай обновляем UI по текущим выбранным месяцам.
   renderMonthGrid(monthPickerState.months);
   updateMonthModeUI();
-  syncBondModalMonthSummary();
 }
 
 function fillBondModalFormFromRow(tr) {
@@ -7128,7 +7130,6 @@ function fillBondModalFormFromRow(tr) {
     populateBondColorOptions();
   }
 
-  syncBondModalMonthSummary();
 }
 
 function getBondModalRowData() {
