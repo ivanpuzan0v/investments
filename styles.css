@@ -1344,6 +1344,13 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .strategyChartsStatCard{
   line-height: 1.25;
   color: var(--muted);
 }
+.strategyTabShell__pane--comparison .strategyComparisonPane__deltaSep{
+  opacity: 0.72;
+  margin: 0 4px;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__delta--neutral{
+  color: var(--muted);
+}
 .strategyTabShell__pane--comparison .strategyComparisonPane__delta--pos{
   color: #1f7a36;
 }

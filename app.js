@@ -4393,11 +4393,23 @@ function renderStrategyComparisonChart(bonds, holdings) {
               `</div>`
             : "—";
           const maxClass = val === maxVal && maxVal > 0 && maxCount === 1 ? " strategyComparisonPane__value--max" : "";
+          let deltaLabel = "";
+          let deltaClass = " strategyComparisonPane__delta--neutral";
+          if (activeCol && !isCurrent) {
+            const absLabel = delta === 0 ? "0 ₽" : `${delta > 0 ? "+" : "−"}${escapeHtml(formatMoney(Math.abs(delta)))}`;
+            let pctLabel = "—";
+            if (baseVal > 0) {
+              const pct = (delta / baseVal) * 100;
+              pctLabel = pct === 0 ? "0%" : `${pct > 0 ? "+" : "−"}${formatAmount(Math.abs(pct))}%`;
+              deltaClass = pct > 0 ? " strategyComparisonPane__delta--pos" : pct < 0 ? " strategyComparisonPane__delta--neg" : " strategyComparisonPane__delta--neutral";
+            } else {
+              deltaClass = delta > 0 ? " strategyComparisonPane__delta--pos" : delta < 0 ? " strategyComparisonPane__delta--neg" : " strategyComparisonPane__delta--neutral";
+            }
+            deltaLabel = `${absLabel}<span class="strategyComparisonPane__deltaSep">•</span>${pctLabel}`;
+          }
           const deltaHtml = !activeCol || isCurrent
             ? ""
-            : `<div class="strategyComparisonPane__delta${delta > 0 ? " strategyComparisonPane__delta--pos" : delta < 0 ? " strategyComparisonPane__delta--neg" : ""}">
-              ${delta === 0 ? "0 ₽" : `${delta > 0 ? "+" : "−"}${escapeHtml(formatMoney(Math.abs(delta)))}`}
-            </div>`;
+            : `<div class="strategyComparisonPane__delta${deltaClass}">${deltaLabel}</div>`;
           return `<td>
             <div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(val))}</div>
             ${deltaHtml}
