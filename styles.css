@@ -1189,12 +1189,13 @@ html[data-theme="dark"] .strategyDynamics{
 }
 .strategyTabShell__pane--charts .card.widget[data-widget="returns"] .chartLegend{
   flex-shrink: 0;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   padding: 0;
 }
 .strategyTabShell__pane--charts .widget[data-widget="returns"] .chartWrap{
   flex: 0 1 auto;
   align-self: stretch;
+  margin-top: -2px;
   margin-left: 0;
   margin-right: 0;
   width: 100%;
