@@ -401,10 +401,14 @@
                 </button>
               </div>
               <div class="strategyTabShell__bondsSortWrap">
-                <select id="strategy-bonds-sort" class="input strategyTabShell__bondsSortSelect" aria-label="Сортировка облигаций">
-                  <option value="name">По названию</option>
-                  <option value="maturity">По дате погашения</option>
-                </select>
+                <div class="strategyTabShell__bondsSortSeg" role="group" aria-label="Сортировка облигаций">
+                  <button type="button" class="strategyTabShell__bondsSortBtn is-active" data-bonds-sort-mode="name">
+                    По названию
+                  </button>
+                  <button type="button" class="strategyTabShell__bondsSortBtn" data-bonds-sort-mode="maturity">
+                    По дате погашения
+                  </button>
+                </div>
               </div>
               <div
                 id="strategy-bonds-empty"
@@ -785,14 +789,23 @@
                 <div class="widget__title strategyTabShell__title">Настройки</div>
               </div>
               <div class="strategyTabShell__settingsBody">
-                <label class="themePicker strategyTabShell__settingsTheme" for="theme-select">
+                <div class="themePicker strategyTabShell__settingsTheme" aria-label="Тема">
                   <span class="themePicker__label">Тема</span>
-                  <select id="theme-select" class="input themeSelect strategyTabShell__settingsThemeSelect" aria-label="Тема оформления">
-                    <option value="system">Как в системе</option>
-                    <option value="light">Светлая</option>
-                    <option value="dark">Тёмная</option>
-                  </select>
-                </label>
+                  <div class="themePicker__seg" role="group" aria-label="Тема оформления">
+                    <button type="button" class="themePicker__btn" data-theme-pref="system" aria-label="Как в системе" title="Как в системе">
+                      <span class="themePicker__icon" aria-hidden="true">⚙️</span>
+                      <span class="themePicker__text">Система</span>
+                    </button>
+                    <button type="button" class="themePicker__btn" data-theme-pref="light" aria-label="Светлая тема" title="Светлая тема">
+                      <span class="themePicker__icon" aria-hidden="true">☀️</span>
+                      <span class="themePicker__text">Светлая</span>
+                    </button>
+                    <button type="button" class="themePicker__btn" data-theme-pref="dark" aria-label="Тёмная тема" title="Тёмная тема">
+                      <span class="themePicker__icon" aria-hidden="true">🌙</span>
+                      <span class="themePicker__text">Тёмная</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </aside>
@@ -804,6 +817,7 @@
       <tr>
         <td>
           <input type="hidden" data-field="bond" value="" />
+          <input type="hidden" data-field="bondColor" value="" />
           <div class="bondTableName" data-display-for="bond">—</div>
         </td>
         <td>
@@ -906,6 +920,12 @@
                   <span class="floatingField__label">Название или тикер</span>
                 </label>
 
+                <div class="bondModal__field bondModal__colorField" aria-label="Цвет облигации">
+                  <div class="bondModal__colorLabel">Цвет на графиках</div>
+                  <input id="bond-modal-color" type="hidden" value="" />
+                  <div id="bond-modal-color-palette" class="bondColorPalette" role="listbox" aria-label="Палитра цвета облигации"></div>
+                </div>
+
                 <label class="floatingField bondModal__field" for="bond-modal-coupon">
                   <input id="bond-modal-coupon" class="input input--num floatingField__input" type="number" min="0" step="0.01" placeholder=" " />
                   <span class="floatingField__label">Купон за 1 выплату</span>
@@ -960,7 +980,16 @@
 
                 <div id="bond-month-picker-panel" class="bondMonthPickerPanel bondModal__monthPanel">
                   <div class="bondMonthChips">
-                    <div class="bondMonthChips__label bondModal__inlineLabel">Месяцы выплат</div>
+                    <div class="bondMonthChips__head">
+                      <div class="bondMonthChips__label bondModal__inlineLabel">Месяцы выплат</div>
+                      <button
+                        id="bond-modal-months-toggle-btn"
+                        type="button"
+                        class="btn btn--ghost bondMonthChips__toggleBtn"
+                      >
+                        Выбрать все
+                      </button>
+                    </div>
                     <div id="month-grid" class="monthGrid bondModal__monthGrid" aria-label="Месяцы года"></div>
                   </div>
                 </div>

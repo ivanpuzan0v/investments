@@ -411,3 +411,42 @@ test("reinvest budget includes principal returned on maturity", async () => {
     dom.window.close();
   }
 });
+
+test("autoplan in 2031 includes last coupon from another bond and buys full lots", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    setTableRows(window, {
+      bonds: [
+        // Bond 1: semiannual coupons (May/Dec), active through 2036.
+        { bond: "Облигация 1", coupon: "10", bondPrice: "1000", payoutMonths: "5,12", startDate: "2026-01-01", endDate: "2036-12-31" },
+        // Bond 2: target for purchases in 2031.
+        { bond: "Облигация 2", coupon: "8", bondPrice: "1000", payoutMonths: "5,12", startDate: "2026-01-01", endDate: "2036-12-31" },
+      ],
+      holdings: [{ bond: "Облигация 1", quantity: "1" }],
+      buys: [],
+    });
+
+    setSelectedBonds(document, ["Облигация 2"]);
+    setSelectedDays(document, [10]);
+
+    document.getElementById("auto-plan-start").value = "2031-01-01";
+    document.getElementById("auto-plan-end").value = "2031-01-31";
+    document.getElementById("auto-plan-topup-amount").value = "1995";
+    document.getElementById("auto-plan-reinvest").checked = true;
+
+    const strategySelect = document.getElementById("auto-plan-strategy");
+    if (strategySelect.options.length) strategySelect.value = strategySelect.options[0].value;
+
+    const result = window.generateAutoPlanBuyRows();
+    assert.equal(result.ok, true, result.message || "expected successful generation");
+
+    const rows = parseRowItems(result.rows);
+    assert.equal(rows.length, 1, "expected one generated date in Jan 2031");
+    const items = rows[0].items;
+    assert.equal(items.length, 1, "budget should be allocated to selected bond only");
+    assert.equal(items[0].bond, "ОБЛИГАЦИЯ 2");
+    assert.equal(items[0].quantity, 2, "1995 topup + 10 last Dec coupon from Bond 1 => 2005 => 2 full lots at 1000");
+  } finally {
+    dom.window.close();
+  }
+});

@@ -1,8 +1,10 @@
 @import url("./design-system/design-system.css?v=1");
 
 .themePicker{
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  flex-direction: column;
   gap: 8px;
 }
 .themePicker__label{
@@ -19,6 +21,49 @@
   padding: 8px 12px;
   font-size: var(--font-medium);
   border-radius: 10px;
+}
+.themePicker__seg{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+}
+.themePicker__btn{
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid color-mix(in srgb, var(--hairline) 82%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg0) 84%, transparent);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.themePicker__icon{
+  font-size: 16px;
+  line-height: 1;
+}
+.themePicker__text{
+  font-size: 0.7rem;
+  line-height: 1.1;
+  color: var(--text-subhead);
+}
+.themePicker__btn:hover{
+  background: color-mix(in srgb, var(--bg0) 70%, transparent);
+}
+.themePicker__btn.is-active{
+  border-color: color-mix(in srgb, var(--primary) 62%, transparent);
+  background: color-mix(in srgb, var(--primary) 18%, var(--bg0));
+}
+.themePicker__btn.is-active .themePicker__text{
+  color: var(--text);
 }
 
 .page{
@@ -298,6 +343,11 @@ html[data-theme="dark"] .planScheduleDayChip--selected:hover{
   gap: 6px;
   cursor: pointer;
   color: var(--text);
+}
+.autoPlanBondPick__label{
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
 }
 .autoPlanBondPick input{
   flex-shrink: 0;
@@ -679,6 +729,38 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
 .strategyTabShell__bondsSortWrap{
   padding: 0 var(--strategy-shell-pad) 8px;
 }
+.strategyTabShell__bondsSortSeg{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bg0) 82%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--hairline) 82%, transparent);
+}
+.strategyTabShell__bondsSortBtn{
+  min-width: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-subhead);
+  font: inherit;
+  font-size: var(--fs-small);
+  line-height: 1.2;
+  padding: 7px 8px;
+  text-align: center;
+  cursor: pointer;
+}
+.strategyTabShell__bondsSortBtn.is-active{
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.strategyTabShell__bondsSortBtn:focus-visible{
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 .strategyTabShell__bondsSortSelect{
   width: 100%;
   min-width: 170px;
@@ -740,6 +822,23 @@ html[data-theme="dark"] .strategyTabShell__bondOpenBtn:focus-visible{
 .strategyTabShell__bondMain{
   min-width: 0;
   flex: 1;
+}
+.strategyTabShell__bondNameRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.strategyTabShell__bondColorDot{
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 999px;
+  flex-shrink: 0;
+  align-self: center;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+}
+.strategyTabShell__bondNameRow .strategyTabShell__bondName{
+  min-width: 0;
 }
 .strategyTabShell__bondName{
   font-weight: 650;
@@ -942,31 +1041,44 @@ html[data-theme="dark"] .strategyPlansPane__tableWrap.tableWrap{
   vertical-align: bottom;
 }
 .strategyPlansPane__table .strategyPlansPane__colDate{
-  width: 24%;
+  width: 20%;
 }
 .strategyPlansPane__table .strategyPlansPane__colSum{
-  width: 18%;
+  width: 24%;
 }
 .strategyPlansPane__table .strategyPlansPane__colItems{
-  width: auto;
+  width: 40%;
 }
 .strategyPlansPane__table .strategyPlansPane__colActions{
-  width: 132px;
+  width: 16%;
   white-space: nowrap;
-  text-align: left;
+  text-align: right;
   vertical-align: middle;
 }
 .strategyPlansPane__table tbody td.strategyPlansPane__cellActions{
   vertical-align: middle;
   padding-left: 8px;
-  padding-right: 30px;
+  padding-right: 18px;
 }
 .strategyPlansPane__table tbody td:nth-child(3){
   padding-right: 58px;
 }
+.strategyPlansPane__table tbody td:nth-child(3) .buySummary--stack{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.strategyPlansPane__table tbody td:nth-child(3) .buySummary__commission{
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
 .strategyPlansPane__table tbody td.strategyPlansPane__cellActions .buyRowActions{
   gap: 8px;
-  justify-content: flex-start;
+  justify-content: flex-end;
 }
 .strategyPlansPane__table tbody td.strategyPlansPane__cellActions .iconBtn{
   display: inline-flex;
@@ -1008,30 +1120,36 @@ html[data-theme="dark"] .strategyPlansPane__table thead th{
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: visible;
-  /* Палитра облигаций в «Статистике» (см. getSeriesPalette в app.js). 8 базовых + 9–10 = повтор 1–2 для 10-го ключа в JS. */
-  --sky-blue-light: #f02e2eff;
-  --blue-green: #f06f2eff;
-  --cerulean: #779820ff;
-  --deep-space-blue: #177844ff;
-  --amber-flame: #1a5d87ff;
-  --amber-glow: #2f3aa2ff;
-  --princeton-orange: #792cafff;
-  --rusty-spice: #9f3085ff;
-  --oxidized-iron: #f02e2eff;
-  --brown-red: #f06f2eff;
+  --deep-space-blue: #ff0000ff;
+  --prussian-blue: #ff6700ff;
+  --regal-navy: #ff9c00ff;
+  --twitter-blue: #849102ff;
+  --fresh-sky: #73cd13ff;
+  --sky-surge: #349756ff;
+  --strong-cyan: #35c49cff;
+  --charcoal-blue: #0b8dd5ff;
+  --baltic-blue: #2468b7ff;
+  --ink-black: #0d27bbff;
+  --vanilla-custard: #5846c7ff;
+  --sunflower-gold: #910ad9ff;
+  --honey-bronze: #e51fc9ff;
+  --school-bus-yellow: #d1388cff;
 }
 html[data-theme="dark"] .strategyDynamics{
-  /* Тёмная тема: приглушённые оттенки той же палитры (не «меловые»). */
-  --sky-blue-light: #dc4545ff;
-  --blue-green: #d8653aff;
-  --cerulean: #749628ff;
-  --deep-space-blue: #1c7a52ff;
-  --amber-flame: #2a6f9eff;
-  --amber-glow: #5a64b8ff;
-  --princeton-orange: #9557c2ff;
-  --rusty-spice: #b35693ff;
-  --oxidized-iron: #dc4545ff;
-  --brown-red: #d8653aff;
+  --deep-space-blue: #ff4d4dff;
+  --prussian-blue: #ff8a33ff;
+  --regal-navy: #ffb733ff;
+  --twitter-blue: #9faa35ff;
+  --fresh-sky: #8bd84aff;
+  --sky-surge: #5bac78ff;
+  --strong-cyan: #5dd0b0ff;
+  --charcoal-blue: #45a9dfff;
+  --baltic-blue: #4f86c6ff;
+  --ink-black: #4e62cdff;
+  --vanilla-custard: #7b6dd5ff;
+  --sunflower-gold: #ad47e4ff;
+  --honey-bronze: #ea56d5ff;
+  --school-bus-yellow: #db63a3ff;
 }
 .strategyDynamics__titleRow{
   flex-shrink: 0;
@@ -1226,6 +1344,10 @@ html[data-theme="dark"] .strategyTabShell__pane--charts .strategyChartsStatCard{
   vertical-align: top;
   border-top: 0.5px solid var(--hairline);
 }
+.strategyTabShell__pane--comparison .strategyComparisonPane__table thead th.strategyComparisonPane__currentCol{
+  font-weight: 700;
+  color: #0071e3;
+}
 .strategyTabShell__pane--comparison .strategyComparisonPane__value{
   font-size: var(--fs-small);
   font-weight: 600;
@@ -1243,6 +1365,16 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
   font-size: var(--fs-xs);
   line-height: 1.35;
   color: var(--muted);
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__chips{
+  margin-top: 4px;
+  gap: 5px 6px;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bondChip{
+  max-width: 100%;
+}
+.strategyTabShell__pane--comparison .strategyComparisonPane__bondChip .buyChip__name{
+  color: #000000;
 }
 .strategyTabShell__pane--comparison .strategyComparisonPane__bond{
   color: inherit;
@@ -1433,10 +1565,13 @@ html[data-theme="dark"] .strategyTabShell__pane--portfolio .portfolioAboveChart 
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 .portfolioHoldingsModal__actions{
   display: flex;
   justify-content: flex-start;
+  flex-shrink: 0;
 }
 .portfolioHoldingsModal__footer{
   justify-content: flex-end;
@@ -2353,11 +2488,25 @@ html[data-theme="dark"] .buyChip{
 .bondMonthChips{
   width: 100%;
 }
+.bondMonthChips__head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
 .bondMonthChips__label{
   font-size: var(--fs-small);
   font-weight: 650;
   color: var(--muted);
-  margin-bottom: 8px;
+  margin-bottom: 0;
+}
+.bondMonthChips__toggleBtn{
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: var(--fs-small);
+  line-height: 1.2;
 }
 
 /* Месяцы в модалке облигации: серые chips по умолчанию, синие при выборе */
@@ -2898,6 +3047,9 @@ input.taxControl__input{
 .portfolioHoldingsTableWrap{
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--hairline) 85%, transparent);
+  max-height: min(58vh, 520px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .portfolioHoldingsTable th,
 .portfolioHoldingsTable td{
@@ -3827,6 +3979,11 @@ html[data-theme="dark"] .bondModal__group{
 .modal--sheet .bondModal__field .floatingField__input:not(:placeholder-shown) + .floatingField__label{
   top: 8px;
 }
+.modal--sheet .bondModal__field select.floatingField__input + .floatingField__label{
+  top: 8px;
+  transform: none;
+  font-size: var(--fs-xs);
+}
 .modal--sheet .sheetModal__field .floatingField__input:focus,
 .modal--sheet .bondModal__field .floatingField__input:focus{
   border: none;
@@ -3997,7 +4154,17 @@ html[data-theme="dark"] .modal--autoPlan .autoPlanModal__footer .autoPlanModal__
   border: none;
   background: var(--sheetCard);
   border-radius: 16px;
-  padding: 16px 16px 14px;
+  padding: 16px 18px 14px;
+}
+.modal--portfolioParams .portfolioParamsModal__body{
+  /* Чуть больше поля по горизонтали — иначе overflow-x: hidden у .sheetModal__body подрезает скругления у краёв */
+  padding-left: 28px;
+  padding-right: 28px;
+}
+.modal--portfolioParams .portfolioParamsModal__group.sheetModal__group{
+  overflow: visible;
+  padding-inline: 2px;
+  box-sizing: border-box;
 }
 .modal--portfolioParams .sheetModal__section[aria-labelledby="portfolio-params-section-start"]{
   max-width: 720px;
@@ -4174,6 +4341,56 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
   margin-top: 0;
   padding: 14px 14px 8px;
   border-top: 0.5px solid var(--sheetSep);
+}
+.bondModal__colorField{
+  padding: 12px 14px 14px;
+}
+.bondModal__colorLabel{
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-subhead);
+  margin-bottom: 10px;
+}
+.bondColorPalette{
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+}
+.bondColorPalette__swatch{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  border: none;
+  background: var(--swatch);
+  cursor: pointer;
+}
+.bondColorPalette__swatch.is-active{
+  transform: none;
+}
+.bondColorPalette__swatch.is-active::after{
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid rgb(214, 214, 219);
+  pointer-events: none;
+}
+.bondColorPalette__swatch:hover{
+  transform: translateY(-1px);
+}
+.bondColorPalette__swatch:focus-visible{
+  outline: none;
+}
+.bondColorPalette__swatch:focus-visible::after{
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 1.5px solid rgb(214, 214, 219);
+  pointer-events: none;
 }
 .bondModal__inlineLabel,
 .bondModal__monthPanel .bondMonthChips__label{

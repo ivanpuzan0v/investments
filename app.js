@@ -114,12 +114,15 @@ const bondModalOverlay = document.getElementById("bond-modal-overlay");
 const bondModalClose = document.getElementById("bond-modal-close");
 const bondModalTitle = document.getElementById("bond-modal-title");
 const bondModalNameInput = document.getElementById("bond-modal-name");
+const bondModalColorSelect = document.getElementById("bond-modal-color");
+const bondModalColorPalette = document.getElementById("bond-modal-color-palette");
 const bondModalCouponInput = document.getElementById("bond-modal-coupon");
 const bondModalBondPriceInput = document.getElementById("bond-modal-bond-price");
 const bondModalNominalInput = document.getElementById("bond-modal-nominal");
 const bondModalOpenMonthPickerBtn = document.getElementById("bond-modal-open-month-picker");
 const bondModalPayoutMonthsInput = document.getElementById("bond-modal-payoutMonths");
 const bondModalPayoutMonthsSelect = document.getElementById("bond-modal-payoutMonths-select");
+const bondModalMonthsToggleBtn = document.getElementById("bond-modal-months-toggle-btn");
 const bondModalStartDateVisibleInput = document.getElementById("bond-modal-start-date");
 const bondModalEndDateVisibleInput = document.getElementById("bond-modal-end-date");
 const bondModalStartDateInput = document.getElementById("bond-modal-startDate");
@@ -149,6 +152,7 @@ const strategyTabStrategyList = document.getElementById("strategy-tab-strategy-l
 const strategyTabBuysTbody = document.getElementById("strategy-tab-buys-tbody");
 const strategyTabBondsList = document.getElementById("strategy-tab-bonds-list");
 const strategyBondsSortSelect = document.getElementById("strategy-bonds-sort");
+const strategyBondsSortButtons = Array.from(document.querySelectorAll(".strategyTabShell__bondsSortBtn[data-bonds-sort-mode]"));
 const strategyTabNewStrategyBtn = document.getElementById("strategy-tab-new-strategy");
 const strategyTabNewBondBtn = document.getElementById("strategy-tab-new-bond");
 const strategyTabAddBuyBtn = document.getElementById("strategy-tab-add-buy");
@@ -166,6 +170,7 @@ const autoPlanConflictKeepBtn = document.getElementById("auto-plan-conflict-keep
 const autoPlanConflictOverwriteBtn = document.getElementById("auto-plan-conflict-overwrite");
 let autoPlanScaffoldRestore = null;
 let autoPlanGenerateTooltipHost = null;
+let autoPlanBondTooltipHost = null;
 let autoPlanConflictResolve = null;
 const strategyPaneBuys = document.getElementById("strategy-pane-buys");
 const strategyPaneCharts = document.getElementById("strategy-pane-charts");
@@ -183,6 +188,7 @@ const strategyCouponDisplayGrossRadio = document.getElementById("strategy-coupon
 const strategySidebarCommissionInput = document.getElementById("strategy-sidebar-commission-pct");
 const strategyPlansYearSelect = document.getElementById("strategy-plans-year");
 const themeSelect = document.getElementById("theme-select");
+const themePickerButtons = Array.from(document.querySelectorAll(".themePicker__btn[data-theme-pref]"));
 
 const DATE_YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTHS_RU = [
@@ -259,6 +265,23 @@ function syncAppShellHeaderOffset() {
 }
 
 function initThemeUi() {
+  const applyThemePreference = (next) => {
+    if (next !== "light" && next !== "dark" && next !== "system") return;
+    try {
+      localStorage.setItem(THEME_PREF_KEY, next);
+    } catch {
+      /* ignore */
+    }
+    applyDocumentTheme(effectiveThemeFromPreference(next));
+    if (themeSelect) themeSelect.value = next;
+    themePickerButtons.forEach((btn) => {
+      const active = btn.getAttribute("data-theme-pref") === next;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    syncAppShellHeaderOffset();
+  };
+
   const pref = getThemePreference();
   applyDocumentTheme(effectiveThemeFromPreference(pref));
   syncAppShellHeaderOffset();
@@ -266,16 +289,19 @@ function initThemeUi() {
     themeSelect.value = pref;
     themeSelect.addEventListener("change", () => {
       const next = String(themeSelect.value || "").trim();
-      if (next !== "light" && next !== "dark" && next !== "system") return;
-      try {
-        localStorage.setItem(THEME_PREF_KEY, next);
-      } catch {
-        /* ignore */
-      }
-      applyDocumentTheme(effectiveThemeFromPreference(next));
-      syncAppShellHeaderOffset();
+      applyThemePreference(next);
     });
   }
+  themePickerButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyThemePreference(String(btn.getAttribute("data-theme-pref") || "").trim());
+    });
+  });
+  themePickerButtons.forEach((btn) => {
+    const active = btn.getAttribute("data-theme-pref") === pref;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
   if (window.matchMedia) {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onSchemeChange = () => {
@@ -286,6 +312,7 @@ function initThemeUi() {
     mq.addEventListener("change", onSchemeChange);
   }
 }
+
 
 function readRows(tbody) {
   return Array.from(tbody.querySelectorAll("tr")).map((tr) => {
@@ -1020,29 +1047,54 @@ function formatMonthKeyRuLong(monthKey) {
 }
 
 const STATISTICS_SERIES_PALETTE_KEYS = [
-  "--sky-blue-light",
-  "--blue-green",
-  "--cerulean",
   "--deep-space-blue",
-  "--amber-flame",
-  "--amber-glow",
-  "--princeton-orange",
-  "--rusty-spice",
-  "--oxidized-iron",
-  "--brown-red",
+  "--prussian-blue",
+  "--regal-navy",
+  "--twitter-blue",
+  "--fresh-sky",
+  "--sky-surge",
+  "--strong-cyan",
+  "--charcoal-blue",
+  "--baltic-blue",
+  "--ink-black",
+  "--vanilla-custard",
+  "--sunflower-gold",
+  "--honey-bronze",
+  "--school-bus-yellow",
 ];
 
 const STATISTICS_SERIES_PALETTE_FALLBACK = [
-  "#f02e2eff",
-  "#f06f2eff",
-  "#779820ff",
-  "#177844ff",
-  "#1a5d87ff",
-  "#2f3aa2ff",
-  "#792cafff",
-  "#9f3085ff",
-  "#f02e2eff",
-  "#f06f2eff",
+  "#ff0000ff",
+  "#ff6700ff",
+  "#ff9c00ff",
+  "#849102ff",
+  "#73cd13ff",
+  "#349756ff",
+  "#35c49cff",
+  "#0b8dd5ff",
+  "#2468b7ff",
+  "#0d27bbff",
+  "#5846c7ff",
+  "#910ad9ff",
+  "#e51fc9ff",
+  "#d1388cff",
+];
+
+const STATISTICS_SERIES_PALETTE_DARK_FALLBACK = [
+  "#ff4d4dff",
+  "#ff8a33ff",
+  "#ffb733ff",
+  "#9faa35ff",
+  "#8bd84aff",
+  "#5bac78ff",
+  "#5dd0b0ff",
+  "#45a9dfff",
+  "#4f86c6ff",
+  "#4e62cdff",
+  "#7b6dd5ff",
+  "#ad47e4ff",
+  "#ea56d5ff",
+  "#db63a3ff",
 ];
 
 /** Палитра облигаций в разделе «Статистика» (круговая диаграмма и график выплат). Берётся из CSS `.strategyDynamics`, иначе запасной список (тесты без стилей). */
@@ -1059,6 +1111,147 @@ function getSeriesPalette() {
     if (fromCss.every((v) => v.length > 0)) return fromCss;
   }
   return [...STATISTICS_SERIES_PALETTE_FALLBACK];
+}
+
+function getBondPaletteOptions() {
+  return [...STATISTICS_SERIES_PALETTE_KEYS];
+}
+
+function getSeriesPaletteByKey() {
+  const colors = getSeriesPalette();
+  const byKey = new Map();
+  STATISTICS_SERIES_PALETTE_KEYS.forEach((key, idx) => {
+    const color =
+      normalizeHexColorToken(colors[idx]) ||
+      normalizeHexColorToken(STATISTICS_SERIES_PALETTE_FALLBACK[idx]) ||
+      "#76b041ff";
+    byKey.set(key, color);
+  });
+  return byKey;
+}
+
+function populateBondColorOptions() {
+  if (!bondModalColorSelect) return;
+  const keys = getBondPaletteOptions();
+  const current = normalizeBondColor(bondModalColorSelect.value);
+  const selected = current || keys[0] || "";
+  const byKey = getSeriesPaletteByKey();
+  bondModalColorSelect.value = selected;
+  if (!bondModalColorPalette) return;
+  bondModalColorPalette.innerHTML = keys
+    .map((key) => {
+      const active = key === selected;
+      const color = byKey.get(key) || "#76b041ff";
+      return `<button type="button" class="bondColorPalette__swatch${active ? " is-active" : ""}" role="option" aria-selected="${active ? "true" : "false"}" data-bond-color="${escapeHtml(key)}" style="--swatch:${escapeHtml(color)}" title="${escapeHtml(color.toUpperCase())}"></button>`;
+    })
+    .join("");
+}
+
+function normalizeBondColor(rawColor) {
+  const raw = String(rawColor || "").trim();
+  if (!raw) return "";
+  const allowedKeys = new Set(getBondPaletteOptions());
+  if (allowedKeys.has(raw)) return raw;
+  const normalizedHex = normalizeHexColorToken(raw);
+  if (!normalizedHex) return "";
+  // Backward compatibility: map stored hex from light/dark palettes to semantic key.
+  for (let i = 0; i < STATISTICS_SERIES_PALETTE_KEYS.length; i += 1) {
+    const lightHex = normalizeHexColorToken(STATISTICS_SERIES_PALETTE_FALLBACK[i]);
+    const darkHex = normalizeHexColorToken(STATISTICS_SERIES_PALETTE_DARK_FALLBACK[i]);
+    if (normalizedHex === lightHex || normalizedHex === darkHex) return STATISTICS_SERIES_PALETTE_KEYS[i];
+  }
+  return "";
+}
+
+function getBondColorByBondKeyMap(paletteRaw) {
+  const paletteKeys = Array.isArray(paletteRaw) && paletteRaw.length ? paletteRaw : getBondPaletteOptions();
+  const paletteByKey = getSeriesPaletteByKey();
+  const rows = sanitizeBondRows(readRows(bondsTbody));
+  const namesSorted = rows
+    .map((r) => normalizeBondKey(r.bond))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "ru", { sensitivity: "base", numeric: true }));
+  const keyFallback = paletteKeys[0] || STATISTICS_SERIES_PALETTE_KEYS[0] || "--baltic-blue";
+  const fallbackByBond = new Map();
+  namesSorted.forEach((bond, idx) => {
+    const key = paletteKeys[idx % paletteKeys.length] || keyFallback;
+    const color = paletteByKey.get(key) || normalizeHexColorToken(STATISTICS_SERIES_PALETTE_FALLBACK[0]) || "#76b041ff";
+    fallbackByBond.set(bond, color);
+  });
+  const map = new Map();
+  rows.forEach((row) => {
+    const bond = normalizeBondKey(row.bond);
+    if (!bond) return;
+    const explicitKey = normalizeBondColor(row.bondColor);
+    const explicitColor = explicitKey ? paletteByKey.get(explicitKey) : "";
+    map.set(
+      bond,
+      explicitColor ||
+        fallbackByBond.get(bond) ||
+        normalizeHexColorToken(STATISTICS_SERIES_PALETTE_FALLBACK[0]) ||
+        "#76b041ff"
+    );
+  });
+  return map;
+}
+
+function normalizeHexColorToken(rawColor) {
+  const raw = String(rawColor || "").trim();
+  const m = /^#([0-9a-f]{3,8})$/i.exec(raw);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3 || h.length === 4) {
+    h = h
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
+  }
+  if (h.length === 6) h += "ff";
+  if (h.length !== 8) return null;
+  return `#${h.toLowerCase()}`;
+}
+
+function mixHexColor(hexColor, ratioRaw) {
+  const hex = normalizeHexColorToken(hexColor);
+  if (!hex) return String(hexColor || "");
+  const ratio = Math.max(-0.75, Math.min(0.75, Number(ratioRaw) || 0));
+  const body = hex.slice(1);
+  const rr = Number.parseInt(body.slice(0, 2), 16);
+  const gg = Number.parseInt(body.slice(2, 4), 16);
+  const bb = Number.parseInt(body.slice(4, 6), 16);
+  const aa = Number.parseInt(body.slice(6, 8), 16);
+  const mixTo = ratio >= 0 ? 255 : 0;
+  const t = Math.abs(ratio);
+  const blend = (x) => Math.round(x + (mixTo - x) * t);
+  const out = [blend(rr), blend(gg), blend(bb), aa]
+    .map((n) => n.toString(16).padStart(2, "0"))
+    .join("");
+  return `#${out}`;
+}
+
+function buildStatisticsSeriesColors(seriesCount, paletteRaw) {
+  const target = Math.max(0, Number(seriesCount) || 0);
+  if (!target) return [];
+  const source = Array.isArray(paletteRaw) && paletteRaw.length ? paletteRaw : STATISTICS_SERIES_PALETTE_FALLBACK;
+  const uniqueBase = [];
+  const seen = new Set();
+  for (const c of source) {
+    const normalized = normalizeHexColorToken(c) || String(c || "").trim();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    uniqueBase.push(normalized);
+  }
+  if (!uniqueBase.length) uniqueBase.push(...STATISTICS_SERIES_PALETTE_FALLBACK.slice(0, 8));
+  const shifts = [0, 0.16, -0.12, 0.28, -0.24];
+  const out = [];
+  for (let ring = 0; out.length < target; ring += 1) {
+    const shift = shifts[ring % shifts.length];
+    for (let i = 0; i < uniqueBase.length && out.length < target; i += 1) {
+      const c = uniqueBase[i];
+      out.push(shift === 0 ? c : mixHexColor(c, shift));
+    }
+  }
+  return out;
 }
 
 function getYearFromMonthKey(monthKey) {
@@ -1162,11 +1355,24 @@ function ensureComparisonYear() {
 }
 
 function getStrategyBondsSortMode() {
+  const activeBtn = strategyBondsSortButtons.find((btn) => btn.classList.contains("is-active"));
+  const fromButtons = String(activeBtn?.getAttribute("data-bonds-sort-mode") || "").trim();
+  if (fromButtons === "maturity" || fromButtons === "name") return fromButtons;
   const fromSelect = String(strategyBondsSortSelect?.value || "").trim();
   if (fromSelect === "maturity" || fromSelect === "name") return fromSelect;
   const saved = String(localStorage.getItem(STRATEGY_BONDS_SORT_KEY) || "").trim();
   if (saved === "maturity" || saved === "name") return saved;
   return "name";
+}
+
+function setStrategyBondsSortModeUi(modeRaw) {
+  const mode = modeRaw === "maturity" ? "maturity" : "name";
+  strategyBondsSortButtons.forEach((btn) => {
+    const active = btn.getAttribute("data-bonds-sort-mode") === mode;
+    btn.classList.toggle("is-active", active);
+    btn.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  if (strategyBondsSortSelect) strategyBondsSortSelect.value = mode;
 }
 
 function getSelectedComparisonStrategyIds() {
@@ -1227,6 +1433,7 @@ function renderYearPies(chartData) {
 
   const seriesByBond = chartData?.seriesByBond || [];
   const palette = getSeriesPalette();
+  const bondColorMap = getBondColorByBondKeyMap(getBondPaletteOptions());
 
   const byYear = new Map();
   seriesByBond.forEach((series) => {
@@ -1267,17 +1474,19 @@ function renderYearPies(chartData) {
     let currentAngle = 0;
     const slices =
       entries.length === 1
-        ? `<circle class="yearPieSlice" cx="50" cy="50" r="44" fill="${palette[0]}" data-slice-bond="${escapeHtml(
+        ? `<circle class="yearPieSlice" cx="50" cy="50" r="44" fill="${escapeHtml(
+            bondColorMap.get(normalizeBondKey(entries[0][0])) || palette[0]
+          )}" data-slice-bond="${escapeHtml(
             entries[0][0]
           )}" data-slice-year="${escapeHtml(String(selectedYear))}" data-slice-amount="${entries[0][1]}" data-slice-pct="100"></circle>`
         : entries
-            .map(([bond, value], idx) => {
+            .map(([bond, value]) => {
               const share = value / total;
               const angle = share * 360;
               const start = currentAngle;
               const end = currentAngle + angle;
               currentAngle = end;
-              const color = palette[idx % palette.length];
+              const color = bondColorMap.get(normalizeBondKey(bond)) || palette[0];
               const pct = (value / total) * 100;
               return { bond, value, color, path: arcPath(50, 50, 44, start, end), pct };
             })
@@ -1295,8 +1504,8 @@ function renderYearPies(chartData) {
   const legend =
     total > 0
       ? entries
-          .map(([bond, value], idx) => {
-            const color = palette[idx % palette.length];
+          .map(([bond, value]) => {
+            const color = bondColorMap.get(normalizeBondKey(bond)) || palette[0];
             return `<div class="yearPieLegend__item">
           <span class="yearPieLegend__dot" style="background:${color}"></span>
           <span class="yearPieLegend__bond">${escapeHtml(bond)}</span>
@@ -1323,6 +1532,12 @@ function renderYearPies(chartData) {
  * После смены data-theme CSS-переменные палитры меняются; перерисовываем SVG с заливками из getSeriesPalette().
  */
 function refreshStatisticsVisualsForTheme() {
+  const selectedColor = bondModalColorSelect?.value || "";
+  populateBondColorOptions();
+  if (bondModalColorSelect && selectedColor) {
+    const normalized = normalizeBondColor(selectedColor);
+    bondModalColorSelect.value = normalized || getBondPaletteOptions()[0] || "";
+  }
   if (lastCouponPayoutChartData) renderChart(lastCouponPayoutChartData);
   if (lastSummaryPieChartData) renderYearPies(lastSummaryPieChartData);
 }
@@ -1338,14 +1553,14 @@ function onYearPieYearSegmentClick(e) {
   renderAll();
 }
 
-function renderChartLegend(seriesByBond, palette) {
+function renderChartLegend(seriesByBond, seriesColors) {
   if (!chartLegend) return;
-  // Тот же sIdx, что у столбцов в renderChart (palette[sIdx]), а не порядковый номер среди «видимых» серий.
+  // Тот же sIdx, что у столбцов в renderChart, а не порядковый номер среди «видимых» серий.
   const chunks = seriesByBond
     .map((series, sIdx) => {
       const visible = (series.points || []).some((point) => Number(point.amount) > 0);
       if (!visible) return "";
-      const color = palette[sIdx % palette.length];
+      const color = seriesColors[sIdx] || seriesColors[0] || "#0071e3";
       const safeBond = String(series.bond || `Bond ${sIdx + 1}`)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -2017,6 +2232,52 @@ function showAutoPlanGenerateTooltip(hintText, clientX, clientY) {
   el.hidden = false;
   el.classList.add("chartTooltip--visible");
   positionAutoPlanGenerateTooltip(clientX, clientY);
+}
+
+function ensureAutoPlanBondTooltip() {
+  if (autoPlanBondTooltipHost) return autoPlanBondTooltipHost;
+  const el = document.createElement("div");
+  el.className = "chartTooltip autoPlanBondTooltip";
+  el.setAttribute("role", "tooltip");
+  el.hidden = true;
+  document.body.appendChild(el);
+  autoPlanBondTooltipHost = el;
+  return el;
+}
+
+function hideAutoPlanBondTooltip() {
+  if (!autoPlanBondTooltipHost) return;
+  autoPlanBondTooltipHost.hidden = true;
+  autoPlanBondTooltipHost.classList.remove("chartTooltip--visible");
+  autoPlanBondTooltipHost.innerHTML = "";
+}
+
+function positionAutoPlanBondTooltip(clientX, clientY) {
+  const el = autoPlanBondTooltipHost;
+  if (!el) return;
+  const margin = 14;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  requestAnimationFrame(() => {
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    let left = clientX + margin;
+    let top = clientY + margin;
+    if (left + tw > vw - 8) left = clientX - tw - margin;
+    if (top + th > vh - 8) top = clientY - th - margin;
+    left = Math.max(8, Math.min(left, vw - tw - 8));
+    top = Math.max(8, Math.min(top, vh - th - 8));
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+  });
+}
+
+function showAutoPlanBondTooltip(titleHtml, metaHtml, clientX, clientY) {
+  const el = ensureAutoPlanBondTooltip();
+  el.innerHTML = `<div class="chartTooltip__title">${titleHtml}</div><div class="chartTooltip__meta">${metaHtml}</div>`;
+  el.hidden = false;
+  el.classList.add("chartTooltip--visible");
+  positionAutoPlanBondTooltip(clientX, clientY);
 }
 
 function buildBuyPlanBudgetTooltipMeta(entry, options = {}) {
@@ -3156,9 +3417,11 @@ function buildPayoutSeries(bonds, buys, holdings) {
       // New format: grouped items in one row
       const groupedItems = parseBuyItems(row.items);
       if (groupedItems.length) {
+        const dateMonthUTCms = monthKeyToUTCms(toMonthKeyFromYMD(dateYMD));
         return groupedItems.map((item) => ({
           dateYMD,
           dateUTCms,
+          dateMonthUTCms,
           bond: normalizeBondKey(item.bond),
           quantity: item.quantity,
         }));
@@ -3168,7 +3431,7 @@ function buildPayoutSeries(bonds, buys, holdings) {
       const bond = normalizeBondKey(row.bond);
       const quantity = parseNumber(row.quantity);
       if (!bond || !Number.isFinite(quantity) || quantity <= 0) return [];
-      return [{ dateYMD, dateUTCms, bond, quantity }];
+      return [{ dateYMD, dateUTCms, dateMonthUTCms: monthKeyToUTCms(toMonthKeyFromYMD(dateYMD)), bond, quantity }];
     });
 
   /** Портфель: для помесячной модели считаем, что владение начинается с 1-го числа месяца начала обращения. */
@@ -3189,6 +3452,7 @@ function buildPayoutSeries(bonds, buys, holdings) {
     return {
       dateYMD,
       dateUTCms,
+      dateMonthUTCms: monthKeyToUTCms(toMonthKeyFromYMD(dateYMD)),
       bond: bondKey,
       quantity: item.quantity,
     };
@@ -3214,15 +3478,16 @@ function buildPayoutSeries(bonds, buys, holdings) {
         const monthKey = `${String(y).padStart(4, "0")}-${String(monthNum).padStart(2, "0")}`;
         if (startMonthKey && monthKeyToUTCms(monthKey) < monthKeyToUTCms(startMonthKey)) return;
         if (endMonthKey && monthKeyToUTCms(monthKey) > monthKeyToUTCms(endMonthKey)) return;
-        const paymentDate = new Date(Date.UTC(y, monthIndex, 1));
-        const paymentTs = paymentDate.getTime();
+        const paymentMonthTs = monthKeyToUTCms(monthKey);
         allDateSet.add(monthKey);
 
         const quantityAtDate = normalizedBuys
           .concat(holdingsAsBuys)
           .filter(
             (buyRow) =>
-              normalizeBondKey(buyRow.bond) === bondRow.matchBond && buyRow.dateUTCms <= paymentTs
+              normalizeBondKey(buyRow.bond) === bondRow.matchBond &&
+              Number.isFinite(buyRow.dateMonthUTCms) &&
+              buyRow.dateMonthUTCms <= paymentMonthTs
           )
           .reduce((sum, buyRow) => sum + buyRow.quantity, 0);
 
@@ -3569,7 +3834,13 @@ function renderChart(chartData) {
   }
 
   const palette = getSeriesPalette();
-  renderChartLegend(seriesByBond, palette);
+  const fallbackSeriesColors = buildStatisticsSeriesColors(seriesByBond.length, palette);
+  const bondColorMap = getBondColorByBondKeyMap(getBondPaletteOptions());
+  const seriesColors = seriesByBond.map((series, idx) => {
+    const key = normalizeBondKey(series.matchBond || series.bond);
+    return bondColorMap.get(key) || fallbackSeriesColors[idx] || fallbackSeriesColors[0] || "#76b041ff";
+  });
+  renderChartLegend(seriesByBond, seriesColors);
 
   const monthTotals = visibleDates.map((monthKey) =>
     seriesByBond.reduce((sum, _series, sIdx) => sum + (amountByBondAndDate[sIdx].get(monthKey) || 0), 0)
@@ -3614,7 +3885,7 @@ function renderChart(chartData) {
     );
     ordered.forEach((item, i) => {
       const { bondRow, sIdx, amount } = item;
-      const color = palette[sIdx % palette.length];
+      const color = seriesColors[sIdx] || seriesColors[0] || "#0071e3";
       const segH = segHeights[i] || 0;
       yStackBottom -= segH;
       const yTop = yStackBottom;
@@ -3665,7 +3936,7 @@ function renderChart(chartData) {
     seriesByBond.forEach((series, sIdx) => {
       const amt = amountByBondAndDate[sIdx].get(bucketKey) || 0;
       if (!(amt > 0)) return;
-      const color = palette[sIdx % palette.length];
+      const color = seriesColors[sIdx] || seriesColors[0] || "#0071e3";
       const safeColor = escapeHtml(color);
       const safeMatch = escapeHtml(String(series.matchBond || ""));
       lines.push(
@@ -3997,12 +4268,20 @@ function renderStrategyComparisonChart(bonds, holdings) {
   const isAllTime = selectedYear === PORTFOLIO_CHART_YEAR_ALL;
   const taxRate = getTaxRateDecimal();
   const useNet = getCouponDisplayUsesNet();
+  const couponByBondKey = new Map();
+  (bonds || []).forEach((row) => {
+    const key = normalizeBondKey(row?.bond);
+    const coupon = parseNumber(row?.coupon);
+    if (!key || !(Number.isFinite(coupon) && coupon > 0)) return;
+    couponByBondKey.set(key, coupon);
+  });
   const byStrategy = strategies.map((strategy) => {
     const buys = sortBuyRowsByDate((buyRowsByStrategyId.get(strategy.id) || []).filter(isBuyRowComplete)).rows;
     const payoutGross = buildPayoutSeries(bonds, buys, holdings);
     const payout = useNet ? toNetChartData(payoutGross, taxRate) : payoutGross;
     const monthTotals = new Map();
-    const monthBonds = new Map();
+    const monthBondAmounts = new Map();
+    const monthBondQty = new Map();
     for (const series of payout.seriesByBond || []) {
       for (const p of series.points || []) {
         if (!(Number(p.amount) > 0)) continue;
@@ -4013,13 +4292,35 @@ function renderStrategyComparisonChart(bonds, holdings) {
         const amount = Number(p.amount) || 0;
         monthTotals.set(bucketKey, (monthTotals.get(bucketKey) || 0) + amount);
         const bondName = String(series.bond || series.matchBond || "").trim();
-        if (bondName) {
-          if (!monthBonds.has(bucketKey)) monthBonds.set(bucketKey, new Set());
-          monthBonds.get(bucketKey).add(bondName);
-        }
+        const bondKey = normalizeBondKey(series.matchBond || series.bond);
+        if (!bondName || !bondKey) continue;
+        if (!monthBondAmounts.has(bucketKey)) monthBondAmounts.set(bucketKey, new Map());
+        const amtMap = monthBondAmounts.get(bucketKey);
+        const prevAmt = amtMap.get(bondKey);
+        amtMap.set(bondKey, { bond: bondName, amount: (prevAmt?.amount || 0) + amount });
       }
     }
-    return { strategy, monthTotals, monthBonds };
+    for (const series of payoutGross.seriesByBond || []) {
+      for (const p of series.points || []) {
+        if (!(Number(p.amount) > 0)) continue;
+        const year = getYearFromMonthKey(p.monthKey);
+        if (!year) continue;
+        if (!isAllTime && year !== selectedYear) continue;
+        const bucketKey = isAllTime ? year : p.monthKey;
+        const bondKey = normalizeBondKey(series.matchBond || series.bond);
+        if (!bondKey) continue;
+        const coupon = couponByBondKey.get(bondKey);
+        if (!(Number.isFinite(coupon) && coupon > 0)) continue;
+        const qtyRaw = (Number(p.amount) || 0) / coupon;
+        if (!(qtyRaw > 0)) continue;
+        if (!monthBondQty.has(bucketKey)) monthBondQty.set(bucketKey, new Map());
+        const qtyMap = monthBondQty.get(bucketKey);
+        // For yearly buckets we should not multiply quantity by number of coupon months.
+        // Keep the position size representative for the period.
+        qtyMap.set(bondKey, Math.max(qtyMap.get(bondKey) || 0, qtyRaw));
+      }
+    }
+    return { strategy, monthTotals, monthBondAmounts, monthBondQty };
   });
 
   const bucketSet = new Set();
@@ -4029,10 +4330,18 @@ function renderStrategyComparisonChart(bonds, holdings) {
   const strategyCols = byStrategy
     .filter(({ strategy }) => selectedIds.has(String(strategy.id)))
     .filter(({ monthTotals }) => Array.from(monthTotals.values()).some((v) => v > 0));
+  const currentStrategyId = String(activeBuyStrategyId || "").trim();
   const periodHead = isAllTime ? "Год" : "Месяц";
   strategyComparisonThead.innerHTML = `<tr>
     <th scope="col" style="width: 140px;">${periodHead}</th>
-    ${strategyCols.map(({ strategy }) => `<th scope="col">${escapeHtml(String(strategy.name || "Стратегия"))}</th>`).join("")}
+    ${strategyCols
+      .map(({ strategy }) => {
+        const isCurrent = String(strategy.id) === currentStrategyId;
+        return `<th scope="col" class="${isCurrent ? "strategyComparisonPane__currentCol" : ""}">${escapeHtml(
+          String(strategy.name || "Стратегия")
+        )}</th>`;
+      })
+      .join("")}
   </tr>`;
 
   if (!buckets.length || !strategyCols.length) {
@@ -4053,31 +4362,38 @@ function renderStrategyComparisonChart(bonds, holdings) {
       const maxCount = rowValues.filter((v) => v === maxVal && v > 0).length;
       const activeStrategyCount = rowValues.filter((v) => v > 0).length;
       const bondPresenceCount = new Map();
-      strategyCols.forEach(({ monthTotals, monthBonds }) => {
+      strategyCols.forEach(({ monthTotals, monthBondAmounts }) => {
         const v = monthTotals.get(bucket) || 0;
         if (!(v > 0)) return;
-        const bonds = Array.from(monthBonds.get(bucket) || []);
-        bonds.forEach((bond) => {
+        const bonds = Array.from((monthBondAmounts.get(bucket) || new Map()).values());
+        bonds.forEach(({ bond }) => {
           bondPresenceCount.set(bond, (bondPresenceCount.get(bond) || 0) + 1);
         });
       });
       const cells = strategyCols
-        .map(({ monthTotals, monthBonds }) => {
+        .map(({ strategy, monthTotals, monthBondAmounts, monthBondQty }) => {
           const val = monthTotals.get(bucket) || 0;
           if (!(val > 0)) return `<td>—</td>`;
-          const bonds = Array.from(monthBonds.get(bucket) || []).sort((a, b) =>
-            a.localeCompare(b, "ru", { numeric: true, sensitivity: "base" })
-          );
+          const bonds = Array.from((monthBondAmounts.get(bucket) || new Map()).entries())
+            .map(([bondKey, entry]) => {
+              const qty = Math.max(0, Math.round((monthBondQty.get(bucket) || new Map()).get(bondKey) || 0));
+              return { bondKey, bond: entry.bond, qty };
+            })
+            .sort((a, b) => a.bond.localeCompare(b.bond, "ru", { numeric: true, sensitivity: "base" }));
           const bondsHtml = bonds.length
-            ? bonds
-                .map((bond) => {
+            ? `<div class="buyChips strategyComparisonPane__chips">` +
+              bonds
+                .map(({ bond, qty }) => {
                   const count = bondPresenceCount.get(bond) || 0;
                   const isDifferent = activeStrategyCount > 1 && count < activeStrategyCount;
-                  return `<span class="strategyComparisonPane__bond${isDifferent ? " strategyComparisonPane__bond--diff" : ""}">${escapeHtml(
-                    bond
-                  )}</span>`;
+                  return `<span class="buyChip strategyComparisonPane__bondChip${isDifferent ? " strategyComparisonPane__bond--diff" : ""}">
+                    <span class="buyChip__name">${escapeHtml(bond)}</span>
+                    <span class="buyChip__sep">•</span>
+                    <span class="buyChip__detail">${escapeHtml(formatQuantityRu(qty))}</span>
+                  </span>`;
                 })
-                .join('<span class="strategyComparisonPane__bondSep">, </span>')
+                .join("") +
+              `</div>`
             : "—";
           const maxClass = val === maxVal && maxVal > 0 && maxCount === 1 ? " strategyComparisonPane__value--max" : "";
           return `<td>
@@ -4231,7 +4547,9 @@ function renderStrategyTab() {
       .map((row) => {
         const d = normalizeYMD(row.date);
         const items = parseBuyItems(row.items);
+        const gross = roundRub2(items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 0), 0));
         const total = computeBuyItemsOutlayWithCommissionRub(items);
+        const commission = Math.max(0, roundRub2(total - gross));
         const itemsHtml = !items.length ? "—" : `<div class="buySummary">${buildBuyChipsHtmlFromItems(items)}</div>`;
         const dateCell = `<div class="buyTableDate">${escapeHtml(d ? formatDateRuMonthWords(d) : "—")}</div>`;
         const keyAttr = encodeURIComponent(stableBuyRowKeyFromRowData(row));
@@ -4259,7 +4577,12 @@ function renderStrategyTab() {
         return `<tr class="strategyTabShell__buyRowClick"${planYearAttr}${planDateAttr} data-strategy-buy-key="${keyAttr}" tabindex="0" role="button">
         <td>${dateCell}</td>
         <td>${itemsHtml}</td>
-        <td><div class="buySummary">${escapeHtml(formatMoney(total))}</div></td>
+        <td>
+          <div class="buySummary buySummary--stack">
+            <div>${escapeHtml(formatMoney(total))}</div>
+            <div class="buySummary__commission">Комиссия: ${escapeHtml(formatMoney(commission))}</div>
+          </div>
+        </td>
         ${actionsCell}
       </tr>`;
       })
@@ -4287,10 +4610,12 @@ function renderStrategyTab() {
   } else {
     if (bondsEmptyEl) bondsEmptyEl.setAttribute("hidden", "");
     if (strategyTabBondsList) strategyTabBondsList.removeAttribute("hidden");
+    const bondColorMap = getBondColorByBondKeyMap(getBondPaletteOptions());
     strategyTabBondsList.innerHTML = bonds
       .map((row) => {
         const nameRaw = String(row.bond || "").trim();
         const name = normalizeBondKey(nameRaw) || nameRaw || "—";
+        const bondColor = bondColorMap.get(name) || "#76b041ff";
         const coupon = parseNumber(row.coupon);
         const monthsNorm = Array.from(new Set(parseMonthList(row.payoutMonths))).sort((a, b) => a - b);
         const { freq, monthsHtml } = formatStrategyTabBondPayoutBlock(monthsNorm);
@@ -4299,7 +4624,10 @@ function renderStrategyTab() {
         return `<li class="strategyTabShell__bondRow">
           <button type="button" class="strategyTabShell__bondOpenBtn" data-strategy-bond="${keyEsc}">
             <div class="strategyTabShell__bondMain">
-              <div class="strategyTabShell__bondName">${escapeHtml(name)}</div>
+              <div class="strategyTabShell__bondNameRow">
+                <span class="strategyTabShell__bondColorDot" style="background:${escapeHtml(bondColor)}"></span>
+                <div class="strategyTabShell__bondName">${escapeHtml(name)}</div>
+              </div>
               <div class="strategyTabShell__bondMeta">${metaHtml}</div>
             </div>
             <div class="strategyTabShell__bondPayout">
@@ -4543,7 +4871,12 @@ function renderAll(options = {}) {
   const bonds = sanitizeBondRows(readRows(bondsTbody));
   const buys = sortBuyRowsByDate(readRows(buysTbody)).rows.filter(isBuyRowComplete);
   const holdings = sanitizeHoldingRows(readRows(holdingsTbody));
-  const needsPayoutSeries = isChartsVisible || isComparisonVisible || !strategyTabShell || isBuysVisible;
+  const needsPayoutSeries =
+    isChartsVisible ||
+    isComparisonVisible ||
+    isPortfolioVisible ||
+    !strategyTabShell ||
+    isBuysVisible;
   const payoutSeries = needsPayoutSeries ? buildPayoutSeries(bonds, buys, holdings) : null;
   if (isPortfolioVisible) {
     const portfolioBuys = getBuysForPortfolioChart();
@@ -4551,6 +4884,8 @@ function renderAll(options = {}) {
     renderPortfolioChart(payoutSeriesPortfolio);
   }
   if (isComparisonVisible) renderStrategyComparisonChart(bonds, holdings);
+  /* Год в правом сайдбаре синхронизируется из ensureChartYearOptions; renderChart вызывается только при открытой «Статистике». */
+  if (payoutSeries && !isChartsVisible) ensureChartYearOptions(payoutSeries);
   if (isChartsVisible && payoutSeries) renderChart(payoutSeries);
   renderPortfolioHoldingsChips(holdings);
   if (payoutSeries) renderSummary(payoutSeries, buys, holdings);
@@ -5742,9 +6077,7 @@ function loadAll() {
       else portfolioScenariosByStrategyId[s.id] = normalizePortfolioScenario(portfolioScenariosByStrategyId[s.id]);
     });
     applyPortfolioScenarioToInputs(getPortfolioScenarioForStrategy(getPortfolioScenarioStrategyId()));
-    if (strategyBondsSortSelect) {
-      strategyBondsSortSelect.value = strategyBondsSortRaw === "maturity" ? "maturity" : "name";
-    }
+    setStrategyBondsSortModeUi(strategyBondsSortRaw);
     try {
       const driftRaw = localStorage.getItem(AUTO_PLAN_MONTHLY_PRICE_DRIFT_PCT_KEY);
       if (autoPlanPriceDriftPctInput && driftRaw !== null && driftRaw !== undefined) {
@@ -5764,7 +6097,7 @@ function loadAll() {
     if (taxRateInput) taxRateInput.value = "13";
     loadStrategySidebarParamsFromStorage();
     if (portfolioStartDateInput) portfolioStartDateInput.value = getTodayYMD();
-    if (strategyBondsSortSelect) strategyBondsSortSelect.value = "name";
+    setStrategyBondsSortModeUi("name");
     setPortfolioMoneyInputValue(portfolioStartValueInput, "0");
     portfolioScenariosByStrategyId = {
       [DEFAULT_BUY_STRATEGY_ID]: normalizePortfolioScenario({
@@ -6207,10 +6540,21 @@ if (strategyBondsSortSelect) {
   strategyBondsSortSelect.addEventListener("change", () => {
     const mode = getStrategyBondsSortMode();
     localStorage.setItem(STRATEGY_BONDS_SORT_KEY, mode);
+    setStrategyBondsSortModeUi(mode);
     renderAll();
   });
 }
-
+if (strategyBondsSortButtons.length) {
+  strategyBondsSortButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = String(btn.getAttribute("data-bonds-sort-mode") || "").trim();
+      if (mode !== "name" && mode !== "maturity") return;
+      localStorage.setItem(STRATEGY_BONDS_SORT_KEY, mode);
+      setStrategyBondsSortModeUi(mode);
+      renderAll();
+    });
+  });
+}
 if (portfolioParamsOpenBtn) {
   portfolioParamsOpenBtn.addEventListener("click", () => openPortfolioParamsModal());
 }
@@ -6352,6 +6696,7 @@ window.addEventListener("resize", syncAppShellHeaderOffset);
 bindChartTooltips();
 updateSortableHeaders();
 initStrategyShellResize();
+populateBondColorOptions();
 loadAll();
 initAutoPlanWidgetUi();
 initStrategyTabPanel();
@@ -6372,6 +6717,7 @@ function syncDateSummaries() {
     const bondPriceDisplay = tr.querySelector('[data-display-for="bondPrice"]');
     const nominalHidden = tr.querySelector('[data-field="nominal"]');
     const nominalDisplay = tr.querySelector('[data-display-for="nominal"]');
+    const bondColorHidden = tr.querySelector('[data-field="bondColor"]');
     if (!monthsHidden || !startHidden || !endHidden) return;
 
     const selected = parseMonthList(monthsHidden.value);
@@ -6383,6 +6729,9 @@ function syncDateSummaries() {
     if (bondDisplay && bondHidden) {
       const v = String(bondHidden.value || "").trim();
       bondDisplay.textContent = v ? normalizeBondKey(v) : "—";
+    }
+    if (bondColorHidden) {
+      bondColorHidden.value = normalizeBondColor(bondColorHidden.value) || "";
     }
 
     if (couponDisplay && couponHidden) {
@@ -6525,6 +6874,10 @@ function updateMonthModeUI() {
   const all = isAllMonthsSelected(monthPickerState.months);
   if (monthModeAllBtn) monthModeAllBtn.classList.toggle("is-active", all);
   if (monthModeCustomBtn) monthModeCustomBtn.classList.toggle("is-active", !all);
+  if (bondModalMonthsToggleBtn) {
+    const hasSelected = Array.isArray(monthPickerState.months) && monthPickerState.months.length > 0;
+    bondModalMonthsToggleBtn.textContent = hasSelected ? "Сбросить" : "Выбрать все";
+  }
 }
 
 function setMonthMonths(months) {
@@ -6751,6 +7104,7 @@ function fillBondModalFormFromRow(tr) {
   const payoutMonthsInput = tr.querySelector('input[data-field="payoutMonths"]');
   const startHidden = tr.querySelector('input[data-field="startDate"]');
   const endHidden = tr.querySelector('input[data-field="endDate"]');
+  const colorHidden = tr.querySelector('input[data-field="bondColor"]');
   if (!bondInput || !couponInput || !payoutMonthsInput || !startHidden || !endHidden) return;
 
   bondModalNameInput.value = String(bondInput.value || "").trim();
@@ -6767,6 +7121,12 @@ function fillBondModalFormFromRow(tr) {
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = String(endHidden.value || "").trim();
   if (bondModalStartDateInput) bondModalStartDateInput.value = String(startHidden.value || "").trim();
   if (bondModalEndDateInput) bondModalEndDateInput.value = String(endHidden.value || "").trim();
+  if (bondModalColorSelect) {
+    const preferred = normalizeBondColor(colorHidden?.value || "");
+    const fallback = getBondColorByBondKeyMap(getBondPaletteOptions()).get(normalizeBondKey(bondInput.value || ""));
+    bondModalColorSelect.value = preferred || fallback || getBondPaletteOptions()[0] || "";
+    populateBondColorOptions();
+  }
 
   syncBondModalMonthSummary();
 }
@@ -6781,8 +7141,9 @@ function getBondModalRowData() {
   const bondPrice = Number.isFinite(bondPriceRaw) && bondPriceRaw > 0 ? String(bondPriceRaw) : "";
   const nominalRaw = parseNumber(bondModalNominalInput?.value || "");
   const nominal = Number.isFinite(nominalRaw) && nominalRaw > 0 ? String(nominalRaw) : "";
+  const bondColor = normalizeBondColor(bondModalColorSelect?.value || "");
 
-  return { bond, coupon, payoutMonths, startDate, endDate, bondPrice, nominal };
+  return { bond, coupon, payoutMonths, startDate, endDate, bondPrice, nominal, bondColor };
 }
 
 function openBondModalNew() {
@@ -6799,6 +7160,8 @@ function openBondModalNew() {
   if (bondModalEndDateVisibleInput) bondModalEndDateVisibleInput.value = "";
   if (bondModalStartDateInput) bondModalStartDateInput.value = "";
   if (bondModalEndDateInput) bondModalEndDateInput.value = "";
+  if (bondModalColorSelect) bondModalColorSelect.value = getBondPaletteOptions()[0] || "";
+  populateBondColorOptions();
   initBondMonthPickerState();
   setBondModalOpen(true);
   if (bondModalNameInput) {
@@ -6847,6 +7210,28 @@ if (bondModalOpenMonthPickerBtn) {
   });
 }
 
+if (bondModalMonthsToggleBtn) {
+  bondModalMonthsToggleBtn.addEventListener("click", () => {
+    if (!monthPickerState) return;
+    const hasSelected = Array.isArray(monthPickerState.months) && monthPickerState.months.length > 0;
+    if (hasSelected) setMonthMonths([]);
+    else setMonthMonths([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+}
+
+if (bondModalColorPalette) {
+  bondModalColorPalette.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    const btn = t.closest("[data-bond-color]");
+    if (!(btn instanceof HTMLButtonElement) || !bondModalColorSelect) return;
+    const color = normalizeBondColor(btn.getAttribute("data-bond-color") || "");
+    if (!color) return;
+    bondModalColorSelect.value = color;
+    populateBondColorOptions();
+  });
+}
+
 // select[multiple] больше не используется; синхронизация идёт через клики по чипам.
 
 if (bondModalSaveBtn) {
@@ -6875,6 +7260,7 @@ if (bondModalSaveBtn) {
       const endHidden = tr.querySelector('input[data-field="endDate"]');
       const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
       const nominalHidden = tr.querySelector('input[data-field="nominal"]');
+      const bondColorHidden = tr.querySelector('input[data-field="bondColor"]');
       if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden || !nominalHidden) return;
 
       const newKey = normalizeBondKey(row.bond);
@@ -6887,6 +7273,7 @@ if (bondModalSaveBtn) {
       endHidden.value = row.endDate;
       bondPriceHidden.value = row.bondPrice || "";
       nominalHidden.value = row.nominal || "";
+      if (bondColorHidden) bondColorHidden.value = row.bondColor || "";
 
       syncDateSummaries();
 
@@ -6912,6 +7299,7 @@ if (bondModalSaveBtn) {
     const endHidden = tr.querySelector('input[data-field="endDate"]');
     const bondPriceHidden = tr.querySelector('input[data-field="bondPrice"]');
     const nominalHidden = tr.querySelector('input[data-field="nominal"]');
+    const bondColorHidden = tr.querySelector('input[data-field="bondColor"]');
     if (!bondInput || !couponInput || !payoutMonthsHidden || !startHidden || !endHidden || !bondPriceHidden || !nominalHidden) return;
 
     bondInput.value = row.bond;
@@ -6921,6 +7309,7 @@ if (bondModalSaveBtn) {
     endHidden.value = row.endDate;
     bondPriceHidden.value = row.bondPrice || "";
     nominalHidden.value = row.nominal || "";
+    if (bondColorHidden) bondColorHidden.value = row.bondColor || "";
 
     bondsTbody.appendChild(node);
     syncDateSummaries();
@@ -7044,9 +7433,76 @@ function getAvailableBondNames() {
     .sort((a, b) => a.localeCompare(b, "ru"));
 }
 
+function getAutoPlanBondSummaryByKey(bondKey) {
+  const want = normalizeBondKey(bondKey);
+  if (!want || !bondsTbody) return null;
+  const rows = sanitizeBondRows(readRows(bondsTbody));
+  const row = rows.find((r) => normalizeBondKey(r.bond) === want);
+  if (!row) return null;
+  const months = Array.from(new Set(parseMonthList(row.payoutMonths))).sort((a, b) => a - b);
+  const coupon = parseNumber(row.coupon);
+  const nominal = parseNumber(row.nominal);
+  const bondPrice = parseNumber(row.bondPrice);
+  const startDate = normalizeYMD(row.startDate) || "";
+  const endDate = normalizeYMD(row.endDate) || "";
+  return {
+    bond: normalizeBondKey(row.bond),
+    coupon: Number.isFinite(coupon) && coupon > 0 ? coupon : NaN,
+    nominal: Number.isFinite(nominal) && nominal > 0 ? nominal : NaN,
+    bondPrice: Number.isFinite(bondPrice) && bondPrice > 0 ? bondPrice : NaN,
+    months,
+    startDate,
+    endDate,
+  };
+}
+
+function buildAutoPlanBondTooltipMeta(summary) {
+  if (!summary) return "Нет данных по облигации.";
+  const months = summary.months || [];
+  const lines = [];
+  lines.push(`Купон: ${escapeHtml(Number.isFinite(summary.coupon) ? formatMoney(summary.coupon) : "—")}`);
+  lines.push(`Номинал: ${escapeHtml(Number.isFinite(summary.nominal) ? formatMoney(summary.nominal) : "—")}`);
+  lines.push(`Цена в справочнике: ${escapeHtml(Number.isFinite(summary.bondPrice) ? formatMoney(summary.bondPrice) : "—")}`);
+  const periodText =
+    summary.startDate || summary.endDate
+      ? `${escapeHtml(formatDateRuMonthWords(summary.startDate))} — ${escapeHtml(formatDateRuMonthWords(summary.endDate))}`
+      : "—";
+  lines.push(`Период: ${periodText}`);
+  if (months.length) {
+    lines.push(`${escapeHtml(formatPayoutsPerYearPhrase(months.length))}: ${escapeHtml(summarizeMonths(months))}`);
+  } else {
+    lines.push("Месяцы выплат: не заданы");
+  }
+  return lines.join("<br/>");
+}
+
+function bindAutoPlanBondPickerTooltip(el) {
+  if (!el || el.dataset.tooltipBound) return;
+  el.dataset.tooltipBound = "1";
+  el.addEventListener("pointermove", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    const label = t.closest(".autoPlanBondPick");
+    if (!(label instanceof HTMLElement)) {
+      hideAutoPlanBondTooltip();
+      return;
+    }
+    const inp = label.querySelector('input[type="checkbox"][data-bond]');
+    const bond = String(inp?.getAttribute("data-bond") || "").trim();
+    if (!bond) {
+      hideAutoPlanBondTooltip();
+      return;
+    }
+    const summary = getAutoPlanBondSummaryByKey(bond);
+    showAutoPlanBondTooltip(escapeHtml(bond), buildAutoPlanBondTooltipMeta(summary), e.clientX, e.clientY);
+  });
+  el.addEventListener("pointerleave", () => hideAutoPlanBondTooltip());
+}
+
 function refreshAutoPlanBondPicker() {
   const el = document.getElementById("auto-plan-bonds");
   if (!el) return;
+  bindAutoPlanBondPickerTooltip(el);
   const bonds = getAvailableBondNames();
   const sig = bonds.join("\0");
   if (sig === autoPlanBondPickerSig && el.querySelector('input[type="checkbox"][data-bond], .autoPlanBonds__empty')) {
@@ -7071,7 +7527,7 @@ function refreshAutoPlanBondPicker() {
       const checked = prev.has(bond) ? prev.get(bond) : true;
       return `<label class="autoPlanBondPick"><input type="checkbox" id="auto-plan-bond-cb-${idx}" data-bond="${escapeHtml(
         bond
-      )}" ${checked ? "checked" : ""} /><span>${escapeHtml(bond)}</span></label>`;
+      )}" ${checked ? "checked" : ""} /><span class="autoPlanBondPick__label">${escapeHtml(bond)}</span></label>`;
     })
     .join("");
   autoPlanBondPickerSig = sig;
@@ -7116,6 +7572,7 @@ function closeAutoPlanModal() {
   }
   autoPlanScaffoldRestore = null;
   hideAutoPlanGenerateTooltip();
+  hideAutoPlanBondTooltip();
   if (autoPlanModalOverlay) closeModalOverlay(autoPlanModalOverlay);
 }
 

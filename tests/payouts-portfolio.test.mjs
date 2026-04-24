@@ -261,3 +261,107 @@ test("portfolio chart applies different topup amounts by periods", async () => {
     dom.window.close();
   }
 });
+
+test("buildPayoutSeries keeps final coupon in maturity month for semiannual bond", async () => {
+  const { dom, window } = await setupApp();
+  try {
+    const bonds = [
+      {
+        bond: "AAA",
+        coupon: "10",
+        payoutMonths: "5,12",
+        startDate: "2026-01-01",
+        endDate: "2040-05-31",
+        bondPrice: "100",
+        nominal: "100",
+      },
+    ];
+    const buys = [{ date: "2026-02-15", items: JSON.stringify([{ bond: "AAA", price: 100, quantity: 1 }]) }];
+    const holdings = [];
+
+    const out = window.buildPayoutSeries(bonds, buys, holdings);
+    const pointMap = new Map((out.seriesByBond[0]?.points || []).map((p) => [String(p.monthKey), Number(p.amount)]));
+    assert.equal(pointMap.get("2039-12"), 10);
+    assert.equal(pointMap.get("2040-05"), 10, "final coupon in maturity month must be present");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("comparison table shows maturity-month coupon for selected year", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    const bonds = [
+      {
+        bond: "AAA",
+        coupon: "10",
+        payoutMonths: "5,12",
+        startDate: "2026-01-01",
+        endDate: "2040-05-31",
+        bondPrice: "100",
+        nominal: "100",
+      },
+    ];
+    const buysByStrategy = {
+      "s1": [{ date: "2026-02-15", items: JSON.stringify([{ bond: "AAA", price: 100, quantity: 1 }]) }],
+    };
+    window.localStorage.setItem("invest_planner_bonds_v2", JSON.stringify(bonds));
+    window.localStorage.setItem(
+      "invest_planner_buy_strategies_v1",
+      JSON.stringify({ strategies: [{ id: "s1", name: "Стратегия 1" }], buysByStrategy })
+    );
+    window.localStorage.setItem("invest_planner_active_buy_strategy_v1", "s1");
+    window.localStorage.setItem("invest_planner_chart_year_v1", "2040");
+    window.loadAll();
+
+    const strategyPlansYear = document.getElementById("strategy-plans-year");
+    if (strategyPlansYear) strategyPlansYear.value = "2040";
+    window.renderStrategyComparisonChart(bonds, []);
+
+    const tableText = String(document.getElementById("strategy-comparison-tbody")?.textContent || "").toLowerCase();
+    assert.ok(tableText.includes("май 2040"), "row for maturity month must exist in selected year");
+    assert.ok(tableText.includes("10,00"), "coupon amount for maturity month must be shown");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("comparison all-time does not double bond quantity for multiple coupon months", async () => {
+  const { dom, window, document } = await setupApp();
+  try {
+    const bonds = [
+      {
+        bond: "AAA",
+        coupon: "10",
+        payoutMonths: "5,12",
+        startDate: "2026-01-01",
+        endDate: "2030-12-31",
+        bondPrice: "100",
+        nominal: "100",
+      },
+    ];
+    const buysByStrategy = {
+      "s1": [{ date: "2026-02-15", items: JSON.stringify([{ bond: "AAA", price: 100, quantity: 1 }]) }],
+    };
+    window.localStorage.setItem("invest_planner_bonds_v2", JSON.stringify(bonds));
+    window.localStorage.setItem(
+      "invest_planner_buy_strategies_v1",
+      JSON.stringify({ strategies: [{ id: "s1", name: "Стратегия 1" }], buysByStrategy })
+    );
+    window.localStorage.setItem("invest_planner_active_buy_strategy_v1", "s1");
+    window.localStorage.setItem("invest_planner_chart_year_v1", "__all__");
+    window.loadAll();
+
+    window.renderStrategyComparisonChart(bonds, []);
+
+    const tbody = document.getElementById("strategy-comparison-tbody");
+    const tbodyText = String(tbody?.textContent || "").toLowerCase();
+    assert.ok(tbodyText.includes("2026"), "all-time mode should show a yearly row");
+    const chipName = tbody?.querySelector(".strategyComparisonPane__bondChip .buyChip__name");
+    const chipQty = tbody?.querySelector(".strategyComparisonPane__bondChip .buyChip__detail");
+    assert.equal(String(chipName?.textContent || "").trim(), "AAA");
+    assert.equal(String(chipQty?.textContent || "").trim(), "1", "quantity must not be multiplied by coupon frequency");
+  } finally {
+    dom.window.close();
+  }
+});
