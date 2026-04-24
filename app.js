@@ -4322,15 +4322,23 @@ function renderStrategyComparisonChart(bonds, holdings) {
     .filter(({ strategy }) => selectedIds.has(String(strategy.id)))
     .filter(({ monthTotals }) => Array.from(monthTotals.values()).some((v) => v > 0));
   const currentStrategyId = String(activeBuyStrategyId || "").trim();
+  const activeCol = strategyCols.find(({ strategy }) => String(strategy.id) === currentStrategyId) || null;
+  const totalsByStrategy = strategyCols.map(({ monthTotals }) =>
+    buckets.reduce((sum, bucket) => sum + (monthTotals.get(bucket) || 0), 0)
+  );
+  const maxTotal = totalsByStrategy.length ? Math.max(...totalsByStrategy) : 0;
   const periodHead = isAllTime ? "Год" : "Месяц";
   strategyComparisonThead.innerHTML = `<tr>
     <th scope="col" style="width: 140px;">${periodHead}</th>
     ${strategyCols
-      .map(({ strategy }) => {
+      .map(({ strategy }, idx) => {
         const isCurrent = String(strategy.id) === currentStrategyId;
+        const leader = totalsByStrategy[idx] === maxTotal && maxTotal > 0
+          ? `<span class="strategyComparisonPane__leaderTag">Лучшее</span>`
+          : "";
         return `<th scope="col" class="${isCurrent ? "strategyComparisonPane__currentCol" : ""}">${escapeHtml(
           String(strategy.name || "Стратегия")
-        )}</th>`;
+        )}${leader}</th>`;
       })
       .join("")}
   </tr>`;
@@ -4345,7 +4353,7 @@ function renderStrategyComparisonChart(bonds, holdings) {
     return;
   }
 
-  strategyComparisonTbody.innerHTML = buckets
+  const bodyRowsHtml = buckets
     .map((bucket) => {
       const periodText = isAllTime ? bucket : formatMonthKeyRuLong(bucket);
       const rowValues = strategyCols.map(({ monthTotals }) => monthTotals.get(bucket) || 0);
@@ -4365,6 +4373,9 @@ function renderStrategyComparisonChart(bonds, holdings) {
         .map(({ strategy, monthTotals, monthBondAmounts, monthBondQty }) => {
           const val = monthTotals.get(bucket) || 0;
           if (!(val > 0)) return `<td>—</td>`;
+          const baseVal = activeCol ? activeCol.monthTotals.get(bucket) || 0 : 0;
+          const isCurrent = String(strategy.id) === currentStrategyId;
+          const delta = isCurrent ? 0 : val - baseVal;
           const bonds = Array.from((monthBondAmounts.get(bucket) || new Map()).entries())
             .map(([bondKey, entry]) => {
               const qty = Math.max(0, Math.round((monthBondQty.get(bucket) || new Map()).get(bondKey) || 0));
@@ -4389,8 +4400,26 @@ function renderStrategyComparisonChart(bonds, holdings) {
               `</div>`
             : "—";
           const maxClass = val === maxVal && maxVal > 0 && maxCount === 1 ? " strategyComparisonPane__value--max" : "";
+          let deltaLabel = "";
+          let deltaClass = " strategyComparisonPane__delta--neutral";
+          if (activeCol && !isCurrent) {
+            const absLabel = delta === 0 ? "0 ₽" : `${delta > 0 ? "+" : "−"}${escapeHtml(formatMoney(Math.abs(delta)))}`;
+            let pctLabel = "—";
+            if (baseVal > 0) {
+              const pct = (delta / baseVal) * 100;
+              pctLabel = pct === 0 ? "0%" : `${pct > 0 ? "+" : "−"}${formatAmount(Math.abs(pct))}%`;
+              deltaClass = pct > 0 ? " strategyComparisonPane__delta--pos" : pct < 0 ? " strategyComparisonPane__delta--neg" : " strategyComparisonPane__delta--neutral";
+            } else {
+              deltaClass = delta > 0 ? " strategyComparisonPane__delta--pos" : delta < 0 ? " strategyComparisonPane__delta--neg" : " strategyComparisonPane__delta--neutral";
+            }
+            deltaLabel = `${absLabel}<span class="strategyComparisonPane__deltaSep">•</span>${pctLabel}`;
+          }
+          const deltaHtml = !activeCol || isCurrent
+            ? ""
+            : `<div class="strategyComparisonPane__delta${deltaClass}">${deltaLabel}</div>`;
           return `<td>
             <div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(val))}</div>
+            ${deltaHtml}
             <div class="strategyComparisonPane__bonds">${bondsHtml}</div>
           </td>`;
         })
@@ -4401,6 +4430,57 @@ function renderStrategyComparisonChart(bonds, holdings) {
       </tr>`;
     })
     .join("");
+  const avgByStrategy = totalsByStrategy.map((total) => (buckets.length ? total / buckets.length : 0));
+  const maxAvg = avgByStrategy.length ? Math.max(...avgByStrategy) : 0;
+  const stabilityByStrategy = strategyCols.map(({ monthTotals }) => {
+    const vals = buckets.map((bucket) => Number(monthTotals.get(bucket) || 0));
+    if (!vals.length) return 0;
+    const mean = vals.reduce((s, v) => s + v, 0) / vals.length;
+    if (!(mean > 0)) return 0;
+    const variance = vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length;
+    const std = Math.sqrt(variance);
+    return std / mean;
+  });
+  const minStability = stabilityByStrategy.length ? Math.min(...stabilityByStrategy) : 0;
+  const totalRowHtml = `<tr class="strategyComparisonPane__totalRow">
+    <td>${isAllTime ? "Итого за период" : "Итого за год"}</td>
+    ${totalsByStrategy
+      .map((total) => {
+        const maxClass = total === maxTotal && maxTotal > 0 ? " strategyComparisonPane__value--max" : "";
+        return `<td><div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(total))}</div></td>`;
+      })
+      .join("")}
+  </tr>`;
+  const avgRowHtml = `<tr class="strategyComparisonPane__summaryRow">
+    <td>Среднее за период</td>
+    ${avgByStrategy
+      .map((avg) => {
+        const maxClass = avg === maxAvg && maxAvg > 0 ? " strategyComparisonPane__value--max" : "";
+        return `<td><div class="strategyComparisonPane__value${maxClass}">${escapeHtml(formatMoney(avg))}</div></td>`;
+      })
+      .join("")}
+  </tr>`;
+  const stabilityRowHtml = `<tr class="strategyComparisonPane__summaryRow">
+    <td>
+      <span class="strategyComparisonPane__helpWrap">
+        <span>Стабильность</span>
+        <span class="strategyComparisonPane__helpBtn" aria-hidden="true">?</span>
+        <span class="strategyComparisonPane__helpPopover" role="tooltip" aria-label="Пояснение стабильности">
+          <strong class="strategyComparisonPane__helpTitle">Что такое стабильность (CV)</strong>
+          <span class="strategyComparisonPane__helpText">Показывает, насколько ровно распределены выплаты по периодам.</span>
+          <span class="strategyComparisonPane__helpText"><strong>Формула:</strong> CV = стандартное отклонение / средняя выплата.</span>
+          <span class="strategyComparisonPane__helpText"><strong>Интерпретация:</strong> чем ниже значение, тем стабильнее и предсказуемее денежный поток.</span>
+        </span>
+      </span>
+    </td>
+    ${stabilityByStrategy
+      .map((cv) => {
+        const leaderClass = cv === minStability ? " strategyComparisonPane__value--max" : "";
+        return `<td><div class="strategyComparisonPane__value${leaderClass}">${escapeHtml(formatAmount(cv * 100))}%</div></td>`;
+      })
+      .join("")}
+  </tr>`;
+  strategyComparisonTbody.innerHTML = `${bodyRowsHtml}${totalRowHtml}${avgRowHtml}${stabilityRowHtml}`;
 }
 
 function clearComparisonBondChipLinkedHover() {
@@ -6651,8 +6731,8 @@ function closeSummaryInfoPopovers(exceptBtn = null) {
   });
 }
 
-function positionSummaryInfoPopover(pop, stat) {
-  if (!(pop instanceof HTMLElement) || !(stat instanceof HTMLElement)) return;
+function positionSummaryInfoPopover(pop, host) {
+  if (!(pop instanceof HTMLElement) || !(host instanceof HTMLElement)) return;
   pop.style.left = "";
   pop.style.right = "8px";
   pop.style.top = "";
@@ -6660,19 +6740,19 @@ function positionSummaryInfoPopover(pop, stat) {
   pop.style.width = "";
   const margin = 8;
   const rect = pop.getBoundingClientRect();
-  const statRect = stat.getBoundingClientRect();
+  const hostRect = host.getBoundingClientRect();
   const viewportWidth = window.innerWidth;
 
   if (rect.right > viewportWidth - margin) {
     const overflow = rect.right - (viewportWidth - margin);
-    const desiredLeft = Math.max(margin - statRect.left, stat.clientWidth - rect.width - 8 - overflow);
-    pop.style.left = `${Math.max(8 - statRect.left, desiredLeft)}px`;
+    const desiredLeft = Math.max(margin - hostRect.left, host.clientWidth - rect.width - 8 - overflow);
+    pop.style.left = `${Math.max(8 - hostRect.left, desiredLeft)}px`;
     pop.style.right = "auto";
   }
 
   const nextRect = pop.getBoundingClientRect();
   if (nextRect.left < margin) {
-    pop.style.left = `${margin - statRect.left}px`;
+    pop.style.left = `${margin - hostRect.left}px`;
     pop.style.right = "auto";
   }
 
@@ -6691,8 +6771,8 @@ document.addEventListener("click", (e) => {
     closeSummaryInfoPopovers();
     return;
   }
-  const stat = btn.closest(".summaryStat");
-  if (!stat) return;
+  const host = btn.closest(".summaryStat, .strategyComparisonPane__helpWrap");
+  if (!host) return;
   const isOpen = btn.getAttribute("aria-expanded") === "true";
   closeSummaryInfoPopovers(btn);
   if (isOpen) {
@@ -6702,9 +6782,12 @@ document.addEventListener("click", (e) => {
   const text = btn.getAttribute("data-summary-help") || "";
   const pop = document.createElement("div");
   pop.className = "summaryInfoPopover";
+  if (host.classList.contains("strategyComparisonPane__helpWrap")) {
+    pop.classList.add("summaryInfoPopover--comparison");
+  }
   pop.textContent = text;
-  stat.appendChild(pop);
-  positionSummaryInfoPopover(pop, stat);
+  host.appendChild(pop);
+  positionSummaryInfoPopover(pop, host);
   btn.setAttribute("aria-expanded", "true");
 });
 
