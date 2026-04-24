@@ -753,6 +753,18 @@ html[data-theme="dark"] .strategyTabShell__resizer::before{
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
+html[data-theme="dark"] .strategyTabShell__bondsSortSeg{
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16);
+}
+html[data-theme="dark"] .strategyTabShell__bondsSortBtn{
+  color: rgba(235, 235, 245, 0.7);
+}
+html[data-theme="dark"] .strategyTabShell__bondsSortBtn.is-active{
+  background: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
 .strategyTabShell__bondsSortSelect{
   width: 100%;
   min-width: 170px;
@@ -1367,10 +1379,10 @@ html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonP
   background: rgb(250, 250, 252);
 }
 html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__table tbody tr:hover td{
-  background: rgba(77, 163, 255, 0.18);
+  background: rgb(40, 40, 42);
 }
 html[data-theme="dark"] .strategyTabShell__pane--comparison .strategyComparisonPane__table tbody tr:hover td:first-child{
-  background: rgba(77, 163, 255, 0.18);
+  background: rgb(40, 40, 42);
 }
 .strategyTabShell__pane--comparison .strategyComparisonPane__value{
   font-size: var(--fs-ui);
@@ -3133,7 +3145,11 @@ html[data-theme="dark"] .chartLegend__item--active{
 }
 .chartLegend__item:hover .chartLegend__sum,
 .chartLegend__item--active .chartLegend__sum{
-  color: var(--text);
+  color: #000;
+}
+html[data-theme="dark"] .chartLegend__item:hover .chartLegend__sum,
+html[data-theme="dark"] .chartLegend__item--active .chartLegend__sum{
+  color: #fff;
 }
 
 .taxControl{
@@ -4479,6 +4495,7 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
 }
 .bondModal__colorField{
   padding: 12px 14px 14px;
+  position: relative;
 }
 .bondModal__colorLabel{
   font-size: 0.75rem;
@@ -4489,14 +4506,59 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
   margin-bottom: 10px;
 }
 .bondColorPalette{
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  display: flex;
+  width: auto;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: thin;
+  padding: 3px 0;
   gap: 8px;
 }
+.bondColorPalette--used{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.bondColorRow{
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.bondColorPickerPopover{
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 8px;
+  z-index: 30;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--sheet);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+.bondColorPickerPopover__input{
+  width: 44px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.bondColorPalette::-webkit-scrollbar{
+  height: 6px;
+}
+.bondColorPalette::-webkit-scrollbar-thumb{
+  background: rgba(120, 120, 130, 0.35);
+  border-radius: 999px;
+}
+.bondColorPalette::-webkit-scrollbar-track{
+  background: transparent;
+}
 .bondColorPalette__swatch{
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
   border-radius: 999px;
   border: none;
   background: var(--swatch);
@@ -4512,9 +4574,7 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
   border-radius: 999px;
   border: 1.5px solid rgb(214, 214, 219);
   pointer-events: none;
-}
-.bondColorPalette__swatch:hover{
-  transform: translateY(-1px);
+  z-index: 1;
 }
 .bondColorPalette__swatch:focus-visible{
   outline: none;
@@ -4526,6 +4586,42 @@ html[data-theme="dark"] .modal--bond .bondModal__dateRow .floatingField__input[t
   border-radius: 999px;
   border: 1.5px solid rgb(214, 214, 219);
   pointer-events: none;
+}
+.bondColorPalette__swatch--add{
+  background: var(--swatch, rgb(228, 228, 232));
+}
+.bondColorPalette__swatch--add.is-default{
+  background: rgb(223, 223, 228);
+}
+.bondColorPalette__addBadge{
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: rgb(120, 120, 128);
+  color: #fff;
+  font-size: 10px;
+  line-height: 12px;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+}
+html[data-theme="dark"] .bondColorPalette__swatch--add{
+  background: var(--swatch, rgba(255, 255, 255, 0.24));
+}
+html[data-theme="dark"] .bondColorPalette__swatch--add.is-default{
+  background: rgba(255, 255, 255, 0.2);
+}
+html[data-theme="dark"] .bondColorPalette__addBadge{
+  background: rgba(0, 0, 0, 0.68);
+}
+html[data-theme="dark"] .bondColorPickerPopover{
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgb(44, 44, 46);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 .bondModal__inlineLabel,
 .bondModal__monthPanel .bondMonthChips__label{
